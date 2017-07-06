@@ -267,3 +267,141 @@ assert reditCardNumber == 123456
 assert 1i.class == Integer
 assert 1i.class != Long
 
+
+
+byte var1 = 127
+char var2 = 'A'
+short var3 = 456
+int var4 = 1
+long var5 = 123
+
+// byte char short 和 int 进行计算  结果是 int 类型
+assert (var1 + var4).class == Integer
+assert (var2 + var4).class == Integer
+assert (var3 + var4).class == Integer
+
+//long 和 byte char short int  进行计算  结果是long 类型
+// 太多了。。 平常用不到   看到了去看官方文档吧。。。
+
+
+
+//Groovy 不提供专用的整除运算符号  只能通过intdiv 函数
+//println 4.intdiv(5)
+
+//如果 在除法中 存在一个 float 或 double类型的数据，那么结果就是Double类型 。否则结果都是BigDecimal类型
+assert (4/3).class == BigDecimal
+assert (4d/3).class == Double
+assert (4f/3).class == Double
+assert (4l/3).class == BigDecimal
+
+
+
+//次方运算  符号:**   基数 ** 指数
+// 如果指数是小数 ，如果可以返回 integer 那就返回integer  ， 可以返回Long 就返回Long ， 否则的话统一返回Double
+assert 2**0.1 instanceof Double
+assert 2**-0.1 instanceof Double
+assert 1**-0.3f instanceof Integer
+assert 9.9**1.9 instanceof Double
+
+//前提：指数是整数
+//如果 负整数 ，那么久按照数据是否满足条件  返回Integer Long or Double
+assert 10**-1 instanceof Double
+assert 1**-1 instanceof Integer
+//如果 是正整数或者零， 那么根据 基数来分类
+//如果 基数是 BigDecimal  那么返回 BigDecimal
+//如果 基数是BigInteger 那么返回BigInteger
+//如果 基数是Integer 那么返回Integer ，当数据放不下时  就返回 BigInteger
+//如果 基数是Long ，那么返回Long ， 当数据放不下时  就返回BigInteger
+assert new BigDecimal(10) ** 0 instanceof BigDecimal
+assert new BigInteger(10) ** 1 instanceof BigInteger
+assert 10i ** 1 instanceof Integer
+assert 10i ** 10 instanceof BigInteger
+assert 10l ** 10 instanceof Long
+assert 10l ** 100 instanceof BigInteger
+
+
+
+// 布尔值  true false
+def bool1 = true
+assert bool1 instanceof Boolean
+
+
+
+// Lists  集合
+def numbers2 = [1,2,3] as LinkedList
+assert numbers2 instanceof LinkedList
+
+def numbers1 = [1,2,3]
+assert numbers1 instanceof List
+assert numbers1.size ==3
+assert numbers1 instanceof ArrayList
+assert numbers1[1]==2
+//可以通过 << leftShift 操作符 来往List末尾 添加一个 数据
+numbers1<< 4
+assert numbers1[-1] ==4
+assert numbers1[0,-1] == [1,4]
+assert numbers1[0..-1] == [1,2,3,4]
+//list 还可以包含另外一个list
+def multi = [[0,1],[2,3]]
+assert multi[1][1]==3
+
+
+
+// Arrays  数组
+//如果 使用def 定义 默认是Arraylist 类型 ,除非使用了 as 指定类型
+int[] arry1 = [1,2,3]
+Integer[] arry2 = [1,2,3]
+def arry3 = [1,2,3]
+def arry4 = [1,2,3] as int[]
+assert arry4 instanceof int[]
+assert arry3 instanceof ArrayList
+assert arry1 instanceof int[]
+assert arry2 instanceof Integer[]
+//Arrays 取大小 不能使用  size... 而得用 size() 
+assert arry1.size() ==3
+//println arry1.class
+//println arry2.class
+// Arrays 也可以 使用多重数组
+def multi2 = new Integer[2][2]
+assert multi2.size() == 2
+assert multi2[0][0]==null
+
+Integer[][] p1 
+p1 = [[1],[2]]
+assert p1 instanceof Integer[][]
+
+
+
+
+//Maps 字典 键值对
+def maps1 = [red:'#FF0000',green:'#00FF00',blue:'#0000ff']
+assert maps1 instanceof Map
+assert maps1 instanceof HashMap
+assert maps1 instanceof LinkedHashMap
+
+//取值
+assert maps1.red == '#FF0000'
+assert maps1['red'] == '#FF0000'
+
+// 去取一个不存在的key  会返回null
+assert maps1.yellow == null
+
+//可以使用 String  int 作为key
+//但是用int 作为key的话 取值的时候 不能直接 用 .key 来取值  必须使用  map[key]来取值
+def maps2 = [1:2,3:4]
+assert maps2[1]==2
+
+//如果使用一个变量的name 作为key  那么会把这个 name当成key
+def key1  = 'hello'
+def maps3 = [key1:'world']
+assert maps3.containsKey('key1')
+assert !maps3.containsKey('hello')
+
+//如果就是要使用name ，同时让他取value当做key
+def maps4 = [(key1):'world']
+assert maps4.containsKey('hello')
+assert !maps4.containsKey('key1')
+
+
+
+
