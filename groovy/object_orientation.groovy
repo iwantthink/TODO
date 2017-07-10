@@ -181,17 +181,121 @@ assert pp1.getName() == 'jack'
 class Person4{
     String name
     String age
+    
+   void name(String name){
+       this.name = name
+   }
+   
+   String getName(){
+       this.name
+   }
 }
 def pp2 = new Person4()
 assert  pp2.properties.keySet().containsAll(['name','age'])
+//默认使用类中属性  将隐式调用get /set，但是如果在方法中  是直接读取字段
+pp2.name('jack') //读取字段
+assert pp2.name =='jack'// 隐式调用 get
+
+
+//Groovy 会识别属性， 即使没有提供字段 ，但是只要有 遵循 java bean  和  get/set 的方法 ，就可以直接使用属性
+//如果是有 set  那就 只写   如果只有get 就 只读
+class Example1{
+
+    private String name
+
+    void setName(String name){
+        this.name = name
+    }
+    
+//    String getName(){
+//        "my name is$name"
+//    }
+}
+
+def ex1 = new Example1()
+ex1.name ='jack'
+assert ex1.name=='jack'
 
 
 
 
 
 
+//Annotation 注解  
+// 使用 @interface 关键字
+@interface SomeAnnotation{}
+//注解 可以添加 没有具体实现的方法 和  有默认值的 方法
+//成员类型 可以是 原始类型，字符串 ，类，一个枚举，另一种注解类型，或者上述任何的数组形式
+@interface SomeAnnotation1{
+    String value() default 'groovy'
+}
+//注解位置
+//注解可以应用于代码的各种元素
+@SomeAnnotation
+void func11(){}
+@SomeAnnotation
+class SomeClass1{}
+@SomeAnnotation
+String str1
+//可以通过 @Target 元注解 来指定注解范围
+import java.lang.annotation.ElementType
+import java.lang.annotation.Target
+@Target([ElementType.METHOD])
+@interface SomeAnnotation11{}
+
+//注解值
+//在使用注解时，至少得替那些没有默认值的 成员设置值
+@Target([ElementType.METHOD])
+@interface Page{
+    int statusCode() default 100
+    String value()
+}
+@Page(value = 'jack')
+def sayHi(){}
+//如果只存在一个 需要设置值的 成员时，可以省略= 之前的部分
+@Page('jack')
+void sayHello(){}
 
 
+
+//注解可见性
+//通过元注解@Retention 进行设置
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+@Retention(RetentionPolicy.RUNTIME)
+@interface SomeAnnotation4{
+    String status()
+}
+
+
+//闭包可以作为 注解的参数, 但是 需要你将成员的类型设置成为 Class
+// 当前Groovy 是2.4.7  貌似还没有这个特性， 应该是在 这之后 添加的。。 具体的没看  
+//class Example3{
+//    @SomeAnnotation4({6})
+//    void sayHello1(){}
+//}
+
+
+
+
+//元注解 meta-annotations
+//使用元注解  可以用来修饰 注解， 在编译时 这个注解 会被替换
+
+@interface Service{}
+@interface Transactional{}
+
+@Service
+@Transactional
+@interface Combination{}
+
+@Combination()
+class Example5{
+}
+
+def annotations = Example5.annotations*.annotationType()
+assert !(Service in annotations)
+
+//TODO。。。。。。。。。。还有很多杂七杂八的玩意   暂时用不到 用到再学。。。
 
 
 
