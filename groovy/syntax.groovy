@@ -22,9 +22,11 @@ def variable3  = "\${}"
 String function1(arg1,arg2){
 }
 
-//无返回值的 函数 必须使用def
+//无返回值的 函数 必须使用def 或者使用 void
 def noReturnFunc(){
 }
+
+void noReturnFunc1(){}
 
 
 //函数中的返回值 可以不使用return语句来设置。默认会将函数中最后一句代码执行的结果设置成返回值
@@ -328,6 +330,8 @@ assert bool1 instanceof Boolean
 
 
 // Lists  集合
+//list 变量由 [] 定义 ，并且可以直接通过索引进行存取，如果索引超过当前链表长度，list会自动往该索引添加元素
+// 一般List 用 ArrayList作为真正的实现
 def numbers2 = [1,2,3] as LinkedList
 assert numbers2 instanceof LinkedList
 
@@ -348,7 +352,7 @@ assert multi[1][1]==3
 
 
 // Arrays  数组
-//如果 使用def 定义 默认是Arraylist 类型 ,除非使用了 as 指定类型
+//List如果 使用def 定义 默认是Arraylist 类型 ,除非使用了 as 指定类型
 int[] arry1 = [1,2,3]
 Integer[] arry2 = [1,2,3]
 def arry3 = [1,2,3]
@@ -374,6 +378,7 @@ assert p1 instanceof Integer[][]
 
 
 //Maps 字典 键值对
+//map 以[key:value]存在， key 可以用 单引号 ，双引号 或者不用引号 包裹
 def maps1 = [red:'#FF0000',green:'#00FF00',blue:'#0000ff']
 assert maps1 instanceof Map
 assert maps1 instanceof HashMap
@@ -402,6 +407,7 @@ def maps4 = [(key1):'world']
 assert maps4.containsKey('hello')
 assert !maps4.containsKey('key1')
 
-
-
+//直接添加key
+maps4.anotherKey = "i am map"
+println maps4
 
