@@ -42,6 +42,18 @@ def closure3 ={->
 }
 
 
+
+////函数的最后一个参数是闭包的时候，可以省略圆括号
+//def getName(int a,int b,Closure cl){
+//        cl(a,b)
+//}
+//
+//def getAge(a,b){ println "aaaaa"}
+//getAge 1,2
+//getName(1,2,{a,b->println "a=$a,b=$b "})
+//getName 1,2,{a,b->println "222  a=$a,b=$b"}
+//
+
 //闭包也可以使用可变参数
 def vargsFunc1 = {String ... args -> args.join('')}
 assert vargsFunc1('1','2','3')=='123'
@@ -309,4 +321,3 @@ factorial = factorial.trampoline()
 assert factorial(1)    == 1
 assert factorial(3)    == 1 * 2 * 3
 assert factorial(1000) // == 402387260.. plus another 2560 digits
-
