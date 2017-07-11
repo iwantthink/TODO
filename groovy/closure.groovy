@@ -128,4 +128,185 @@ class InnerOwnerClass{
 def e2 = new InnerOwnerClass()
 e2.run()
 
+class NestedClosure2{
+    void run(){
+        def nestedMethod = {
+            def cl = {owner}
+            cl()
+        }
+       assert nestedMethod()==nestedMethod
+    }
+}
+def e3 = new NestedClosure2()
+e3.run()
+
+
+
+//delegate
+//可以使用delegate 或者 getDelegate 来访问闭包的代理
+// 默认情况下 代理设置为 owner
+class Enclosing3{
+    void run(){
+        def func0 = {owner}
+        assert func0()==this
+        def func1 = {delegate}
+        assert func1()==this
+        def func2 = {getDelegate()}
+        assert func2()==this
+        
+        def enclosed = {
+            {-> delegate}.call()
+        }
+       
+        def ownerMethod = {
+            {->owner}.call()
+        }
+        //这里应该可以判断出 delegate 此时是 owner
+        assert enclosed()==enclosed
+        assert ownerMethod() ==ownerMethod
+        
+    }
+}
+def e4 = new Enclosing3()
+e4.run()
+
+
+//闭包的 代理对象是可以被设置的
+class Jack{
+    String name
+}
+
+class Lucy{
+    String name
+}
+def jack = new Jack(name:'jack')
+def lucy = new Lucy(name:'lucy')
+def delegateClosure = { delegate.name.toUpperCase() }
+delegateClosure.delegate = jack
+assert delegateClosure()== 'JACK'
+delegateClosure.delegate = lucy
+assert delegateClosure()=='LUCY'
+
+//在闭包中，无需明确设置delegate 即可使用delegate
+class Ryan{
+    String name
+}
+def r = new Ryan(name:'Ryan')
+def r2 = {name.toUpperCase()}
+r2.delegate = r
+assert r2() == 'RYAN'
+
+
+//delegate的 委托策略
+//Closure.OWNER_FIRST  owner 优先 delegate其次  。这是默认的策略!!
+
+class Ryan1{
+    String name
+}
+class Ryan2{
+    String name = 'Ryan2'
+    def upper = {name.toUpperCase()}
+//    void run(){
+//        def t = {owner}
+//        assert t().name==this.name
+//        def r = { delegate.name.toUpperCase()}
+//        r.resolveStrategy = Closure.OWNER_FIRST
+//        assert r()=='RYAN2'
+//        def ryan1 = new Ryan1(name:'Ryan1')
+//        r.delegate = ryan1
+//        assert r()=='RYAN1'
+//    }
+}
+def ryan1 = new Ryan1(name:'Ryan1')
+def ryan2 = new Ryan2()
+ryan2.upper.delegate = ryan1
+assert ryan2.upper()=='RYAN2'
+
+//Closure.DELEGATE_FIRST delegate优先 owner 其次
+ryan2.upper.resolveStrategy = Closure.DELEGATE_FIRST
+assert ryan2.upper()=='RYAN1'
+
+//Closure.OWNER_ONLY 仅针对 owner
+//Closure.DELEGATE_ONLY  仅针对 delegate
+
+
+
+
+//在Gstring 中使用Closure
+// GString 只会在 创建的时候 去估值
+//${x}不能代表一个 闭包 
+def x =1
+def gs = "x=${x}"
+assert gs == 'x=1'
+x = 2
+assert gs !='x=2'
+
+//如果想要在 GString 中 实现真正的闭包，例如对变量进行延迟估值 ，请使用 ${->x}
+def y = 1
+def gss = "y=${->y}"
+assert gss =='y=1'
+y=2
+assert gss == 'y=2'
+
+
+
+//curry(left)
+//curry 的功能是 设置 最左侧的参数，并返回一个设置了参数之后的 闭包
+def curry1 = {int a,int b->a+b}
+def curry2 = curry1.curry(1)
+assert curry2(1)==2
+assert curry2(1)==curry1(1,1)
+
+
+//Right curry
+//可以设置 最右侧的参数，并返回一个设置了参数之后的闭包
+def curry3 = {int a,String b-> "$b has $a kids"}
+def curry4 = curry3.rcurry('lucy')
+assert curry4(1)=='lucy has 1 kids'
+
+
+
+//index based curry
+//如果闭包接收多于俩个参数， 可以使用 ncurry(),去设定 指定索引位置的参数值
+def curry5 = {a,b,c->a+b+c}
+def curry6 = curry5.ncurry(1,1)
+assert curry6(2,3)==6
+
+
+
+// memolize
+def fib
+fib = { long n -> n<2?n:fib(n-1)+fib(n-2) }.memoize()
+println fib(111)
+
+//assert fib(15) == 610 // slow!
+
+
+
+//Composition
+//将一个 闭包的结果 作为另外一个闭包的 参数
+def plus2 = {it+2}
+def times3 = {it * 3}
+def timesInPlus = plus2<<times3
+assert timesInPlus(1)==5
+assert timesInPlus(1)== plus2(times3(1))
+
+def plusInTimes = plus2>>times3
+assert plusInTimes(1)==9
+assert plusInTimes(1)== times3(plus2(1))
+
+
+
+//Trampoline
+//递归算法通常受最大堆高度限制，例如你调用一个递归自身太多的方法，最终会收到一个 StackOverflowException
+def factorial
+factorial = { int n, def accu = 1G ->
+    if (n < 2) return accu
+    factorial.trampoline(n - 1, n * accu)
+}
+factorial = factorial.trampoline()
+
+assert factorial(1)    == 1
+assert factorial(3)    == 1 * 2 * 3
+assert factorial(1000) // == 402387260.. plus another 2560 digits
 
