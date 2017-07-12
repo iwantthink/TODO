@@ -29,7 +29,8 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 */
-
+//所有的任务只会被 执行一次 。 无论你是执行了多少个
+// 打个比方  gradle test test  和 gradle test 是得到一样的结果
 task compile{
 	doLast{
 		println 'compile'
@@ -49,7 +50,54 @@ task test (dependsOn:[compile,compileTest]){
 }
 
 task dist(dependsOn:[compile,test]){
+	description = 'i am dist'
+	group = 'dist'
+
 	doLast{
 		pirntln 'dist'
 	}
 }
+
+//可以通过-x 来排除指定的 任务
+//gradle compileTest -x compile
+
+
+
+//gradle test --continue  ，gradle会执行所有的任务，即使遇到了失败的任务
+
+
+
+//在调用 task的时候 ，如果task的 缩写 不会和其他的task冲突 ，那么可以直接使用这个 缩写来调用
+//gradle d   ==  gradle dist
+
+
+
+//调用task的时候，如果task 使用驼峰式命名(必须是，另外注意大小写) ，则可以 使用驼峰式的缩写
+//gradle cT == gradle compileTest
+
+
+
+//通过 -b 的指令 来指定 使用哪个构建文件
+//通过 -p 的指令 来指定 使用哪个项目
+//gradle -p -b subBuild/build.gradle sayHi
+
+
+
+//--rerun-tasks
+//强制gradle运行所有任务
+
+
+
+//gradle projects 
+//获取 项目列表
+
+
+
+//gradle tasks 
+// 获取 任务列表
+//--all 用来获取所有任务 ，包括未分类的
+
+
+
+// description = ''    group = ''
+//用来设置 说明  和 分组 ,应该是在闭包中设置的

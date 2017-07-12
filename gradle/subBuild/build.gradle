@@ -1,0 +1,5 @@
+task sayHi{
+	doLast{
+		println 'hello groovy'
+	}
+}
