@@ -1,14 +1,14 @@
-// groovy ±ØĞëÔÚÀà¶¨ÒåÖ®Ç°Ö¸¶¨°ü £¬·ñÔòÊ¹ÓÃÄ¬ÈÏ°ü
+// groovy å¿…é¡»åœ¨ç±»å®šä¹‰ä¹‹å‰æŒ‡å®šåŒ… ï¼Œå¦åˆ™ä½¿ç”¨é»˜è®¤åŒ…
 package com.package
 
 //import 
-//ÀıÈç MarkupBuilder Õâ¸öÀà Èç¹ûÎÒ²» ÊÖ¶¯ import £¬ Ôò ÏÂÃæµÄassert²»³ÉÁ¢
+//ä¾‹å¦‚ MarkupBuilder è¿™ä¸ªç±» å¦‚æœæˆ‘ä¸ æ‰‹åŠ¨ import ï¼Œ åˆ™ ä¸‹é¢çš„assertä¸æˆç«‹
 import groovy.xml.MarkupBuilder
 def xml = new MarkupBuilder()
 assert xml !=null
 
 
-// Groovy »áÎªÎÒÃÇÄ¬ÈÏ µ¼ÈëÒ»Ğ©°ü ¼õÉÙÎÒÃÇµÄ´úÂë
+// Groovy ä¼šä¸ºæˆ‘ä»¬é»˜è®¤ å¯¼å…¥ä¸€äº›åŒ… å‡å°‘æˆ‘ä»¬çš„ä»£ç 
 //import java.lang.*
 //import java.util.*
 //import java.io.*
@@ -20,18 +20,18 @@ assert xml !=null
 
 
 
-// * µ¼Èë£¬ Groovy Ìá¹©ÁËÏñjava Ò»ÑùµÄÒ»ÖÖ·½Ê½£¬ Ê¹ÓÃ ·ûºÅ* ±íÊ¾µ¼Èë°üÖĞËùÓĞµÄÀà
-// ÀıÈç  MarkupBuilder  ºÍ  StreamingMarkupBuilder  ¶¼ÊÇÔÚ groovy.xml ÏÂÃæ
+// * å¯¼å…¥ï¼Œ Groovy æä¾›äº†åƒjava ä¸€æ ·çš„ä¸€ç§æ–¹å¼ï¼Œ ä½¿ç”¨ ç¬¦å·* è¡¨ç¤ºå¯¼å…¥åŒ…ä¸­æ‰€æœ‰çš„ç±»
+// ä¾‹å¦‚  MarkupBuilder  å’Œ  StreamingMarkupBuilder  éƒ½æ˜¯åœ¨ groovy.xml ä¸‹é¢
 import groovy.xml.* 
 assert new StreamingMarkupBuilder()!=null
 
 
 
-// Groovy ÔÊĞí ¾²Ì¬µ¼Èë £¬ Ïàµ±ÓÚ°Ñ·½·¨µ±×ö×Ô¼ºÀàÖĞµÄ¾²Ì¬·½·¨Ò»ÑùÊ¹ÓÃ
+// Groovy å…è®¸ é™æ€å¯¼å…¥ ï¼Œ ç›¸å½“äºæŠŠæ–¹æ³•å½“åšè‡ªå·±ç±»ä¸­çš„é™æ€æ–¹æ³•ä¸€æ ·ä½¿ç”¨
 import static Boolean.FALSE
 assert !FALSE
-//Groovy µÄ¾²Ì¬µ¼Èë ÓëjavaÏàËÆ £¬µ«ÊÇ¸ü¼ÓµÄ¶¯Ì¬£¬GroovyÔÊĞíÄãµÄÀàÖĞ¶¨ÒåºÍ ¾²Ì¬µ¼ÈëµÄ·½·¨  Í¬ÑùµÄÃû×Ö£¬Ö»ĞèÒªÁ©ÕßÓĞ²»Í¬µÄ²ÎÊıÒªÇó
-//ÕâÔÚjavaÖĞÊÇ²»±»ÔÊĞíµÄ  ¡£µ«ÊÇ groovyÊÇÔÊĞíµÄ
+//Groovy çš„é™æ€å¯¼å…¥ ä¸javaç›¸ä¼¼ ï¼Œä½†æ˜¯æ›´åŠ çš„åŠ¨æ€ï¼ŒGroovyå…è®¸ä½ çš„ç±»ä¸­å®šä¹‰å’Œ é™æ€å¯¼å…¥çš„æ–¹æ³•  åŒæ ·çš„åå­—ï¼Œåªéœ€è¦ä¿©è€…æœ‰ä¸åŒçš„å‚æ•°è¦æ±‚
+//è¿™åœ¨javaä¸­æ˜¯ä¸è¢«å…è®¸çš„  ã€‚ä½†æ˜¯ groovyæ˜¯å…è®¸çš„
 import static java.lang.String.format
 
 class SomeClass{
@@ -46,22 +46,22 @@ class SomeClass{
 
 
 
-//¾²Ì¬µ¼Èë±ğÃû
+//é™æ€å¯¼å…¥åˆ«å
 import static Calendar.getInstance as now
 assert now().class == Calendar.getInstance().class
 
 
 
 
-//µ¼Èë±ğÃû
+//å¯¼å…¥åˆ«å
 import java.util.Date as jud
 assert new jud() instanceof java.util.Date
 
 
 
 
-// Groovy Ö§³Ö class ĞÎÊ½ ºÍ ½Å±¾ĞÎÊ½
-//class ĞÎÊ½
+// Groovy æ”¯æŒ class å½¢å¼ å’Œ è„šæœ¬å½¢å¼
+//class å½¢å¼
 //Main.Groovy
 class Main{
     static void main(String... args){
@@ -69,12 +69,12 @@ class Main{
     }
 }
 
-//script ĞÎÊ½ 
-//Main2.Groovy ScriptµÄÒ»ÖÖĞÎÊ½ £¬ÎŞĞèÉùÃ÷Ëü
+//script å½¢å¼ 
+//Main2.Groovy Scriptçš„ä¸€ç§å½¢å¼ ï¼Œæ— éœ€å£°æ˜å®ƒ
 println "hello groovy "
 
-//Script µÄÁíÒ»ÖÖ±íÏÖĞÎÊ½
-//ĞèÒªÌá¹©Ò»¸ö run ·½·¨ 
+//Script çš„å¦ä¸€ç§è¡¨ç°å½¢å¼
+//éœ€è¦æä¾›ä¸€ä¸ª run æ–¹æ³• 
 import org.codehaus.groovy.runtime.InvokerHelper
 class Main2 extends Script{
        def run(){
@@ -84,9 +84,9 @@ class Main2 extends Script{
            InvokerHelper.runScript(Main2,args)
        }
 }
-//ÁíÍâ Èç¹ûÅ×³öÒì³££¬ »áÊ¹ÓÃ ×ª»»Ö®Ç°µÄ ĞĞºÅ ¶ø²»ÊÇÉú³ÉµÄ´úÂëµÄĞĞºÅ
+//å¦å¤– å¦‚æœæŠ›å‡ºå¼‚å¸¸ï¼Œ ä¼šä½¿ç”¨ è½¬æ¢ä¹‹å‰çš„ è¡Œå· è€Œä¸æ˜¯ç”Ÿæˆçš„ä»£ç çš„è¡Œå·
 
-// Script µÄµÚÒ»ÖÖĞÎÊ½ £¬¶¨Òå±äÁ¿
-//int x = 1   »áÔÚÉú³ÉµÄ´úÂëÖĞ  ±»µ±×ö ¾Ö²¿±äÁ¿
-//def x = 1  »á±»µ±×öÈ«¾Ö±äÁ¿
+// Script çš„ç¬¬ä¸€ç§å½¢å¼ ï¼Œå®šä¹‰å˜é‡
+//int x = 1   ä¼šåœ¨ç”Ÿæˆçš„ä»£ç ä¸­  è¢«å½“åš å±€éƒ¨å˜é‡
+//def x = 1  ä¼šè¢«å½“åšå…¨å±€å˜é‡
 

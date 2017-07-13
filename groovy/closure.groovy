@@ -1,11 +1,11 @@
 //Closure
-//Óï·¨£º { [closureParameters->] statements   },ÖĞÀ¨ºÅ¿ÉÑ¡Ìî£¬µ«ÊÇµ±ÓĞ²ÎÊıÊ±  -> ÊÇ±ØĞëµÄ
+//è¯­æ³•ï¼š { [closureParameters->] statements   },ä¸­æ‹¬å·å¯é€‰å¡«ï¼Œä½†æ˜¯å½“æœ‰å‚æ•°æ—¶  -> æ˜¯å¿…é¡»çš„
 
-//µ±Closure×÷ÎªÒ»¸ö¶ÔÏóÊ±
-//±Õ°ü ÊÇgroovy.lang.Closure ÀàµÄÒ»¸öÊµÀı£¬ËùÒÔ¿ÉÒÔ×÷ÎªÈÎºÎÆäËû±äÁ¿±»·ÖÅä
+//å½“Closureä½œä¸ºä¸€ä¸ªå¯¹è±¡æ—¶
+//é—­åŒ… æ˜¯groovy.lang.Closure ç±»çš„ä¸€ä¸ªå®ä¾‹ï¼Œæ‰€ä»¥å¯ä»¥ä½œä¸ºä»»ä½•å…¶ä»–å˜é‡è¢«åˆ†é…
 def listener  ={println it}
 assert listener instanceof Closure
-//Èç¹û²»Ê¹ÓÃdef ¶¨Òå ClosureµÄ»° £¬ ¿ÉÒÔÊ¹ÓÃClosure
+//å¦‚æœä¸ä½¿ç”¨def å®šä¹‰ Closureçš„è¯ ï¼Œ å¯ä»¥ä½¿ç”¨Closure
 Closure listener2 = {->println "hi $it"}
 Closure<Boolean> listener3 = {File file->
 file.name.endWith('.txt')
@@ -13,37 +13,37 @@ file.name.endWith('.txt')
 
 
 
-//µ÷ÓÃ±Õ°ü
+//è°ƒç”¨é—­åŒ…
 def code = {123}
-//Èç¹ûÄãÕâÃ´¶¨ÒåÁË Closure  Äã¿ÉÒÔ Í¨¹ıÃû×Ö+()  À´µ÷ÓÃ
-//»òÕß Í¨¹ı Ãû×Ö.call() À´µ÷ÓÃ
-// Óë·½·¨²»Í¬µÄÊÇ  Closure ×ÜÊÇ»á·µ»ØÒ»¸öÖµ
+//å¦‚æœä½ è¿™ä¹ˆå®šä¹‰äº† Closure  ä½ å¯ä»¥ é€šè¿‡åå­—+()  æ¥è°ƒç”¨
+//æˆ–è€… é€šè¿‡ åå­—.call() æ¥è°ƒç”¨
+// ä¸æ–¹æ³•ä¸åŒçš„æ˜¯  Closure æ€»æ˜¯ä¼šè¿”å›ä¸€ä¸ªå€¼
 assert code()==123
 assert code.call()==123
 
 
-//ClosureµÄ²ÎÊı
-// 1.¿ÉÑ¡µÄ -ÀàĞÍ  2.Ãû×Ö 3.¿ÉÑ¡µÄ -Ä¬ÈÏÖµ
+//Closureçš„å‚æ•°
+// 1.å¯é€‰çš„ -ç±»å‹  2.åå­— 3.å¯é€‰çš„ -é»˜è®¤å€¼
 def closure1 = {int i=1->
      "the value of i is $i"
 }
 assert closure1()=='the value of i is 1'
 
 
-//Òşº¬²ÎÊı
-//µ±Ò»¸ö±Õ°üÃ»ÓĞÃ÷È·¶¨Òå ²ÎÊıÊ±£¬ »áÓĞÒ»¸öÒşº¬µÄ²ÎÊı   it 
+//éšå«å‚æ•°
+//å½“ä¸€ä¸ªé—­åŒ…æ²¡æœ‰æ˜ç¡®å®šä¹‰ å‚æ•°æ—¶ï¼Œ ä¼šæœ‰ä¸€ä¸ªéšå«çš„å‚æ•°   it 
 def closure2 = {"hello $it" }
 assert closure2('groovy') == 'hello groovy'
 
 
-//µ±ÄãÃ÷È·²»ĞèÒª²ÎÊıÊ± ÕâÃ´×ö
+//å½“ä½ æ˜ç¡®ä¸éœ€è¦å‚æ•°æ—¶ è¿™ä¹ˆåš
 def closure3 ={->
     "hi groovy"
 }
 
 
 
-////º¯ÊıµÄ×îºóÒ»¸ö²ÎÊıÊÇ±Õ°üµÄÊ±ºò£¬¿ÉÒÔÊ¡ÂÔÔ²À¨ºÅ
+////å‡½æ•°çš„æœ€åä¸€ä¸ªå‚æ•°æ˜¯é—­åŒ…çš„æ—¶å€™ï¼Œå¯ä»¥çœç•¥åœ†æ‹¬å·
 //def getName(int a,int b,Closure cl){
 //        cl(a,b)
 //}
@@ -54,14 +54,14 @@ def closure3 ={->
 //getName 1,2,{a,b->println "222  a=$a,b=$b"}
 //
 
-//±Õ°üÒ²¿ÉÒÔÊ¹ÓÃ¿É±ä²ÎÊı
+//é—­åŒ…ä¹Ÿå¯ä»¥ä½¿ç”¨å¯å˜å‚æ•°
 def vargsFunc1 = {String ... args -> args.join('')}
 assert vargsFunc1('1','2','3')=='123'
-//Ê¹ÓÃÊı×éµÄ»° Ò²¿ÉÒÔÊµÏÖÏàÍ¬µÄ¹¦ÄÜ
+//ä½¿ç”¨æ•°ç»„çš„è¯ ä¹Ÿå¯ä»¥å®ç°ç›¸åŒçš„åŠŸèƒ½
 def vargsFunc2 = {String [] args -> args.join('') }
 assert vargsFunc2('1','2','3')=='123'
 
-// Èç¹û³ıÁË ¿É±ä²ÎÊıÍâ »¹ÒªÓĞ²ÎÊı£¬ ÄÇÃ´¿É±ä²ÎÊıĞèÒª·Åµ½×îºó
+// å¦‚æœé™¤äº† å¯å˜å‚æ•°å¤– è¿˜è¦æœ‰å‚æ•°ï¼Œ é‚£ä¹ˆå¯å˜å‚æ•°éœ€è¦æ”¾åˆ°æœ€å
 def vargsFunc3 = {int i,String... args
 ->
 println "i=$i ,args = $args"
@@ -71,9 +71,9 @@ vargsFunc3(1,'1','2')
 
 
 //owner delegate and  this
-//ÕâÊÇ´æÔÚ±Õ°üÖĞµÄ¸ÅÄî
-// this µÄÒâË¼
-//µ÷ÓÃgetThisObject ½«·µ»Ø¶¨ÒåclosureµÄÀà£¬Ïàµ±ÓÚÏÔÊ½ Ê¹ÓÃthis
+//è¿™æ˜¯å­˜åœ¨é—­åŒ…ä¸­çš„æ¦‚å¿µ
+// this çš„æ„æ€
+//è°ƒç”¨getThisObject å°†è¿”å›å®šä¹‰closureçš„ç±»ï¼Œç›¸å½“äºæ˜¾å¼ ä½¿ç”¨this
 class Enclosing{
     void run1(){
         def getObject = { getThisObject()}
@@ -86,7 +86,7 @@ def  enclosing1 = new Enclosing()
 enclosing1.run1()
 
 
-//Èç¹û±Õ°üÔÚ ÄÚ²¿ÀàÖĞ¶¨Òå£¬ ÄÇÃ´»á·µ»ØÄÚ²¿Àà ¶ø²»ÊÇÍâ²¿Àà
+//å¦‚æœé—­åŒ…åœ¨ å†…éƒ¨ç±»ä¸­å®šä¹‰ï¼Œ é‚£ä¹ˆä¼šè¿”å›å†…éƒ¨ç±» è€Œä¸æ˜¯å¤–éƒ¨ç±»
 class EnclosedInInnerClass{
     class Inner{
         Closure cl = {this}
@@ -100,7 +100,7 @@ class EnclosedInInnerClass{
 def eiic = new EnclosedInInnerClass()
 eiic.run()
 
-//ÔÚÇ¶Ì×±Õ°üµÄÇé¿öÏÂ £¬ ½«·µ»Ø Íâ²¿Àà  ¶ø²»ÊÇ±Õ°ü
+//åœ¨åµŒå¥—é—­åŒ…çš„æƒ…å†µä¸‹ ï¼Œ å°†è¿”å› å¤–éƒ¨ç±»  è€Œä¸æ˜¯é—­åŒ…
 class NestedClosure{
     void run(){
         def nestedClosures = {
@@ -114,8 +114,8 @@ class NestedClosure{
 
 
 
-//ownerµÄÒâË¼
-//owner »á·µ»ØÒ»¸ö Ö±½Ó±ÕºÏ º¬ÓĞowner±Õ°ü µÄ¶ÔÏó£¬ÎŞÂÛËüÊÇ class »òÕßclosure
+//ownerçš„æ„æ€
+//owner ä¼šè¿”å›ä¸€ä¸ª ç›´æ¥é—­åˆ å«æœ‰owneré—­åŒ… çš„å¯¹è±¡ï¼Œæ— è®ºå®ƒæ˜¯ class æˆ–è€…closure
 class EnclosingOwner{
     void run(){
         def getOwnerMethod = { owner }
@@ -155,8 +155,8 @@ e3.run()
 
 
 //delegate
-//¿ÉÒÔÊ¹ÓÃdelegate »òÕß getDelegate À´·ÃÎÊ±Õ°üµÄ´úÀí
-// Ä¬ÈÏÇé¿öÏÂ ´úÀíÉèÖÃÎª owner
+//å¯ä»¥ä½¿ç”¨delegate æˆ–è€… getDelegate æ¥è®¿é—®é—­åŒ…çš„ä»£ç†
+// é»˜è®¤æƒ…å†µä¸‹ ä»£ç†è®¾ç½®ä¸º owner
 class Enclosing3{
     void run(){
         def func0 = {owner}
@@ -173,7 +173,7 @@ class Enclosing3{
         def ownerMethod = {
             {->owner}.call()
         }
-        //ÕâÀïÓ¦¸Ã¿ÉÒÔÅĞ¶Ï³ö delegate ´ËÊ±ÊÇ owner
+        //è¿™é‡Œåº”è¯¥å¯ä»¥åˆ¤æ–­å‡º delegate æ­¤æ—¶æ˜¯ owner
         assert enclosed()==enclosed
         assert ownerMethod() ==ownerMethod
         
@@ -183,7 +183,7 @@ def e4 = new Enclosing3()
 e4.run()
 
 
-//±Õ°üµÄ ´úÀí¶ÔÏóÊÇ¿ÉÒÔ±»ÉèÖÃµÄ
+//é—­åŒ…çš„ ä»£ç†å¯¹è±¡æ˜¯å¯ä»¥è¢«è®¾ç½®çš„
 class Jack{
     String name
 }
@@ -199,7 +199,7 @@ assert delegateClosure()== 'JACK'
 delegateClosure.delegate = lucy
 assert delegateClosure()=='LUCY'
 
-//ÔÚ±Õ°üÖĞ£¬ÎŞĞèÃ÷È·ÉèÖÃdelegate ¼´¿ÉÊ¹ÓÃdelegate
+//åœ¨é—­åŒ…ä¸­ï¼Œæ— éœ€æ˜ç¡®è®¾ç½®delegate å³å¯ä½¿ç”¨delegate
 class Ryan{
     String name
 }
@@ -209,8 +209,8 @@ r2.delegate = r
 assert r2() == 'RYAN'
 
 
-//delegateµÄ Î¯ÍĞ²ßÂÔ
-//Closure.OWNER_FIRST  owner ÓÅÏÈ delegateÆä´Î  ¡£ÕâÊÇÄ¬ÈÏµÄ²ßÂÔ!!
+//delegateçš„ å§”æ‰˜ç­–ç•¥
+//Closure.OWNER_FIRST  owner ä¼˜å…ˆ delegateå…¶æ¬¡  ã€‚è¿™æ˜¯é»˜è®¤çš„ç­–ç•¥!!
 
 class Ryan1{
     String name
@@ -234,26 +234,26 @@ def ryan2 = new Ryan2()
 ryan2.upper.delegate = ryan1
 assert ryan2.upper()=='RYAN2'
 
-//Closure.DELEGATE_FIRST delegateÓÅÏÈ owner Æä´Î
+//Closure.DELEGATE_FIRST delegateä¼˜å…ˆ owner å…¶æ¬¡
 ryan2.upper.resolveStrategy = Closure.DELEGATE_FIRST
 assert ryan2.upper()=='RYAN1'
 
-//Closure.OWNER_ONLY ½öÕë¶Ô owner
-//Closure.DELEGATE_ONLY  ½öÕë¶Ô delegate
+//Closure.OWNER_ONLY ä»…é’ˆå¯¹ owner
+//Closure.DELEGATE_ONLY  ä»…é’ˆå¯¹ delegate
 
 
 
 
-//ÔÚGstring ÖĞÊ¹ÓÃClosure
-// GString Ö»»áÔÚ ´´½¨µÄÊ±ºò È¥¹ÀÖµ
-//${x}²»ÄÜ´ú±íÒ»¸ö ±Õ°ü 
+//åœ¨Gstring ä¸­ä½¿ç”¨Closure
+// GString åªä¼šåœ¨ åˆ›å»ºçš„æ—¶å€™ å»ä¼°å€¼
+//${x}ä¸èƒ½ä»£è¡¨ä¸€ä¸ª é—­åŒ… 
 def x =1
 def gs = "x=${x}"
 assert gs == 'x=1'
 x = 2
 assert gs !='x=2'
 
-//Èç¹ûÏëÒªÔÚ GString ÖĞ ÊµÏÖÕæÕıµÄ±Õ°ü£¬ÀıÈç¶Ô±äÁ¿½øĞĞÑÓ³Ù¹ÀÖµ £¬ÇëÊ¹ÓÃ ${->x}
+//å¦‚æœæƒ³è¦åœ¨ GString ä¸­ å®ç°çœŸæ­£çš„é—­åŒ…ï¼Œä¾‹å¦‚å¯¹å˜é‡è¿›è¡Œå»¶è¿Ÿä¼°å€¼ ï¼Œè¯·ä½¿ç”¨ ${->x}
 def y = 1
 def gss = "y=${->y}"
 assert gss =='y=1'
@@ -263,7 +263,7 @@ assert gss == 'y=2'
 
 
 //curry(left)
-//curry µÄ¹¦ÄÜÊÇ ÉèÖÃ ×î×ó²àµÄ²ÎÊı£¬²¢·µ»ØÒ»¸öÉèÖÃÁË²ÎÊıÖ®ºóµÄ ±Õ°ü
+//curry çš„åŠŸèƒ½æ˜¯ è®¾ç½® æœ€å·¦ä¾§çš„å‚æ•°ï¼Œå¹¶è¿”å›ä¸€ä¸ªè®¾ç½®äº†å‚æ•°ä¹‹åçš„ é—­åŒ…
 def curry1 = {int a,int b->a+b}
 def curry2 = curry1.curry(1)
 assert curry2(1)==2
@@ -271,7 +271,7 @@ assert curry2(1)==curry1(1,1)
 
 
 //Right curry
-//¿ÉÒÔÉèÖÃ ×îÓÒ²àµÄ²ÎÊı£¬²¢·µ»ØÒ»¸öÉèÖÃÁË²ÎÊıÖ®ºóµÄ±Õ°ü
+//å¯ä»¥è®¾ç½® æœ€å³ä¾§çš„å‚æ•°ï¼Œå¹¶è¿”å›ä¸€ä¸ªè®¾ç½®äº†å‚æ•°ä¹‹åçš„é—­åŒ…
 def curry3 = {int a,String b-> "$b has $a kids"}
 def curry4 = curry3.rcurry('lucy')
 assert curry4(1)=='lucy has 1 kids'
@@ -279,7 +279,7 @@ assert curry4(1)=='lucy has 1 kids'
 
 
 //index based curry
-//Èç¹û±Õ°ü½ÓÊÕ¶àÓÚÁ©¸ö²ÎÊı£¬ ¿ÉÒÔÊ¹ÓÃ ncurry(),È¥Éè¶¨ Ö¸¶¨Ë÷ÒıÎ»ÖÃµÄ²ÎÊıÖµ
+//å¦‚æœé—­åŒ…æ¥æ”¶å¤šäºä¿©ä¸ªå‚æ•°ï¼Œ å¯ä»¥ä½¿ç”¨ ncurry(),å»è®¾å®š æŒ‡å®šç´¢å¼•ä½ç½®çš„å‚æ•°å€¼
 def curry5 = {a,b,c->a+b+c}
 def curry6 = curry5.ncurry(1,1)
 assert curry6(2,3)==6
@@ -296,7 +296,7 @@ println fib(111)
 
 
 //Composition
-//½«Ò»¸ö ±Õ°üµÄ½á¹û ×÷ÎªÁíÍâÒ»¸ö±Õ°üµÄ ²ÎÊı
+//å°†ä¸€ä¸ª é—­åŒ…çš„ç»“æœ ä½œä¸ºå¦å¤–ä¸€ä¸ªé—­åŒ…çš„ å‚æ•°
 def plus2 = {it+2}
 def times3 = {it * 3}
 def timesInPlus = plus2<<times3
@@ -310,7 +310,7 @@ assert plusInTimes(1)== times3(plus2(1))
 
 
 //Trampoline
-//µİ¹éËã·¨Í¨³£ÊÜ×î´ó¶Ñ¸ß¶ÈÏŞÖÆ£¬ÀıÈçÄãµ÷ÓÃÒ»¸öµİ¹é×ÔÉíÌ«¶àµÄ·½·¨£¬×îÖÕ»áÊÕµ½Ò»¸ö StackOverflowException
+//é€’å½’ç®—æ³•é€šå¸¸å—æœ€å¤§å †é«˜åº¦é™åˆ¶ï¼Œä¾‹å¦‚ä½ è°ƒç”¨ä¸€ä¸ªé€’å½’è‡ªèº«å¤ªå¤šçš„æ–¹æ³•ï¼Œæœ€ç»ˆä¼šæ”¶åˆ°ä¸€ä¸ª StackOverflowException
 def factorial
 factorial = { int n, def accu = 1G ->
     if (n < 2) return accu

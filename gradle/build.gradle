@@ -262,3 +262,25 @@ task printProperties{
 		println "age = $age"
 	}
 }
+
+
+
+//如过遇到gradle的问题
+//首先更新至最新版本的 gradle，因为可能已经被修复
+//其次尝试禁用守护进程(--no-daemon)
+
+
+
+//gradle 提供了一套Tooling Api
+//此API 允许执行，监视构建 以及 查询 gradle的相关构建信息
+// def toolingApiVersion = 
+// repositories{
+// 	maven{url 'https://repo.gradle.org/gradle/libs-releases'}
+// }
+
+// dependencies{
+//     compile "org.gradle:gradle-tooling-api:${toolingApiVersion}"
+//     // The tooling API need an SLF4J implementation available at runtime, replace this with any other implementation
+//     runtime 'org.slf4j:slf4j-simple:1.7.10'
+// }
+

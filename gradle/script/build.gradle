@@ -1,0 +1,142 @@
+//Gradle 主要有俩个基本概念  project 和 task
+//每个gradle由单个或多个project组成 
+//每个project又是由单个或多个task组成
+
+//通常我们称build.gradle 为 构建脚本（尽管严格意义上它是 构建配置脚本）
+task sayHello {
+	doLast{
+		println 'hello gradle!'
+	}
+}
+
+//-q 可以抑制gradle日志消息 ，近输出任务输出
+//gradle -q sH
+
+
+//doLast的快捷键 在gradle5.0 中会被遗弃，取而代之的是 doLast  doFirst
+task sayHi <<{
+	println 'hi gradle!'
+}
+
+
+task count<<{
+	4.times{
+		println "$it"
+	}
+}
+
+
+
+//任务依赖
+task func1(dependsOn:sayHi){
+	doLast{
+		println 'func1'
+	}
+}
+
+//任务依赖的任务  被依赖任务的定义 可以迟于依赖任务
+//lazyDependsOn
+task funcx(dependsOn:'funcy'){
+	doLast{
+		println 'funcx'
+	}
+}
+
+task funcy {
+	doLast{
+		println 'funcy'
+	}
+}
+
+
+
+//groovy 可以动态创建task
+4.times{ number->
+	task "task$number"{
+		doLast
+		{
+			println "i am task number $number"		
+		}
+	}
+}
+
+
+//创建任务之后，可以在运行时 动态的添加依赖关系
+//例如我上面创建了 4个task task0,task1,task2,task3
+task0.dependsOn(task2,task1,task3)
+
+
+//可以通过API访问task，用来添加action
+task func2{
+	doLast{
+			println 'normal '
+	}
+}
+
+func2.doFirst{
+	println 'before normal'
+}
+
+func2.doLast{
+	println 'after normal'
+}
+
+func2{
+	doLast{
+		println 'after after normal'
+	}
+}
+
+
+
+//可以通过ext.xxxx  来替task设置额外属性
+task func3{
+	ext.nameProperty = 'jack'
+}
+
+task func4{
+	doLast{
+		println "func3 name = $func3.nameProperty"
+	}
+}
+
+
+
+//设置默认task
+defaultTasks 'clean','run'
+task clean{
+	doLast{
+			println "clean $version"
+	}
+}
+
+task run<<{
+	println "run $version"
+}
+
+//运行 gradle -q 时， 默认会执行 clean  和run
+
+//gradle 具有配置阶段 和 执行阶段
+//在配置阶段之后，gradle 已经知道所有需要执行的任务
+//gradle 提供了一个hook 方法 来利用这些信息
+gradle.taskGraph.whenReady{
+	taskGraph-> if (taskGraph.hasTask(run)) {
+		version = '1.0.0.run'
+	}else{
+		version = '1.0.0.clean'
+	}
+}
+
+//在build.gradle 中 所有未定义的方法/属性 都会委派给 Project 对象去使用
+println name
+println project.name
+
+//this 在嵌套闭包的情况下 ，会返回外部类
+//owner 在嵌套闭包的情况下，会返回外部闭包
+task func6{
+	doLast{
+		println "name = $name"
+		println "this.name = ${this.name}"
+		println "owner.name = ${owner.name}"
+	}
+}
