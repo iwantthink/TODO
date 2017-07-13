@@ -101,3 +101,164 @@ task dist(dependsOn:[compile,test]){
 
 // description = ''    group = ''
 //用来设置 说明  和 分组 ,应该是在闭包中设置的
+
+
+
+//查看特定任务的详细信息
+//gradle -q help --task taskName(指定任务名称)
+
+
+
+//列出项目依赖关系
+//gradle dependencies projectName(指定项目名称):dependencies
+
+
+
+//获取指定项目的属性列表
+//gradle projectName(项目名称):properties
+
+
+
+//通过添加 指令 --profile  , 可以记录构建运行时的一些信息 ， 并写入报告 build/reports/profile 目录
+
+
+
+//通过-m的指令，可以显示任务的执行顺序 而不去真正的执行
+// gradle -m gradle
+
+
+
+//gradle wrapper  解决了用户安装复杂， 版本不正确的工具，是开始gradle构建的首选方式
+//gradlew <task>
+//gradlew 会被绑定在一个指定版本的gradle ， 所以当你用这个命令时，它会去下载相应的版本，并使用它来构建
+//构成gradle wrapper的目录
+// gradle(unix shell script)    gradlew.bat(windows batch file)  
+//gradle/wrapper/gradle-wrapper.jar       gradle/wrapper/gradle-wrapper.properties 
+//gradle 可以在 $user_home/.gradle/wrapper/dists
+
+
+
+// gradle守护程序
+// gradle在JVM上运行，并且需要几个支持库。有时候看起来运行比较慢，gradle Daemon就是为了解决这个问题
+// gradle Daemon 会长久的存活在后台
+// 通过--status 指令  查看gradle Daemon 的状态列表
+// gradle --status
+
+
+
+//禁用Daemon
+// 常见方法是在USER_HOME/.gradle/gradle.properties中 添加 org.gradle.daemon = FALSE
+
+
+//停止Daemon
+//使用--stop
+//gradle --stop
+
+
+
+//开启Daemon
+//gradle --daemon
+
+
+
+//如果没有现在闲置的空守护进程 ，gradle将会启动一个新的Daemon
+// 另外gradle会杀死已经闲置了 3个小时或者更长时间的daemon
+
+
+
+//如果构建环境 没有指定最大堆大小，守护进程将使用1GB的堆内存
+//可以为 daemon 设置指定使用内存
+
+
+
+//设置依赖
+//compile   runtime   testCompile  testRuntime
+// compile group:'',name:'',version:''
+/*
+	dependencies{
+		compile group:name:version
+	}
+*/
+
+
+//默认Gradle 是没有定义任何存储库 。至少需要定义一个 ，才能使用外部依赖
+/*
+	repositories{
+		mavenCentral()
+	}
+
+	repositories{
+		jcenter()
+	}
+	指定maven库
+	repositories{
+		maven{
+			url "http://repo.xx.xx.xx"
+		}
+	}
+	//远程ivy 库
+	repositories{
+		ivy{
+			url ""
+		}
+	}
+	//本地ivy库
+	repositories{
+		ivy{//url可以引用本地目录
+			url "../repo"
+		}
+	}
+
+
+*/
+
+
+
+//上传 发布产品
+//利用uploadArchives task 
+/*
+	发布到ivy
+	uploadArchives {
+		repositories{
+			ivy {
+				credentials{
+					username ''
+					password ''
+				}
+				url ''
+			}
+		}
+	}
+
+
+	发布maven，还需要单独的apply maven插件
+	apply plugin:'maven'
+	uploadArchives{
+		repositories{
+			mavenDeployer{
+				repository(url:'')
+			}
+		}
+
+	}
+
+	
+*/
+
+
+
+//执行多项目任务
+//建议指定路径
+//gradle :subBUild:build
+//gradle taskName 这种方式也可以 ，不过最好只在单项目中使用
+
+
+
+
+//build.gradle  可以从 gradle.properties 中获取数据。。。
+task printProperties{
+	doLast{
+		println "userName = $userName"
+		println "age = $age"
+	}
+}
