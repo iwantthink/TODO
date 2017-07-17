@@ -103,12 +103,12 @@ task func4{
 
 
 //设置默认task
-defaultTasks 'clean','run'
-task clean{
-	doLast{
-			println "clean $version"
-	}
-}
+// defaultTasks 'clean','run'
+// task clean{
+// 	doLast{
+// 			println "clean $version"
+// 	}
+// }
 
 task run<<{
 	println "run $version"
@@ -128,8 +128,12 @@ gradle.taskGraph.whenReady{
 }
 
 //在build.gradle 中 所有未定义的方法/属性 都会委派给 Project 对象去使用
-println name
-println project.name
+// println "name = $name"
+// println "project.name = ${project.name}"
+// println "path = $path"
+// println "description = $description"
+// println "buildDir = ${buildDir.path}"
+// println "projectDir = ${projectDir.path}"
 
 //this 在嵌套闭包的情况下 ，会返回外部类
 //owner 在嵌套闭包的情况下，会返回外部闭包
@@ -139,4 +143,486 @@ task func6{
 		println "this.name = ${this.name}"
 		println "owner.name = ${owner.name}"
 	}
+}
+
+
+
+// Project 提供了一些属性
+/*
+	Name 		Type  		Default Value
+	project  	Project   	The project instance
+	name 		String		the name of the project directory	
+	path		String		the absolute path of the project
+	description String		a description for the project
+	projectDir  File 		the directory containing the build script
+	buildDir    File 		projectDir/build
+	group		Object 		
+	version		Object
+	ant			AntBuilder  an AntBuilder instance
+*/
+
+
+
+//脚本api ，当gradle 执行script 时，会将脚本编译成一个实现了Script的 类，这以为 script中的方法 属性 都可以用！
+
+
+
+//声明变量
+//local variables , extra properties
+//局部变量 用def 声明，且只能在被定义的地方可见(Groovy特征)
+def dest = 'dest'
+task copy(type:Copy){
+	from "hello.txt"
+		//传的是路径
+	into dest
+}
+
+
+
+
+//额外的属性  可以用 ext 属性添加
+//project  task source-set 都可以添加
+//ext可以一次性添加 多个属性
+//引用的时候 直接使用这个额外属性的名称即可
+project.ext{
+	emailDesc = 'this is test text'
+	emailAddress = 'mychocolateisus@gmail.com'
+}
+
+task func7{
+	doLast{
+		println emailDesc
+	}
+}
+
+
+//TODO
+//在任意对象中配置 属性....貌似不行！！！！！！！！！
+// task func8 {
+// 	doLast{
+// 		def file = configure(new File("hello.txt")){
+// 			startT = 'startT'
+// 			endT = 'endT'
+// 		}
+// 		println file.startT
+// 	}
+// }
+
+// apply plugin: 'java'
+
+// task configure { 
+//     doLast { 
+//         def pos = configure（new FieldPosition（10））{ 
+//             beginIndex = 1 
+//             endIndex = 5 
+//         } 
+//         println pos.beginIndex 
+//         println pos.endIndex 
+//     } 
+// }
+
+
+
+
+//TODO  貌似也不行。。
+//可以通过使用单独的一个build.gradle 文件 来充当配置
+//例如  other.gradle
+// task func9{
+// 	doLast{
+// 		def cl = new File('user')
+// 		apply from:'other.gradle',to:cl
+// 		println cl.beginIndex
+// 		println cl.endIndex
+// 	}
+// }
+
+
+//根据groovy的语法 ，一个property 会自动生成 get/set方法
+
+
+
+//方法调用的时候 可以选择 加括号 或者不加括号
+//需要注意的是 当方法没有参数时..可能会被当做 属性来处理
+def method1(){
+	println 'hello'
+}
+method1()
+
+def method2(a){
+	println "method2 a=$a"
+}
+method2 1
+method2(1)
+
+
+
+//apply 方法 实际需要的是 一个 键值对
+//当方法的最后一个参数是 闭包时， 可以把闭包放到 方法调用之后 
+def method3(Closure cl){
+	cl()
+}
+// 以下三种调用方法的方式 是一样的效果
+method3(){
+	println 'method3 1'
+}
+method3({println 'method3 2'})
+method3 {
+	println 'method3 3'
+}
+method3 {
+	println "delegate = "+delegate
+	println "project.allprojects = "+ project.allprojects
+}
+
+apply plugin:'java'
+
+// dependencies {
+//     assert delegate == project.dependencies
+//     println 'dependencies is running'
+//     testCompile('junit:junit:4.12')
+//     delegate.testCompile('junit:junit:4.12')
+// }
+
+method3 {
+	println "owner = $owner"
+	println "delegate = $delegate"
+	println "this = $this"
+	assert delegate != project
+	assert this !=project
+	assert owner !=project
+	assert owner == delegate
+}
+
+def toolingApiVersion = gradle.gradleVersion
+println 'toolingApiVersion = '+toolingApiVersion
+
+repositories {
+    maven { url 'https://repo.gradle.org/gradle/libs-releases' }
+}
+
+dependencies {
+    compile "org.gradle:gradle-tooling-api:${toolingApiVersion}"
+    // The tooling API need an SLF4J implementation available at runtime, replace this with any other implementation
+    runtime 'org.slf4j:slf4j-simple:1.7.10'
+}
+
+
+//gradle 自动帮开发者导入了 一大堆的库
+//gradle  可以通过 tooling api 来标记不同的任务结果
+/*
+标签： no label or EXECUTED     说明：任务已经执行完成     
+情况： 当任务有动作且gradle确定task 是作为构建的一部分
+
+标签：UP-TO-DATE    说明：任务输出没有改变
+情况： 1.当一个任务有输入有输出并且这些没有改变
+	   2.当一个任务有action，并且task输出没有改变
+	   3.当一个任务没有action，但是又 dpendencies 。并且这些dependencies 已经是UP-TO-DATE,SKIPPED or from CACHE
+	   4.当一个任务没有acton，也没有dependencies
+
+
+标签:FROM-CACHE 说明：任务的输出是从之前的执行结果中获得
+情况:当任务存有构建输出缓存
+
+标签：SKIPPED 说明：任务action'被跳过
+情况:1.当一个任务被明确的从 命令行中排除在外
+	 2.当一个任务 返回了 false
+
+标签：NO-SOURCE 说明：任务无需执行其action
+情况: 任务有输入有输出，但是没有source ，例如：source files are .java files for JavaCompile
+*/
+
+
+
+
+//定义任务
+//可以使用字符串作为任务名称
+/*
+ task myTask
+ task myTask { configure closure }
+ task myTask(type: SomeType)
+ task myTask(type: SomeType) { configure closure }
+*/
+
+task ('task4'){
+	doLast{
+		println 'hello task4'
+	}
+}
+
+task (task5,type:Copy){
+	from 'hello.txt'
+	into 'copy'
+}
+
+task task6{
+	doLast{
+		println 'hello task6'
+	}
+}
+
+//创建任务的另一种方式
+tasks.create(name:'task7'){
+	group 'test'
+	description 'test tasks.create'
+	doLast{
+		println 'task7'
+	}
+}
+
+tasks.create(name:'task8',type:Copy){
+	group 'test'
+	from 'hello.txt'
+	into 'copy'
+}
+
+
+
+
+//可以将任务作为属性来使用
+println task8.name
+println project.task8.name
+
+
+//通过tasks collection  来访问task
+println tasks.task8.name
+println tasks['task8'].name
+
+//可以通过tasks.getByPath()方法 来获取  使用任务名称 ，相对路径 或者绝对路径调用该方法
+
+project(':script'){
+	task task9
+}
+
+println tasks.getByPath('task9').path
+println tasks.getByPath(':script:task9').path
+
+//配置任务  
+//方式1
+Copy copy1 = task(task10,type:Copy)
+copy1.from '/'
+copy1.into 'task10'
+copy1.include('**.txt')
+
+//方式2
+task task11(type:Copy)
+
+task11{
+	from '/'
+	into 'task11'
+	include '**.txt'
+}
+
+//方式3
+task (task12,type:Copy){
+	from '/'
+	into 'task12'
+	include '**.gradle'
+}
+
+
+
+//为task添加dependencies
+//添加 来自其他project的依赖
+project(':script'){
+	task task13(dependsOn:':script2:task14')<<{
+		println 'scrip task13 is runned'
+	}
+}
+
+project(':script2'){
+	task task14{
+		doLast{
+			println 'script2 task14 is runned'
+		}
+	}
+}
+
+//同一project中 
+//注释掉 下面也可以用
+// task6.dependsOn task7 
+
+
+//可以使用一个闭包 来返回闭包
+task6.dependsOn {
+	tasks.findAll{
+		it.name.startsWith('task7')
+	}
+}
+
+
+
+
+//Ordering task
+//mustRunAfter shouldRunAfter
+task task15{
+	doLast{
+		println 'task15'
+	}
+}
+task task16{
+	doLast{
+		println 'task16'
+	}
+}
+//只有 俩个任务同时调用时，规则才会生效
+//运行时 使用--continue , 可以在任务失败之后 继续执行
+// task15.mustRunAfter task16
+
+task15.shouldRunAfter task16
+
+task taskA<<{
+	println 'taskA'
+}
+
+task taskB<<{
+	println 'taskB'
+}
+
+task taskC<<{
+	println 'taskC'
+} 
+//如果添加了 依赖关系， 那么 shouldRunAfter 不起作用,另外不能再添加mustRunAfter
+taskA.dependsOn(taskB)
+taskB.dependsOn(taskC)
+taskC.shouldRunAfter taskA
+
+
+//通过group 设置分组
+//通过 description 设置描述
+
+
+
+//通过overwrite  覆盖任务
+//如果不添加overwrite ，那么会抛出一个异常 表示任务已经存在
+
+task task17<<{
+	println 'task17'
+}
+task task17(overwrite:true)<<{
+	println "task17 overwrited"
+}
+
+
+
+//通过onlyIf 来跳过任务
+task task18<<{
+	println 'task18'
+}
+task18.onlyIf {
+	!project.hasProperty('skiptask18')
+}
+//通过-P 设置属性
+//运行gradle -q task18 -Pskiptask18
+
+
+
+//通过抛出StopExecutionException
+task task19<<{
+	println 'task19'
+}
+task19.doFirst{
+	if (true) {
+		throw new StopExecutionException()
+	}
+}
+task task20(dependsOn:task19) <<{
+	println 'task20 not affected'
+}
+
+
+//task 拥有一个 enabled  的属性
+task task21<<{
+	println 'task21'
+}
+task21.enabled = false
+
+
+//UP-TO-DATE CHECK
+//Task.getInputs()   TaskInputs
+//Task.getOutputs()   TaskOutputs
+//Task.getDestroyables()  TaskDestroyables
+
+
+// task processTemplatesAdHoc {
+//     inputs.property("engine", TemplateEngineType.FREEMARKER)
+//     inputs.files(fileTree("src/templates"))
+//     inputs.property("templateData.name", "docs")
+//     inputs.property("templateData.variables", [year: 2013])
+//     outputs.dir("$buildDir/genOutput2")
+
+//     doLast {
+//         // Process the templates here
+//     }
+// }
+
+//生命周期任务
+//许多 gradle 插件 定义了自己的声明周期任务，以方便执行特定的操作
+
+
+
+
+//20 -----------------------------------------------------------------------------------------
+//locating file  Project.file()
+//使用相对路径
+File file1 = file('hello.txt')
+println "file1 = ${file1.getText()}"
+//使用绝对路径
+File file2 = file(file1.absolutePath)
+println "file2 = ${file2.getText()}"
+//使用具有相对路径的File对象
+File file3 = file(new File('hello.txt'))
+println "file3 = ${file3.getText()}"
+
+
+//file 还可以理解 URL  例如 file:/some/path.xml
+
+
+
+
+//FileCollection
+//通过files()获得
+//可以将 集合，迭代 映射 和数组传给此方法。这些将会被展开并转换成实例
+FileCollection collection1 = files('hello.txt',new File('other.gradle'))
+FileCollection collection2 = files('hello.txt')
+collection1.each{
+	println "file name =${it.name}"
+}
+//将FileCollection转换成　各种类型
+Set set1 = collection1.files
+Set set2 = collection1 as Set
+List list1 = collection1 as List
+String path1 = collection1.asPath
+//以下俩个方法当FileCollection只存在一个 File时可以使用
+File file4 = collection2.singleFile
+File file5 = collection2 as File
+
+
+
+//添加和减去 FileCollection
+def union1 = collection1 + files('build.gradle')
+union1.each{
+	println "union1 file name = ${it.name}"
+}
+def different1 = collection1 - files('hello.txt')
+different1.each{
+	println "different1 file name = ${it.name}"
+}
+
+
+
+
+task list1<<{
+	File srcDir
+
+	FileCollection collection = files {srcDir.listFiles()}
+
+	srcDir = file('src')
+	println "Contents of $srcDir.name"
+	collection.collect {
+		relativePath(it)
+	}.sort().each {
+		println it
+	}
+
+
 }
