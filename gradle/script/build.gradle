@@ -626,3 +626,59 @@ task list1<<{
 
 
 }
+
+
+
+
+//文件树是按照层次排列文件的集合
+//由FileTree 表示，其扩展了FileCollection
+//Project.fileTree(Map) 
+
+FileTree tree1 = fileTree(dir:'src')
+//添加 包含和不包含的规则
+// tree1.include '*.txt'
+tree1.exclude '*.gradle'
+tree1.each{
+	println "FileTree $it.name"
+}
+
+
+
+//创建方式2
+tree1 = fileTree('src').include('*.gradle')
+
+//创建方式3
+tree1 = fileTree('src'){
+	include '*.txt'
+}
+
+//创建方式4 通过map创建
+
+tree1 = fileTree(dir:'src',include:'*.txt')
+tree1 = fileTree(dir:'src',include:['*.txt','*.gradle'])
+tree1 = fileTree(dir:'src',include:'',exclude:'')
+
+
+//遍历FileTree
+tree1.each{
+	println "file name = $it.name"
+}
+//筛选FileTree
+FileTree filtered1 = tree1.matching{
+	include '*.gradle'
+}
+
+// Add trees together
+FileTree sum = tree + fileTree(dir: 'src')
+
+// Visit the elements of the tree
+tree.visit {element ->
+    println "$element.relativePath => $element.file"
+}
+
+
+
+//可以将 zip or tar 作为文件树 
+//以下俩个方法会返回FileTree
+//Project.zipTree(Object)
+//Project.tarTree(Object)
