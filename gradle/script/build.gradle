@@ -656,23 +656,24 @@ tree1 = fileTree('src'){
 
 tree1 = fileTree(dir:'src',include:'*.txt')
 tree1 = fileTree(dir:'src',include:['*.txt','*.gradle'])
-tree1 = fileTree(dir:'src',include:'',exclude:'')
+tree1 = fileTree(dir:'src',include:'*',exclude:'')
 
-
-//遍历FileTree
-tree1.each{
-	println "file name = $it.name"
-}
 //筛选FileTree
 FileTree filtered1 = tree1.matching{
-	include '*.gradle'
+	include '*.txt'
 }
 
+//遍历FileTree
+filtered1.each{
+	println "file name = $it.name"
+}
+
+
 // Add trees together
-FileTree sum = tree + fileTree(dir: 'src')
+FileTree sum = filtered1 + fileTree(dir: 'src',include:'*.txt')
 
 // Visit the elements of the tree
-tree.visit {element ->
+sum.visit {element ->
     println "$element.relativePath => $element.file"
 }
 
@@ -682,3 +683,164 @@ tree.visit {element ->
 //以下俩个方法会返回FileTree
 //Project.zipTree(Object)
 //Project.tarTree(Object)
+
+// FileTree someTar1 = tarTree(resources.gzip('xxx.ext'))
+// someTar1.each{
+// 	println it.name
+// }
+
+
+
+
+//指定一组输入文件
+// task compile1(type:JavaCompile){
+// 	source = file('src')
+// }
+//source= file('src') 接受一个file对象
+//source = 'src' 接收路径
+//source = ['src','dest']  可以使用集合来指定多个源目录
+//source = fileTree(dir:'src').matching{ include '*.gradle'} 可以接收一个fileTree
+//source = { file('src').listFiles().findAll{ it.name.endsWith('.zip')}.collect{zipTree(it)}   }
+ 
+
+
+
+ //Copying file
+ //复制文件时，可以过滤内容 
+ //需要提供 from   into   
+
+ task copy2(type:Copy){
+ 	from 'src'
+ 	into 'dest'
+ }
+
+ //from 可以接收一个files()方法作为参数
+ //当参数被解析时，如果是目录，则该目录下的所有内容将被递归复制到目标目录下（注意：不是目录本身）
+ //当参数被解析后，不存在，则会忽略
+ //当参数是task时，即取 task 的输出结果，并且该task会被添加为Copy task的依赖
+
+ task copy3(type:Copy){
+ 	//目录
+ 	from 'src'
+ 	//单个文件
+ 	from 'src/b.txt'
+ 	//task的输出
+ 	// from copyTask
+ 	//明确指定任务的输出
+ 	// from copyTaskWithPatterns.outputs
+ 	//指定zip file
+ 	// from zipTree('src/xx.zip')
+ 	// into { getDestDir()}
+ }
+
+
+
+
+ //在copy时，对输入文件进行筛选
+ task copy4(type:Copy){
+ 	from 'src'
+ 	into 'copy4'
+ 	include '*.txt'
+ 	//传入闭包的话 会给闭包一个 FileTree 参数
+ 	exclude {
+ 		it.file.name.startsWith 'a'
+ 	}
+ }
+
+
+
+ //除了使用 定义一个task 指定Copy 类型外，  Project 也提供了copy 方法
+ task copy5<<{
+ 	copy{
+ 		from 'src'
+ 		into 'copy5'
+ 	}
+ }
+
+ task copy6{
+ 	inputs.file copy2
+ 	outputs.dir 'copy6'
+ 	doLast{
+ 		copy{
+ 			from copy2
+ 			into 'copy6'
+ 		}
+ 	}
+ }
+
+//重命名 file
+ task rename1(type:Copy){
+ 	from 'hello.txt'
+ 	into '/'
+ 	rename{
+ 		it.replace('hello','hi')
+ 	}
+ }
+
+//嵌套输出 
+task copy7(type:Copy){
+	into 'copy7'
+	exclude '*.txt'
+	from('src'){
+		include '*'
+	}
+
+	into('copy7') {
+		exclude '*.java'
+		from 'src'
+	}
+}
+
+//Sync 是扩展自Copy
+//与copy的区别就是， Sync 会将文件先全部复制到 目标目录下，然后再将不需要的删除
+task copy8(type:Sync){
+	from 'src'
+	into 'copy8'
+}
+
+
+
+//创建 zip
+//默认 应该是生成在buiild下
+//命名规则应该是 projectName-version.type 
+//version 可以在task中指定。。 貌似在 全局设置version 没用！
+//baseName 可以替换掉 projectName 
+//baseName - appendix - version - classifier .type
+task zip1(type:Zip){
+	version = 1.5
+	baseName = 'xixixixi'
+	appendix = 'appendix'
+	classifier = 'classifier'
+	from 'src'
+}
+
+
+
+
+// 22--------------------------------------------------------------
+//build LifeCycle
+// Gradle 构建有三个不同阶段  
+// 1.initialization  gradle 决定哪些项目将参与构建，并且为每个project创建一个实例
+// 2.Configuration  作为构建一部分的构建脚本会被执行
+// 3.Execution  gradle 确定了一系列任务（在2阶段 被创建 和 配置的），然后gradle按顺序执行每个任务
+
+
+
+//Settings file
+//除了构建脚本 build.gradle之外，gradle 还提供了一个 settings.gradle 
+//settings.gradle 在初始化阶段执行。另外 多项目构建 必须有settings.gradle 
+
+println "this is executed during the Configuration phase"
+
+task configured{
+	println "this is executed during the Configuration phase"
+
+	doLast{
+		println "this is executed during the Execution phase"
+	}
+
+	doFirst{
+		println "this is executed during the Execution phase"
+	}
+
+}
