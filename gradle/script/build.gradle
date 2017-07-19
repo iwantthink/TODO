@@ -834,7 +834,6 @@ println "this is executed during the Configuration phase"
 
 task configured{
 	println "this is executed during the Configuration phase"
-
 	doLast{
 		println "this is executed during the Execution phase"
 	}
@@ -843,4 +842,26 @@ task configured{
 		println "this is executed during the Execution phase"
 	}
 
+}
+
+//属性访问 和 方法调用 被project 代理
+//同理 属性访问 和 方法调用 在settings.gradle 中 被 settings 代理
+
+
+
+//通过以下设置 可以在 task被添加到project时立刻接收到通知
+//这可以用来设置一些默认值或行为（task在Build file中可用之前）
+tasks.whenTaskAdded{
+	it.ext.srcDir = 'src'
+}
+
+task task22<<{
+	println "task22 srcDir =$srcDir "
+}
+
+
+//task 执行图绘制完毕
+//应该是配置结束
+gradle.taskGraph.whenReady{
+	println "taskGraph.whenReady =  $it.name"
 }
