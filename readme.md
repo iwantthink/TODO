@@ -10,3 +10,6 @@ code review
 学习gradle ...
 
 自定义view 加深
+
+
+**做一个做计划（记忆曲线）的demo apk**
