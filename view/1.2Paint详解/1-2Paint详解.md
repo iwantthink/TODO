@@ -1,22 +1,22 @@
-#Paint的深入理解与使用
+# Paint的深入理解与使用
 ---
-##1.颜色
+## 1.颜色
 基本颜色->ColorFilter->Xfermode
-###1.1基本颜色
+### 1.1基本颜色
 Canvas.drawColor/ARGB()-颜色参数  
 Canvas.drawBitmap()-Bitmap参数  
 Canvas 图形或者文字绘制 -paint 参数
   
 **Paint**设置颜色有俩种方式：一种是直接用Paint.setColor/ARGB(),另一种是使用Shader来指定着色方案
-####1.1.1 直接设置颜色
+#### 1.1.1 直接设置颜色
 `Paint paint = new Paint();`     
 `paint.setColor(Color.parseColor("#009966"))`
 `paint.setARGB(0,100,100,100)`
-####1.1.2 setShader(Shader shader)
+#### 1.1.2 setShader(Shader shader)
 shader又被称为着色器，是图形领域一个通用的概念，与直接设置颜色的区别是：着色器设置的是一个颜色方案，或者说是一套着色规则。当设置了shader之后，paint在绘制图形和文字时就不使用setColor/ARGB了。 
    
 另外Shader这个类，我们通常不会直接使用，而是使用其子类BitmapShader,ComposeShader,LinearGradient,RadialGradient,SweepGradient
-#####1.1.2.1 LinearGradient 线性渐变  
+##### 1.1.2.1 LinearGradient 线性渐变  
 设置俩个点和俩种颜色，以这俩个点为端点，渐变出的颜色用来绘制。
 <pre>
 	Shader shader = new LinearGradient(0,0,100,100,Color.RED,Color.GREEN,Shader.TileMode.CLAMP);
@@ -25,20 +25,20 @@ shader又被称为着色器，是图形领域一个通用的概念，与直接�
 </pre>
 需要注意的是 模式：CLAMP 会在端点之外 延续端点处颜色，MIRROR 镜像模式，REPEAT 重复模式
 
-#####1.1.2.2 RadicalGradient 辐射渐变
+##### 1.1.2.2 RadicalGradient 辐射渐变
 就是从中心向周围辐射渐变
   
 与LinearGradient 类似的使用方法。。具体去查文档就可以了。同样也有三个模式  CLAMP ,REAPEAT ,MIRROR
 
-#####1.1.2.3 SweepGradient 扫描渐变
+##### 1.1.2.3 SweepGradient 扫描渐变
 有点类似雷达扫描的那种效果
 
-#####1.1.2.4 BitmapShader
+##### 1.1.2.4 BitmapShader
 就是用Bitmap的像素来作为图形或文字的填充
 例如：利用canvas.drawCircle() 和 setShader(bitmapShader),可以实现绘制圆形bitmap的效果  
 **注意：默认的bitmap是画在左上角的！另外bitmap大小不会更改的**
 
-#####1.1.2.5 ComposeShader 混合着色器
+##### 1.1.2.5 ComposeShader 混合着色器
 就是把俩个着色器一起使用  
 注意：ComposeShader()需关闭硬件加速  
 这里注意一个参数 ProterDuff.Mode，是用来指定俩个图案共同绘制时的颜色策略。它是一个enum，**[颜色策略」的意思**，就是说把源图像绘制到目标图像处时应该怎样确定二者结合后的颜色，而对于 ComposeShader(shaderA, shaderB, mode) 这个具体的方法，就是指应该怎样把 shaderB 绘制在 shaderA 上来得到一个结合后的 Shader。  
@@ -49,12 +49,12 @@ shader又被称为着色器，是图形领域一个通用的概念，与直接�
 具体效果直接看官方文档https://developer.android.com/reference/android/graphics/PorterDuff.Mode.html
 
 
-###1.2 setColorFilter(ColorFilter colorFilter)  
+### 1.2 setColorFilter(ColorFilter colorFilter)  
 为绘制设置颜色过滤。颜色过滤的意思，就是为绘制的内容设置一个统一的过滤策略，然后 Canvas.drawXXX() 方法会对每个像素都进行过滤后再绘制出来。
   
 ColorFilter 并不会直接被使用，而是会使用其子类：  
 ColorMatrixColorFilter,LightingColorFilter,PorterDuffColorFilter
-####1.2.1 LightingColorFilter  
+#### 1.2.1 LightingColorFilter  
 用来模拟简单的光照
   
 `LightingColorFilter (int mul, int add)`  
@@ -71,13 +71,13 @@ R' = R * 0x0 / 0xff + 0x0 = 0 // 红色被移除
 G' = G * 0xff / 0xff + 0x0 = G  
 B' = B * 0xff / 0xff + 0x0 = B    
 
-####1.2.2 PorterDuffColorFilter  
+#### 1.2.2 PorterDuffColorFilter  
 使用一个指定的颜色和一种指定的PorterDuff.Mode来与绘制对象进行合成。  
 就是与ComposeShader相似，只是PorterDuffColorFilter 只能指定一种颜色作为源，而不能是一个Bitmap  
 >src是所设置的color  
 >dst是所绘制的图形  
   
-####1.2.3 ColorMatrixColorFilter  
+#### 1.2.3 ColorMatrixColorFilter  
 使用一个ColorMatrix来对颜色进行处理  
 其内部是一个4*5的矩阵：  
 [ a, b, c, d, e,  
@@ -93,7 +93,7 @@ A’ = p*R + q*G + r*B + s*A + t;
 另外ColorMatrix有些自带的方法可以做简单的转换，例如setSaturation(float sat)来设置饱和度，当然也可以自己手动设置每一个原色来进行调整  
 参考：https://github.com/chengdazhi/StyleImageView
 
-###1.3 setXfermode(Xfermode xfermode)  
+### 1.3 setXfermode(Xfermode xfermode)  
 处理的是颜色遇上view的问题，其实就是transfer mode ,用X 替代trans 是一种美国人喜欢的简写。。。。。  
 Xfermode 严谨地讲， Xfermode 指的是你要绘制的内容和 Canvas 的目标位置的内容应该怎样结合计算出最终的颜色。但通俗地说，其实就是要你以绘制的内容作为源图像，以 View 中已有的内容作为目标图像，选取一个 PorterDuff.Mode 作为绘制内容的颜色处理方案  
 
@@ -124,20 +124,20 @@ PorterDuff.Mode 在Paint中一共有三处被用到，其工作原理都一样�
 
 **canvas.saveLayer(null,null,Canvas.ALL_SAVE_FLAG);**
   
-##2.效果  
+## 2.效果  
 效果类的API,指的就是抗锯齿,填充/轮廓,线条宽度等等  
-###2.1 setAntiAlias(Boolean aa)设置抗锯齿  
+### 2.1 setAntiAlias(Boolean aa)设置抗锯齿  
 Paint 构造方法里也可以打开。。  
-###2.2 setStyle(Paint.Style style)  
+### 2.2 setStyle(Paint.Style style)  
 设置线条风格，  FILL/STROKE/FILL_AND_STOKE  
-###2.3 线条形状  
+### 2.3 线条形状  
 设置线条形状有四个方法:  
 setStrokeWidth(float width)  
 setStrokeCap(Paint.Cap cap)   
 setStrokeJoin(Paint.Join join)  
 setStrokeMiter(float miter)
   
-####2.3.1 setStokeWidth(float width)
+#### 2.3.1 setStokeWidth(float width)
 设置线条宽度，单位px,默认值0
 
 >线条宽度 0 和 1 的区别
@@ -146,24 +146,24 @@ setStrokeMiter(float miter)
 > 
 > 其实这个和后面要讲的一个「几何变换」有关：你可以为 Canvas 设置 Matrix 来实现几何变换（如放大、缩小、平移、旋转），在几何变换之后 Canvas 绘制的内容就会发生相应变化，包括线条也会加粗，例如 2 像素宽度的线条在 Canvas 放大 2 倍后会被以 4 像素宽度来绘制。而当线条宽度被设置为 0 时，它的宽度就被固定为 1 像素，就算 Canvas 通过几何变换被放大，它也依然会被以 1 像素宽度来绘制。Google 在文档中把线条宽度为 0 时称作「hairline mode（发际线模式）」。
  
-####2.3.2 setStrokeCap(Paint.Cap cap)  
+#### 2.3.2 setStrokeCap(Paint.Cap cap)  
 设置线头的形状。  
 有三种形状： BUTT平头，ROUND 圆头，SQUARE方头。默认为BUTT
   
-####2.3.3 setStrokeJoin(Paint.Join join)  
+#### 2.3.3 setStrokeJoin(Paint.Join join)  
 设置线条拐角的形状。  
 有三个值： MITER 尖角，BEVEL 平角，ROUND 圆角。默认MITER
   
-####2.3.4 setStrokeMiter(float miter)  
+#### 2.3.4 setStrokeMiter(float miter)  
 这个方法是对setStrokeJoin的一个补充，用于设置MITER型拐角的延长线的最大值。    
 >所谓**延长线最大值**，就是当线条拐角设置为MITER时，拐角处 外边缘需要使用延长线来补偿。  
 >但是这种延长线有一个缺陷，那就是当拐角角度过小，就有可能出现连接点过长的情况。所以为了避免这种情况，MITER型连接点有一个额外规则：当尖角过长时，自动改用BEVEL的方式来渲染连接点。那究竟角度达到什么程度需要由BEVEL控制，就是通过setStrokeMiter()设置的值来控制。    
 >具体来讲，就是指尖角的外边缘点和内部拐角的距离/线条宽度 这个俩个长度的比。  
 
 
-###2.4 色彩优化
+### 2.4 色彩优化
 Paint 的色彩优化有两个方法： setDither(boolean dither) 和 setFilterBitmap(boolean filter) 。它们的作用都是让画面颜色变得更加「顺眼」，但原理和使用场景是不同的。  
-####2.4.1 setDither(boolean dither)  
+#### 2.4.1 setDither(boolean dither)  
 设置图像抖动。  
 >所谓抖动，是指把图像从较高色彩深度（即可用的颜色数）向较低色彩深度的区域绘制时，在图像中有意地插入噪点，通过有规律地扰乱图像来让图像对于肉眼更加真实的做法。   
 >
@@ -171,7 +171,7 @@ Paint 的色彩优化有两个方法： setDither(boolean dither) 和 setFilterB
 
 在现在的Android版本的绘制，默认色彩深度已经是32位的ARGB_8888，效果已经足够清晰。只有在自建Bitmap，并选择ARGB_4444或RGB_565时，开启才会有较明显效果  
 
-####2.4.2 setFilterBitmap(boolean filter)
+#### 2.4.2 setFilterBitmap(boolean filter)
 设置是否使用双线性过滤来绘制Bitmap ，适合放大绘制Bitmap时开启。
 图像在放大绘制的时候，默认使用最近邻插值过滤，但是会出现马赛克效果。如果开启双线性过滤，图像会更加平滑。  
   
@@ -180,18 +180,18 @@ Paint 的色彩优化有两个方法： setDither(boolean dither) 和 setFilterB
 >**PathEffect 分为两类**，单一效果的  CornerPathEffect DiscretePathEffect DashPathEffect PathDashPathEffect ，和组合效果的  SumPathEffect ComposePathEffect。  
 
 
-####2.5.1CornerPathEffect  
+#### 2.5.1CornerPathEffect  
 把所有的拐角变成圆角
 
-####2.5.2 DiscretePathEffect  
+#### 2.5.2 DiscretePathEffect  
 把线条进行随机的偏离，让轮廓变得乱七八糟。
 
-####2.5.3 DashPathEffect  
+#### 2.5.3 DashPathEffect  
 使用虚线来绘制线条  
 在Paint.Style == FILL的时候无效   
 另外构造方法中的phase意思是 起始位置的偏移量(**即线条向左整体位移的距离**)
   
-####2.5.4 PathDashPathEffect  
+#### 2.5.4 PathDashPathEffect  
 使用一段path 来绘制虚线。  
 PathDashPathEffect(Path shape, float advance, float phase, PathDashPathEffect.Style style)  
 其构造方法中 最后一个参数，PathDashPathEffect.Style 是一个enum，有三个值，TRANSLATE位移，ROTATE旋转，MORPH变体  
@@ -199,17 +199,17 @@ advance 是两个相邻的 shape 段之间的间隔，不过注意，这个间�
 
 ![PathDashPathEffect](http://ww1.sinaimg.cn/large/6ab93b35gy1fhuzny03xgj20kn0h3myw.jpg)
   
-####2.5.5 SumPathEffect  
+#### 2.5.5 SumPathEffect  
 组合效果类PathEffect。就是分别按照俩种PathEffect分别对目标进行绘制。。
 
-####2.5.6 ComposePathEffect  
+#### 2.5.6 ComposePathEffect  
 组合效果类PathEffect。是先对目标Path 使用一个PathEffect，然后对这个经过PathEffect处理的Path，再用另外一个PathEffect进行处理。  
 
 >注意PathEffect在有些情况下，不支持硬件加速，需要关闭硬件加速才能正常使用  
 >1. **canvas.drawLine()和canvas.drawLines()方法画直线时，setPathEffect()是不支持硬件加速。。 ** 
 >2.PathDashPathEffect对硬件加速的支持有问题，所以在使用这个的时候，也需要关闭硬件加速  
 
-####2.6 setShadowLayer(float radius,float dx,float dy,int shadowColor)  
+#### 2.6 setShadowLayer(float radius,float dx,float dy,int shadowColor)  
 在绘制的内容下面加一层阴影    
 >如果要清楚阴影层，使用clearShadowLayer()  
 >
@@ -217,13 +217,13 @@ advance 是两个相邻的 shape 段之间的间隔，不过注意，这个间�
 >
 >如果shadowColor 是半透明的，阴影的透明度 就是使用shadowColor自己的透明度。如果shadowColor是不透明的，那么阴影的透明度就是使用paint的透明度
 
-####2.7 setMaskFilter(MaskFilter maskfilter)  
+#### 2.7 setMaskFilter(MaskFilter maskfilter)  
 为之后的绘制设置MaskFilter 。setShadowLayer是设置在绘制层下方的附加效果，而这个MaskFilter相反，是设置在绘制层上方的效果。  
 >现在已经出现了俩个setXXXFilter ,一个是setColorFilter,是对每个像素的颜色进行过滤，而这里的setMaskFilter是基于整个画面来进行过滤  
 
 MaskFilter有俩种：BlurMaskFilter和EmbossMaskFilter
 
-#####2.7.1 BlurMaskFilter  
+##### 2.7.1 BlurMaskFilter  
 产生一种模糊效果  
 它的构造方法 BlurMaskFilter(float radius, BlurMaskFilter.Blur style) 中， radius 参数是模糊的范围， style 是模糊的类型。一共有四种:
 
@@ -232,13 +232,13 @@ MaskFilter有俩种：BlurMaskFilter和EmbossMaskFilter
 - INNER:内部模糊，外部不绘制
 - OUTER:内部不绘制，外部模糊
 
-#####2.7.2 EmbossMaskFilter
+##### 2.7.2 EmbossMaskFilter
 产生一种浮雕效果  
 
-####2.8 获取绘制的path  
+#### 2.8 获取绘制的path  
 这是效果类唯一的一组get方法  
 这组方法的作用是，根据paint的设置，计算出绘制Path或文字时的**实际path**    
-#####2.8.1 getFillPath(Path src,Path dst)  
+##### 2.8.1 getFillPath(Path src,Path dst)  
 获取实际Path。所谓实际Path 就是指 drawPath()的绘制内容的轮廓，要算上线条宽度和设置的PathEffect。  
 
 默认情况下(线条宽度为0，没有PathEffect)，原Path和实际Path是一样的。而在线条宽度不为0(且模式为STROKE或FILL_AND_STROKE)，或者是设置了PathEffect的时候，实际Path就和原Path不一样了：  
@@ -249,23 +249,23 @@ getFillPath(src,dst),src是原path，dst 是传入的空path，用来存储实�
 
 **注意:关闭硬件加速 setLayerType(View.LAYER_TYPE_SOFTWARE,null)**  
 
-#####2.8.2 getTextPath  
+##### 2.8.2 getTextPath  
 文字的绘制，虽然是使用Canvas.drawText()方法，但是在底层一点,文字信息全是被转化成图形，对图形进行绘制。  
 getTextPath就是获取目标文字对应的path。  
 
 ![getTextPath](http://ww1.sinaimg.cn/large/6ab93b35gy1fhrodm10sfj20i005m74z.jpg)
 
-##3.drawText相关
+## 3.drawText相关
 Paint 有些设置是与文字绘制相关的，即和drawText()相关  
 例如文字大小，间隔，文字效果等等  
 
-##4.初始化
+## 4.初始化
 也就是用来初始化Paint对象，或者是批量设置Paint的多个属性的方法  
 ###4.1 reset()  
 重置Paint的所有属性为默认值，相当于重新new一个。不过性能肯定是更好的  
-###4.2 set(Paint src)  
+### 4.2 set(Paint src)  
 把传入的Paint的属性赋值到当前Paint  
-###4.3 setFlags(int flags)  
+### 4.3 setFlags(int flags)  
 批量设置flags。相当于调用他们的set方法。可以用**“|”**这个符号来设置多个。  
 >例如：
 >paint.setFlags(Paint.ANTI_ALIAS_FLAG|Paint.DITHER_FLAG)  
