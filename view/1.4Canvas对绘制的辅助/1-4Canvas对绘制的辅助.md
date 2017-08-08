@@ -7,6 +7,9 @@
 	canvas.restore();  
 
 ## 1.2clipPath()
+
+canvas.clipPath(Path path,Op op),op参数 可以做一些取反的操作。。
+
 	canvas.save();  
 	canvas.clipPath(path1);  
 	canvas.drawBitmap(bitmap, point1.x, point1.y, paint);  
