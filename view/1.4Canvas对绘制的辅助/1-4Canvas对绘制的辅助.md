@@ -21,7 +21,8 @@ canvas.clipPath(Path path,Op op),op参数 可以做一些取反的操作。。
 3. 使用Camera来做三维变换  
 
 ## 2.1 使用Canvas 来做常见的二维变换  
-需要注意的是：变换的代码是倒序来进行作用的。举个栗子,如下的代码，实际上**drawYYY的变换熟悉是先执行translate 再执行rotate** ！！drawXXX仍然只是rotate 之后 再进行绘制!!
+
+> **需要注意的是**：变换的代码是倒序来进行作用的。举个栗子,如下的代码，实际上**drawYYY的变换熟悉是先执行translate 再执行rotate** ！！drawXXX仍然只是rotate 之后 再进行绘制!!
 
 	canvas.rotate(45);
 	canvas.drawXXX
@@ -57,11 +58,15 @@ sx,sy是横向和纵向的放缩总数，px py是轴心位置
 [Custom view Matrix 介绍](http://www.gcssloop.com/page/2/#blog)  
 [什么是齐次](https://www.zhihu.com/question/19816504)  
 
+**使用setMatrix(Matrix matrix)方法时需要关闭硬件加速**。。**否则不起作用**
+
 
 ### 2.2.0 Matrix说明
 Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列），代表一个3x3的矩阵.主要功能是坐标映射以及数值转换  
 
-具体数值大概是下面图这个关系：  
+具体数值大概是下面图这个关系：
+
+  
 ![Matrix](http://ww1.sinaimg.cn/large/6ab93b35gy1fibgs6qkpxj20ah01v0sj.jpg)
 
 > 其实2x2的矩阵 就可以满足运算，但是为什么android要使用3X3的呢？  
@@ -93,8 +98,8 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 ##### 2.2.0.1.1 缩放
 用坐标系表示:  
 
->**x = k1x0  
->y = k2y0**
+>x = k1x0  
+>y = k2y0
 
 用矩阵表示:  
 
@@ -127,8 +132,8 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 
 
 **复合错切:**
->**x = x0+ k1y0  
->y = k2x0+y0**
+>x = x0 + k1y0  
+>y = k2x0 + y0
 
 矩阵表示:  
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhrh1az5j205x01v741.jpg)
@@ -302,7 +307,7 @@ Camera 和 Canvas 一样也需要保存和恢复状态才能正常绘制，不�
 ### 2.3.2 Camera.translate(float x, float y, float z) 移动
 
 ### 2.3.3 Camera.setLocation(x, y, z) 设置虚拟相机的位置
-单位是 英寸！！
+**单位是 英寸！！**
 
 >这种设计源自 Android 底层的图像引擎 Skia 。在 Skia 中，Camera 的位置单位是英寸，英寸和像素的换算单位在 Skia 中被写死为了 72 像素，而 Android 中把这个换算单位照搬了过来。  
 >
@@ -311,3 +316,6 @@ Camera 和 Canvas 一样也需要保存和恢复状态才能正常绘制，不�
 >Camera.setLocation(x, y, z) 的 x 和 y 参数一般不会改变，直接填 0 就好。
 
 
+## 3 custom view中关闭加速
+
+        setLayerType(LAYER_TYPE_SOFTWARE, null);
