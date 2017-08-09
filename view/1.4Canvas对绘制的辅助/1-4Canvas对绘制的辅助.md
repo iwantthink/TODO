@@ -67,7 +67,8 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 具体数值大概是下面图这个关系：
 
   
-![Matrix](http://ww1.sinaimg.cn/large/6ab93b35gy1fibgs6qkpxj20ah01v0sj.jpg)
+![Matrix](http://ww1.sinaimg.cn/large/6ab93b35gy1fibgs6qkpxj20ah01v0sj.jpg)  
+
 
 > 其实2x2的矩阵 就可以满足运算，但是为什么android要使用3X3的呢？  
 > 
@@ -89,9 +90,10 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 基本变换有4种: 平移(translate)、缩放(scale)、旋转(rotate) 和 错切(skew)。
 
 具体哪些数值是控制哪些功能：  
-![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibgvnbgsaj20c008zdgy.jpg)
+  
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibgvnbgsaj20c008zdgy.jpg)  
 
-![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibgwggdevj20c008zdge.jpg)
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibgwggdevj20c008zdge.jpg)  
 
 控制透视的最后三个参数 通常为(0,0,1)
 
@@ -101,7 +103,8 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 >x = k1x0  
 >y = k2y0
 
-用矩阵表示:  
+用矩阵表示:   
+
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhcp97jsj205x01va9t.jpg) 
 
@@ -115,9 +118,10 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 
 矩阵表示：  
 
-![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhfsti9ij205j01v3y9.jpg)
 
-![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhix3dl3j208c0dw3yz.jpg)
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhfsti9ij205j01v3y9.jpg)  
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhix3dl3j208c0dw3yz.jpg)  
 
 
 **垂直错切:** 
@@ -136,6 +140,7 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 >y = k2x0 + y0
 
 矩阵表示:  
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhrh1az5j205x01v741.jpg)
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibhrq38ruj208c0dwdgi.jpg)
@@ -144,12 +149,20 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 ##### 2.2.0.1.3 旋转
 
 假定一个点 A(x0, y0) ,距离原点距离为 r, 与水平轴夹角为 α 度, 绕原点旋转 θ 度, 旋转后为点 B(x, y) 如下:  
+
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibi5bronzj202r00b0cw.jpg)  
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibi67tmg0j202q00h0dk.jpg)  
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibi49ujl5j20fr00ia9t.jpg)  
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibi6mu2f8j20fr00idfl.jpg)   
 
+
 矩阵表示:  
+
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibi70mutmj208a01vwe9.jpg)
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibi8w7y02j208c0dwt8s.jpg)  
@@ -157,13 +170,20 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 
 
 ##### 2.2.0.1.4 平移
+
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibiadb2xtj202r00f0cm.jpg)  
+
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibiao4mq5j202o00g0dp.jpg) 
 
-矩阵表示:   
-![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibiav8ra5j206601va9t.jpg)  
 
-![](http://ww1.sinaimg.cn/large/6ab93b35gy1fibiazwc4tj208c0dw0su.jpg)  
+矩阵表示:   
+
+
+![juzhen](http://ww1.sinaimg.cn/large/6ab93b35gy1fibiav8ra5j206601va9t.jpg)  
+
+![juzhen](http://ww1.sinaimg.cn/large/6ab93b35gy1fibiazwc4tj208c0dw0su.jpg)  
 
 #### 2.2.0.2 Matrix复合原理
 其实Matrix的多种复合操作都是使用矩阵乘法实现的，从原理上理解很简单，但是，使用矩阵乘法也有其弱点，后面的操作可能会影响到前面到操作，所以在构造Matrix时顺序很重要。  
