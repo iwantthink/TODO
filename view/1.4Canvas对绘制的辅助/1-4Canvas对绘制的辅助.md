@@ -22,8 +22,6 @@ canvas.clipPath(Path path,Op op),op参数 可以做一些取反的操作。。
 
 ## 2.1 使用Canvas 来做常见的二维变换  
 
-> **需要注意的是**：变换的代码是倒序来进行作用的。举个栗子,如下的代码，实际上**drawYYY的变换熟悉是先执行translate 再执行rotate** ！！drawXXX仍然只是rotate 之后 再进行绘制!!
-
 	canvas.rotate(45);
 	canvas.drawXXX
 	canvas.translate(100,0);
@@ -335,7 +333,7 @@ Camera 有一个相机位置，是在屏幕朝外
 >旋转(rotate)，平移(translate)和移动相机(setLocation)    
 
 
-**Camera 不能设置旋转的中心，永远是原点**
+**Camera 不能设置轴心，永远是原点**
 
 
 ### 2.3.0 save 和 restore  
@@ -356,7 +354,9 @@ Camera 和 Canvas 一样也需要保存和恢复状态才能正常绘制，不�
 	canvas.drawBitmap(bitmap, point1.x, point1.y, paint);  
 	canvas.restore();  
 
-因为默认原点的关系，如果我们想实现 翻转时 对图形进对称的操作。需要移动图形到原点位置！然后再进行操作！最后再移动回去~ (另外这个移动需要使用canvas来进行，因为camera 移动的话 是移动的camera的坐标轴,另外它是在变换结束之后才会做投影，而不是一旋转就投影。。所以 其实移动)  
+因为默认原点的关系，如果我们想实现 翻转时 对图形进对称的操作。需要移动图形到原点位置！然后再进行操作！最后再移动回去~ 
+>**另外这个移动需要使用canvas来进行，因为camera 移动的话 是移动的camera的坐标轴,另外它是在变换结束之后才会做投影！**   
+>**移动camera 的坐标系 不能改变相机的位置..**
 
 	canvas.save();
 
@@ -371,9 +371,34 @@ Camera 和 Canvas 一样也需要保存和恢复状态才能正常绘制，不�
 	canvas.restore(); 
 
 
+另外一种写法:  
+
+	camera.save();
+    matrix.reset();
+    camera.rotateX(degree);
+    camera.getMatrix(matrix);
+    camera.restore();
+    matrix.preTranslate(-centerX, -centerY);//右乘  把绘制内容移回来
+    matrix.postTranslate(centerX, centerY);//左乘  把绘制内容移动到轴心
+    canvas.save();
+    canvas.concat(matrix);
+    canvas.drawBitmap(bitmap, point.x, point.y, paint);
+    canvas.restore();
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fies9k0ez3j20fe0ajmzs.jpg)
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fiesa6bzupj20eh0a0mz6.jpg)
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fifme9iiloj20gh0b3myg.jpg)
+
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fifmejg5jcj20fw0b7405.jpg)
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fifmeoovbbj20gr0a4ac3.jpg)
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fifmet3n57j20ft0akwg3.jpg)
+
+
 
 ### 2.3.2 Camera.translate(float x, float y, float z) 
 - 沿X轴移动,以下俩种方式都能让坐标系向右移动x个单位
@@ -402,6 +427,11 @@ Camera 和 Canvas 一样也需要保存和恢复状态才能正常绘制，不�
 >
 >Camera.setLocation(x, y, z) 的 x 和 y 参数一般不会改变，直接填 0 就好。
 
+
+### 2.3.4 消除camera3D旋转时的 图片过大效果
+
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fifsnq5u0lj20i90b5di8.jpg)
 
 ## 3 custom view中关闭加速
 
