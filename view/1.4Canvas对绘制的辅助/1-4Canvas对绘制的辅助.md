@@ -39,7 +39,9 @@ degrees是旋转角度，方向是顺时针为正方向,px py 是轴心位置
 	canvas.restore();  
 
 ### 2.1.3 canvas.scale(float sx ,float sy,float px,float py) 缩放
-sx,sy是横向和纵向的放缩总数，px py是轴心位置  
+- sx,sy是横向和纵向的放缩总数，px py是轴心位置  
+- 默认的缩放中心为坐标原点，而缩放中心轴就是坐标轴    
+- 当缩放比例为负数的时候会根据缩放中心轴进行翻转
 
 	canvas.save();  
 	canvas.scale(1.3f, 1.3f, x + bitmapWidth / 2, y + bitmapHeight / 2);  
@@ -336,8 +338,13 @@ Camera 有一个相机位置，是在屏幕朝外
 **Camera 不能设置轴心，永远是原点**
 
 
-### 2.3.0 save 和 restore  
+### 2.3.0 快照save 和 回滚restore  
 保存当前状态和恢复到上一次保存的状态
+
+- save 有俩个方法，有一个方法是重载的，可以传入一个flag，根据这个flag参数指定保存的状态  
+- save 方法 是往栈里增加一层状态，restore 是恢复栈里的一层状态
+- restoreToCount()  弹出指定位置以及以上所有状态，并根据指定位置之前的位置的状态进行恢复  
+- getSaveCount() 获取栈中保存状态的数量，默认为1（就是说弹出了所有状态之后 仍然是1）
 
 ### 2.3.1Camera.rotate*()三维旋转
 Camera.rotate*() 一共有四个方法： rotateX(deg) rotateY(deg) rotateZ(deg) rotate(x, y, z)  
@@ -433,6 +440,12 @@ Camera 和 Canvas 一样也需要保存和恢复状态才能正常绘制，不�
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fifsnq5u0lj20i90b5di8.jpg)
 
-## 3 custom view中关闭加速
+
+
+## 4 关闭加速
+自定义View中关闭加速  
 
         setLayerType(LAYER_TYPE_SOFTWARE, null);
+清单文件中关闭硬件加速(关闭的是整个应用的硬件加速)  
+
+	android:hardwareAccelerated = "false"
