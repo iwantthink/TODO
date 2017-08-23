@@ -193,7 +193,7 @@ Matrix是Android SDK 提供的一个矩阵类（矩阵就是一个矩形阵列�
 
 >在图形学中，矩阵M右乘A，表示的是  A * M，而矩阵 M 左乘 A，则表示的是 M * A，可以形象地理解为右乘就是从右边乘进来，左乘就是从左边乘进来。
 >
->**前乘pre:  M` = M·S （前乘相当于矩阵的右乘）S右乘M **
+>**前乘pre:  M` = M·S （前乘相当于矩阵的右乘）S右乘M**
 > 
 >**后乘post:  M` = S·M (后乘相当于矩阵的左乘 ) S左乘M** 
 >  
@@ -281,6 +281,26 @@ Matrix应用到canvas 有俩个方法:canvas.setMatrix canvas.concat
 
 ### 2.2.2使用Matrix来做自定义变换
 Matrix的自定义变换使用setPoyToPoly()方法  
+
+	boolean setPolyToPoly (  
+        float[] src,    // 原始数组 src [x,y]，存储内容为一组点
+        int srcIndex,   // 原始数组开始位置
+        float[] dst,    // 目标数组 dst [x,y]，存储内容为一组点
+        int dstIndex,   // 目标数组开始位置
+        int pointCount) // 测控点的数量 取值范围是: 0到4
+
+> pointCount 取值  
+> 0 相当于reset
+> 1 相当于 translate  
+> 2 可以进行缩放 旋转 平移    
+> 3 缩放 旋转 平移 错切   
+> 4 缩放 旋转 平移 错切 + 任何形变     
+> 通常取4就好了。。因为 其他的都可以用其他api来表示啊。。  
+> 测控点选取都应当是不重复的(src与dst均是如此)，如果选取了重复的点会直接导致测量失效，这也意味着，你不允许将一个方形(四个点)映射为三角形(四个点，但其中两个位置重叠)，但可以接近于三角形    
+
+
+
+
 #### 2.2.2.1 Matrix.setPolyToPoly(float[] src, int srcIndex, float[] dst, int dstIndex, int pointCount) 用点对点映射的方式设置变换  
 
 poly 就是「多」的意思。setPolyToPoly() 的作用是通过多点的映射的方式来直接设置变换。「多点映射」的意思就是把指定的点移动到给出的位置，从而发生形变。例如：(0, 0) -> (100, 100) 表示把 (0, 0) 位置的像素移动到 (100, 100) 的位置，这个是单点的映射，单点映射可以实现平移。而多点的映射，就可以让绘制内容任意地扭曲。
@@ -301,6 +321,39 @@ poly 就是「多」的意思。setPolyToPoly() 的作用是通过多点的映�
 
 
 参数里，src 和 dst 是源点集合目标点集；srcIndex 和 dstIndex 是第一个点的偏移；pointCount 是采集的点的个数（个数不能大于 4，因为大于 4 个点就无法计算变换了）。
+
+### 2.2.3 Matrix Api 介绍
+
+#### 2.2.3.1 mapPoints  
+计算一组点 基于当前Matrix变换后的位置（参数一般是偶数，如果是奇数则会忽略最后一个数）
+
+#### 2.2.3.2 mapRadius  
+测量经过matrix形变的半径
+
+#### 2.2.3.3 mapRect  
+测量矩形经过matrix形变的位置  
+
+#### 2.2.3.4 mapVectors  
+测量向量  
+与mapPoints相同，区别是mapVectors不会受到位置影响  
+
+#### 2.2.3.5 setRectToRect  
+将src矩形 内容填充到 dst矩形中，根据stf参数选择模式 
+ 
+	boolean setRectToRect (RectF src,           // 源区域
+                RectF dst,                  // 目标区域
+                Matrix.ScaleToFit stf)      // 缩放适配模式
+
+#### 2.2.3.6 rectStaysRect  
+判断矩形经过变换之后是否仍为矩形  
+
+#### 2.2.3.7 setSinCos  
+不常用 去查api
+
+#### 2.2.3.8 矩阵相关  
+1. invert 求矩阵的逆矩阵，就是计算与之前相反的矩阵（之前是位移200，逆矩阵就是位移-200）
+2. isAffine  
+3. isIdentity ，判断矩阵是否是 单位矩阵
 
 
 ## 2.3 使用Camera做三维变换
