@@ -55,7 +55,7 @@ shader又被称为着色器，是图形领域一个通用的概念，与直接�
 ColorFilter 并不会直接被使用，而是会使用其子类：  
 ColorMatrixColorFilter,LightingColorFilter,PorterDuffColorFilter
 #### 1.2.1 LightingColorFilter  
-用来模拟简单的光照
+光照颜色过滤器 ,完成色彩过滤和色彩增强的功能
   
 `LightingColorFilter (int mul, int add)`  
 构造方法中有俩个参数，一个是mul 用来和目标像素相乘，一个是add 用来和目标像素相加。  
@@ -67,7 +67,7 @@ B' = B * mul.B / 0xff + add.B
 
 一个**保持原样**的基本LightingColorFilter,mul为0xffffff,add为0x000000,那么对于一个像素  
 例如我想去除红色,可以将mul 改为0x00ffff(RGB R部分为0)，其计算过程：  
-R' = R * 0x0 / 0xff + 0x0 = 0 // 红色被移除  
+R' = R * 0x0 / 0xff + 0x0 = 0  // 红色被移除  
 G' = G * 0xff / 0xff + 0x0 = G  
 B' = B * 0xff / 0xff + 0x0 = B    
 
@@ -76,7 +76,10 @@ B' = B * 0xff / 0xff + 0x0 = B
 就是与ComposeShader相似，只是PorterDuffColorFilter 只能指定一种颜色作为源，而不能是一个Bitmap  
 >src是所设置的color  
 >dst是所绘制的图形  
-  
+
+- Mode.ADD(饱和度相加)，Mode.DARKEN（变暗），Mode.LIGHTEN（变亮），Mode.MULTIPLY（正片叠底），Mode.OVERLAY（叠加），Mode.SCREEN（滤色） 
+
+例如可以利用  PorterDuff.Mode.SRC(Mode.SRC、Mode.SRC_IN、Mode.SRC_ATOP)来实现 v4包中的DrawableCompat.setTint()
 #### 1.2.3 ColorMatrixColorFilter  
 使用一个ColorMatrix来对颜色进行处理  
 其内部是一个4*5的矩阵：  
@@ -99,14 +102,25 @@ Xfermode 严谨地讲， Xfermode 指的是你要绘制的内容和 Canvas 的�
 
 PorterDuff.Mode 在Paint中一共有三处被用到，其工作原理都一样，只是用途不同：  ComposeShader,PorterDuffColorFilter,Xfermode. 用途分别是：混合俩个Shader，增加一个单色的ColorFilter,设置绘制内容和View中已有内容的混合计算方式。  
 
-另外，创建Xfermode，也是在创建其子类： PorterDuffXfermode
+另外，创建Xfermode，也是在创建其子类： PorterDuffXfermode,AvoidXfermode（已废弃）,PixelXorXfermode（已废弃）
 
-**Xfermode注意事项:**
+- PorterDuffXferMode 实例：  
+
+		int layerID = canvas.saveLayer(0, 0, mWidth, mHeight, mPaint, Canvas.ALL_SAVE_FLAG);
+    	canvas.translate(mWidth / 2, mHeight / 2);
+    	mPaint.setColor(Color.BLUE);
+    	canvas.drawCircle(0, 0, 100, mPaint);
+    	mPaint.setColor(Color.RED);
+    	mPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
+    	canvas.drawRect(0, 0, 200, 200, mPaint);
+    	canvas.restoreToCount(layerID);
+	先画的是DST 目标图 后画的是 SRC 源图 ，
 
 
+- **Xfermode注意事项:**
 通常情况下，我们**drawBitmap->setXfermode->drawBitma**p .这个流程我们往往得不到想要的结果，因为我们在第三部draw的时候，我们以为只是第一步draw的图案参与计算，实际上是 view的显示区域都参与计算！！ 并且默认的view底色并不是透明色。
  
-1. 用离屏缓冲(Off-screen BUffer)    
+	1. 用离屏缓冲(Off-screen BUffer)    
 	
      解决办法就是使用离屏缓存，就是把内容绘制在额外的图层上，再把绘制好的内容贴回view中。  
   
@@ -118,9 +132,43 @@ PorterDuff.Mode 在Paint中一共有三处被用到，其工作原理都一样�
 	 View.setLayerType(LAYER_TYPE_HARDWARE)是使用GPU缓冲  
 	 View.setLayerType(LAYER_TYPE_SOFTWARE)是直接使用一个bitmap来缓冲    
  
-2. 控制好透明区域  
+	2. 控制好透明区域  
      使用Xfermode来绘制内容，需要注意控制它的透明区域不要太小，要让它足够**覆盖和它结合绘制的内容**！！
 	
+
+- 源图像在运算时，只是在源图像所在区域与对应区域的目标图像做运算。所以**目标图像与源图像不相交的地方是不会参与运算的**！这一点非常重要！不相交的地方不会参与运算，所以不相交的地方的图像也不会是脏数据，也不会被更新，所以不相交地方的图像也永远显示的是目标图像。
+
+- **PorterDuffColorFilter**中只能使用纯色彩，而且是完全覆盖在图片上方；而**setXfermode()**则不同，它只会在目标图像和源图像交合的位置起作用，而且源图像不一定是纯色的。
+
+- **canvas脏区域更新原理** 
+	Android在绘图时会先检查该画笔Paint对象有没有设置Xfermode，如果没有设置Xfermode，那么直接将绘制的图形覆盖Canvas对应位置原有的像素；如果设置了Xfermode，那么会按照Xfermode具体的规则来更新Canvas中对应位置的像素颜色。 
+
+
+各种mode实现的效果:  
+
+1. Mode.SRC_IN  dst和src相交区域会显示，dst图像不存在的区域不会显示(圆角图片，图片倒影)
+2. Mode.SRC_OUT dst和src相交区域为空像素,当没有dst 只有src时 会显示src(橡皮擦效果，刮刮卡效果)
+3. Mode.SRC_OVER 
+4. Mode.SRC_ATOP 1、当透明度只有100%和0%时，SRC_ATOP是SRC_IN是通用的 2、当透明度不只有100%和0%时，SRC_ATOP相比SRC_IN源图像的饱和度会增加，即会显得更亮！
+5. Mode.DST_IN dst和src相交区域会显示,src图像不存在的区域不会显示
+6. Mode.DST_OUT 
+7. Mode.DST_OVER
+8. Mode.DST_ATOP
+9. Mode.CLEAR 源图像所在区域都会变成空像素！ 
+10. Mode.XOR  
+
+
+- 1:DST相关模式是完全可以使用SRC对应的模式来实现的，只不过需要将目标图像和源图像对调一下即可。 
+2:在SRC模式中，是以显示源图像为主，通过目标图像的透明度来调节计算结果的透明度和饱和度，而在DST模式中，是以显示目标图像为主，通过源图像的透明度来调节计算结果的透明度和饱和度。
+
+
+- 可以从下面三个方面来决定使用哪一个模式：
+1、首先，目标图像和源图像混合，需不需要生成颜色的叠加特效，如果需要叠加特效则从颜色叠加相关模式中选择，有Mode.ADD（饱和度相加）、Mode.DARKEN（变暗），Mode.LIGHTEN（变亮）、Mode.MULTIPLY（正片叠底）、Mode.OVERLAY（叠加），Mode.SCREEN（滤色） 
+2、当不需要特效，而需要根据某一张图像的透明像素来裁剪时，就需要使用SRC相关模式或DST相关模式了。由于SRC相关模式与DST相关模式是相通的，唯一不同的是决定当前哪个是目标图像和源图像； 
+3、当需要清空图像时，使用Mode.CLEAR
+
+
+
 
 **canvas.saveLayer(null,null,Canvas.ALL_SAVE_FLAG);**
   
