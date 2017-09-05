@@ -1,4 +1,5 @@
 # 1 范围裁切
+---
 范围裁切有俩个方法:clipRect()和clipPath().裁切之后所执行的绘制代码都是在这个裁切范围之内。  
 ## 1.1clipRect()
 	canvas.save();  
@@ -14,7 +15,11 @@ canvas.clipPath(Path path,Op op),op参数 可以做一些取反的操作。。
 	canvas.clipPath(path1);  
 	canvas.drawBitmap(bitmap, point1.x, point1.y, paint);  
 	canvas.restore();
+
+
+
 # 2 几何变换
+---
 几何变化的使用大概分成三类：  
 1. 使用Canvas来做常见的二维变换  
 2. 使用Matrix来做常见和不常见的二维变换  
@@ -494,8 +499,115 @@ Camera 和 Canvas 一样也需要保存和恢复状态才能正常绘制，不�
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fifsnq5u0lj20i90b5di8.jpg)
 
 
+# 3 图层和画布
+---
+## 3.1 saveLayer()
 
-## 4 关闭加速
+	public int saveLayer(RectF bounds, Paint paint, int saveFlags)     
+	public int saveLayer(float left, float top, float right, float bottom,Paint paint, int saveFlags)
+
+
+- 保存指定矩形区域的canvas内容,saveFlags取值范围ALL_SAVE_FLAG、MATRIX_SAVE_FLAG、CLIP_SAVE_FLAG、HAS_ALPHA_LAYER_SAVE_FLAG、FULL_COLOR_LAYER_SAVE_FLAG、CLIP_TO_LAYER_SAVE_FLAG总共有这六个，其中ALL_SAVE_FLAG表示保存全部内容  
+
+- saveLayer绘图流程:在调用saveLayer时，会生成一个全新的, 指定大小的,全透明的 bitmap,接下来所有的操作都会在这个bitmap上进行 。 在xferMode里面，绘制源图像时，会将之前画布上所有的内容都作为目标图像,而在saveLayer新生成的 bitmap中，只有dst图像。 在绘制完成之后，会把saveLayer所生成的bitmap盖在原来的canvas上.
+
+
+## 3.2 Layer+bitmap
+图层(layer)： 一个透明图层，在调用canvas.draw 系列函数时 生成的
+
+画布(bitmap): 每一个画布都是一个bitmap,所有的图像最终都是绘制在bitmap上的。
+
+
+## 3.3 save(),saveLayer(),saveLayerAlpha()
+### 3.3.1 saveLayer()
+
+	public int saveLayer(RectF bounds, Paint paint, int saveFlags)  
+	public int saveLayer(float left, float top, float right, float bottom,Paint paint, int saveFlags) 
+
+
+- saveLayer之后 所有的动作都只对新建画布有效
+- 传入的矩形大小就是新建的画布大小  
+- saveLayer时，尽量选取比较小的区域，否则新建画布时  很容易OOM
+
+### 3.3.2 saveLayerAlpha()
+
+	public int saveLayerAlpha(RectF bounds, int alpha, int saveFlags)  
+	public int saveLayerAlpha(float left, float top, float right, float bottom,int alpha, int saveFlags)
+
+- 多了一个alpha参数，指定新建画布的透明度
+
+### 3.3.3 save()
+
+	public int save()  
+	public int save(int saveFlags)  
+- save()不会新建画布
+
+## 3.4 FLAG的意义  
+
+>ALL_SAVE_FLAG	保存所有的标识	save()、saveLayer()
+>
+>MATRIX_SAVE_FLAG	仅保存canvas的matrix数组	save()、saveLayer()
+>
+>CLIP_SAVE_FLAG	仅保存canvas的当前大小	save()、saveLayer()
+>
+>HAS_ALPHA_LAYER_SAVE_FLAG	标识新建的bmp具有透明度，在与上层画布结合时，透明位置显示上图图像,与FULL_COLOR_LAYER_SAVE_FLAG冲突，若同时指定，则以HAS_ALPHA_LAYER_SAVE_FLAG为主	saveLayer()
+>
+>FULL_COLOR_LAYER_SAVE_FLAG	标识新建的bmp颜色完全独立，在与上层画布结合时，先清空上层画布再覆盖上去	saveLayer()
+>
+>CLIP_TO_LAYER_SAVE_FLAG	在保存图层前先把当前画布根据bounds裁剪，与CLIP_SAVE_FLAG冲突，若同时指定，则以CLIP_SAVE_FLAG为主	saveLayer()
+
+### 3.4.1 MATRIX_SAVE_FLAG+save()+saveLayer()
+
+- 指定只保存位置矩阵,也就是translate,rotate,scale,skew时改变的那个Matrix.换句话说就是在调用了save(MATRIX_SAVE_FLAG) 之后，做一些操作，然后再调用restore() 只会恢复位置矩阵。
+
+- 当save\saveLayer调用Canvas.MATRIX_SAVE_FLAG标识时只会保存画布的位置矩阵信息，在canvas.restore()时也只会恢复位置信息，而改变过的画布大小是不会被恢复的。 
+- 当使用canvas.saveLayer(Canvas.MATRIX_SAVE_FLAG)时，需要与Canvas.HAS_ALPHA_LAYER_SAVE_FLAG一起使用，不然新建画布所在区域原来的图像将被清空.
+
+
+### 3.4.2 CLIIP_SAVE_FLAG+saveLayer()+save()
+- 意思是仅保存Canvas的裁剪信息
+
+- 当save/saveLayer调用 Canvas.CLIP_SAVE_FLAG时只会保存画布的裁剪信息，在canvas.restore()时也只会恢复裁剪信息，而改变过的画布位置信息是不会被恢复的。 
+- 当使用canvas.saveLayer(Canvas.CLIP_SAVE_FLAG)时，需要与Canvas.HAS_ALPHA_LAYER_SAVE_FLAG一起使用，不然新建画布所在区域原来的图像将被清空。
+
+
+### 3.4.3 HAS_ALPHA_LAYER_SAVE_FLAG & FULL_COLOR_LAYER_SAVE_FLAG+saveLayer()
+
+- saveLayer专用  
+ 
+- HAS_ALPHA_LAYER_SAVE_FLAG表示新建的bitmap画布在与上一个画布合成时，不会将上一层画布内容清空，直接盖在上一个画布内容上面。 
+ 
+- FULL_COLOR_LAYER_SAVE_FLAG则表示新建的bimap画布在与上一个画布合成时，先将上一层画布对应区域清空，然后再盖在上面。 
+ 
+- 当HAS_ALPHA_LAYER_SAVE_FLAG与FULL_COLOR_LAYER_SAVE_FLAG两个标识同时指定时，以HAS_ALPHA_LAYER_SAVE_FLAG为主 
+ 
+- 当即没有指定HAS_ALPHA_LAYER_SAVE_FLAG也没有指定FULL_COLOR_LAYER_SAVE_FLAG时，系统默认使用FULL_COLOR_LAYER_SAVE_FLAG；
+
+
+### 3.4.4 CLIP_TO_LAYER_SAVE_FLAG +saveLayer()
+
+- saveLayer()专用
+
+- CLIP_TO_LAYER_SAVE_FLAG意义是在新建bitmap前，先把canvas给裁剪，一旦画板被裁剪，那么其中的各个画布都会被受到影响。而且由于它是在新建bitmap前做的裁剪，所以是无法恢复的； 
+
+- 当CLIP_TO_LAYER_SAVE_FLAG与CLIP_SAVE_FLAG标识共用时，在调用restore()后，画布将被恢复
+
+### 3.4.5 ALL_SAVE_FLAG save+saveLayer
+
+- 对于save(int flag)来讲，ALL_SAVE_FLAG = MATRIX_SAVE_FLAG | CLIP_SAVE_FLAG；即保存位置信息和裁剪信息 
+
+- 对于saveLayer(int flag)来讲，ALL_SAVE_FLAG = MATRIX_SAVE_FLAG | CLIP_SAVE_FLAG|HAS_ALPHA_LAYER_SAVE_FLAG；即保存保存位置信息和裁剪信息，新建画布在与上一层画布合成时，不清空原画布内容。
+
+## 3.5 restore()和restoreToCount()
+
+- restore的意义是把回退栈中的最上层画布状态出栈，恢复画布状态。restoreToCount(int count)的意义是一直退栈，直到指定层count+1做为栈顶，将此之前的所有动作都恢复。 
+
+- 所以无论哪种save方法，哪个FLAG标识，保存画布时都使用的是同一个栈 
+
+- restore()与restoreToCount(int count)针对的都是同一个栈，所以是完全可以通用和混用的。
+
+# 4 关闭加速
+---
 自定义View中关闭加速  
 
         setLayerType(LAYER_TYPE_SOFTWARE, null);
