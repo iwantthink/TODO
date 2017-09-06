@@ -258,12 +258,15 @@ advance 是两个相邻的 shape 段之间的间隔，不过注意，这个间�
 >2.PathDashPathEffect对硬件加速的支持有问题，所以在使用这个的时候，也需要关闭硬件加速  
 
 #### 2.6 setShadowLayer(float radius,float dx,float dy,int shadowColor)  
-在绘制的内容下面加一层阴影    
->如果要清除阴影层，使用clearShadowLayer()  
->
->在硬件加速开启的情况下，setShadowLayer()只支持文字的绘制，文字之外的绘制必须关闭硬件加速才能正常绘制阴影    
->
->如果shadowColor 是半透明的，阴影的透明度 就是使用shadowColor自己的透明度。如果shadowColor是不透明的，那么阴影的透明度就是使用paint的透明度
+作用是：在绘制的内容下面加一层阴影    
+- 如果要清除阴影层，使用clearShadowLayer()  
+
+- 在硬件加速开启的情况下，setShadowLayer()只支持文字的绘制，文字之外的绘制必须关闭硬件加速才能正常绘制阴影    
+
+- 如果shadowColor 是半透明的，阴影的透明度 就是使用shadowColor自己的透明度。如果shadowColor是不透明的，那么阴影的透明度就是使用paint的透明度
+
+- 如果绘制的内容是图片,则阴影是图片副本而不是我们设置的shadowColor
+
 
 #### 2.7 setMaskFilter(MaskFilter maskfilter)  
 为之后的绘制设置MaskFilter 。setShadowLayer是设置在绘制层下方的附加效果，而这个MaskFilter相反，是设置在绘制层上方的效果。  
@@ -279,6 +282,9 @@ MaskFilter有俩种：BlurMaskFilter和EmbossMaskFilter
 - SOLID:内部正常绘制，外部模糊
 - INNER:内部模糊，外部不绘制
 - OUTER:内部不绘制，外部模糊
+
+- 可以实现为图片生成指定颜色的阴影(setShadowLayer能生成阴影,但是为图片生成的阴影是经过高斯模糊的图片副本！),通过bitmap.extractAlpha()获取拥有原图alpha值的副本,然后通过mPaint设置颜色 用来设置绘制副本时的颜色！最后再同一位置 绘制原图即可。注意：通过位置控制偏移.
+
 
 ##### 2.7.2 EmbossMaskFilter
 产生一种浮雕效果  
