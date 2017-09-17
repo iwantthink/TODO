@@ -492,6 +492,7 @@ Groovy中容器类有三种:
 		ScriptBytecodeAdapter.setGroovyObjectProperty(str, test.class, this, (String)"x");
 
 但是这种方式仍然不是将变量x定义成成员变量,虽然可以令pintx()访问到变量x！解决办法就是：**在x前面加上@Field标注，这样，x就彻彻底底是test的成员变量了**
+
 	import groovy.transform.Field;   //必须要先import  
 	@Field x = 1
 
