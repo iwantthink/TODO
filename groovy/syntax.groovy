@@ -1,47 +1,47 @@
-// å•è¡Œæ³¨é‡Š
+// µ¥ĞĞ×¢ÊÍ
 /*
-  å¤šè¡Œæ³¨é‡Š
+  ¶àĞĞ×¢ÊÍ
   cmd groovyConsole --- open GroovyConsole
   ctrl+w ---clear output window
   ctrl+r --- run groovy coude 
 */
 /**
-   è¯„è®º,å¯ä»¥æ·»åŠ  @param @return ä¹‹ç±»çš„
+   ÆÀÂÛ,¿ÉÒÔÌí¼Ó @param @return Ö®ÀàµÄ
 */
 
-//groovy å¯ä»¥ä¸ä»¥åˆ†å·ç»“å°¾
-//groovy æ”¯æŒåŠ¨æ€ç±»å‹ï¼Œå³å®šä¹‰å˜é‡çš„æ—¶å€™å¯ä»¥ä¸æŒ‡å®šå…¶ç±»å‹  å®šä¹‰å˜é‡ä½¿ç”¨defï¼ˆdef ä¸æ˜¯å¿…é¡»çš„ï¼ï¼‰
-//groovy æ ‡è¯†ç¬¦ å¯ä»¥ä»¥ è‹±æ–‡ ä¸‹åˆ’çº¿ $å¼€å¤´,ä¸èƒ½ä»¥æ•°å­—å¼€å¤´
-//  è½¬ä¹‰å­—ç¬¦ã€€ï¼‡ï¼¼ï¼‡
+//groovy ¿ÉÒÔ²»ÒÔ·ÖºÅ½áÎ²
+//groovy Ö§³Ö¶¯Ì¬ÀàĞÍ£¬¼´¶¨Òå±äÁ¿µÄÊ±ºò¿ÉÒÔ²»Ö¸¶¨ÆäÀàĞÍ  ¶¨Òå±äÁ¿Ê¹ÓÃdef£¨def ²»ÊÇ±ØĞëµÄ£¡£©
+//groovy ±êÊ¶·û ¿ÉÒÔÒÔ Ó¢ÎÄ ÏÂ»®Ïß $¿ªÍ·,²»ÄÜÒÔÊı×Ö¿ªÍ·
+//  ×ªÒå×Ö·û¡¡£§£Ü£§
 def variable1 = '123'
 def int variable2 = 1
 def variable3  = "\${}"
 //println variable3
 
-//æœ‰è¿”å›å€¼çš„ å‡½æ•°  å¯ä»¥ä¸ä½¿ç”¨def
+//ÓĞ·µ»ØÖµµÄ º¯Êı  ¿ÉÒÔ²»Ê¹ÓÃdef
 String function1(arg1,arg2){
 }
 
-//æ— è¿”å›å€¼çš„ å‡½æ•° å¿…é¡»ä½¿ç”¨def æˆ–è€…ä½¿ç”¨ void
+//ÎŞ·µ»ØÖµµÄ º¯Êı ±ØĞëÊ¹ÓÃdef »òÕßÊ¹ÓÃ void
 def noReturnFunc(){
 }
 
 void noReturnFunc1(){}
 
 
-//å‡½æ•°ä¸­çš„è¿”å›å€¼ å¯ä»¥ä¸ä½¿ç”¨returnè¯­å¥æ¥è®¾ç½®ã€‚é»˜è®¤ä¼šå°†å‡½æ•°ä¸­æœ€åä¸€å¥ä»£ç æ‰§è¡Œçš„ç»“æœè®¾ç½®æˆè¿”å›å€¼
-//å¦‚æœå®šä¹‰å‡½æ•°æ—¶æŒ‡å®šäº†è¿”å›ç±»å‹ï¼Œé‚£ä¹ˆå‡½æ•°ä¸­çš„è¿”å›å€¼å¿…é¡»æ˜¯ä¸ä¹‹åŒ¹é…çš„ç±»å‹ã€‚ä½¿ç”¨åŠ¨æ€ç±»å‹çš„è¯ï¼Œå°±å¯ä»¥è¿”å›ä»»ä½•ç±»å‹äº†ã€‚
+//º¯ÊıÖĞµÄ·µ»ØÖµ ¿ÉÒÔ²»Ê¹ÓÃreturnÓï¾äÀ´ÉèÖÃ¡£Ä¬ÈÏ»á½«º¯ÊıÖĞ×îºóÒ»¾ä´úÂëÖ´ĞĞµÄ½á¹ûÉèÖÃ³É·µ»ØÖµ
+//Èç¹û¶¨Òåº¯ÊıÊ±Ö¸¶¨ÁË·µ»ØÀàĞÍ£¬ÄÇÃ´º¯ÊıÖĞµÄ·µ»ØÖµ±ØĞëÊÇÓëÖ®Æ¥ÅäµÄÀàĞÍ¡£Ê¹ÓÃ¶¯Ì¬ÀàĞÍµÄ»°£¬¾Í¿ÉÒÔ·µ»ØÈÎºÎÀàĞÍÁË¡£
 def doSomething(){
-    "return with str"// è¿”å›String ç±»å‹
-    1111 // è¿”å›intgerç±»å‹
+    "return with str"// ·µ»ØString ÀàĞÍ
+    1111 // ·µ»ØintgerÀàĞÍ
 }
 
 
 
-//å•å¼•å·ä¸­çš„å†…å®¹ä¸¥æ ¼å¯¹åº”javaä¸­çš„Stringï¼Œä¸å¯¹$ç¬¦å·è¿›è¡Œè½¬ä¹‰
-//åŒå¼•å· å†…å®¹ä¸è„šæœ¬è¯­è¨€ç›¸ä¼¼ï¼Œå¦‚æœå­—ç¬¦ä¸­æœ‰$ç¬¦å·ï¼Œä¼šä»¥ $è¡¨è¾¾å¼ å…ˆæ±‚å‡ºå€¼
-// å ä½ç¬¦ å¯ä»¥ ä»¥å‰ç¼€$ æˆ–è€…${}  ,å½“GString è°ƒç”¨toString() æ—¶ å ä½ç¬¦è¡¨è¾¾å¼ çš„å€¼ä¼šè¢«è®¡ç®—å‡ºæ¥
-// å ä½ç¬¦ ä¹‹å†…å…è®¸å£°æ˜ï¼Œ ä¸è¿‡å…¶è¿”å›å€¼æ˜¯æ ¹æ®æœ€åä¸€å¥ï¼Œéœ€è¦æ³¨æ„
+//µ¥ÒıºÅÖĞµÄÄÚÈİÑÏ¸ñ¶ÔÓ¦javaÖĞµÄString£¬²»¶Ô$·ûºÅ½øĞĞ×ªÒå
+//Ë«ÒıºÅ ÄÚÈİÓë½Å±¾ÓïÑÔÏàËÆ£¬Èç¹û×Ö·ûÖĞÓĞ$·ûºÅ£¬»áÒÔ $±í´ïÊ½ ÏÈÇó³öÖµ
+// Õ¼Î»·û ¿ÉÒÔ ÒÔÇ°×º$ »òÕß${}  ,µ±GString µ÷ÓÃtoString() Ê± Õ¼Î»·û±í´ïÊ½ µÄÖµ»á±»¼ÆËã³öÀ´
+// Õ¼Î»·û Ö®ÄÚÔÊĞíÉùÃ÷£¬ ²»¹ıÆä·µ»ØÖµÊÇ¸ù¾İ×îºóÒ»¾ä£¬ĞèÒª×¢Òâ
 def str3 = 'not'
 def str1 = 'i am $str3 student'
 //println str1
@@ -56,19 +56,17 @@ i am not student
 
 
 
-//groovy å‡½æ•°è°ƒç”¨çš„æ—¶å€™ å¯ä»¥ä¸åŠ ä¸Š æ‹¬å·
+//groovy º¯Êıµ÷ÓÃµÄÊ±ºò ¿ÉÒÔ²»¼ÓÉÏ À¨ºÅ
 //println('hello')
 //println 'hello'
 
-//$number1.toString()  Groovyä¼šè®¤ä¸ºä½ åœ¨è°ƒç”¨number1 çš„toStringå±æ€§
+//$number1.toString()  Groovy»áÈÏÎªÄãÔÚµ÷ÓÃnumber1 µÄtoStringÊôĞÔ
 def number1 = 123.456
-//è§£å†³åŠæ³•
+//½â¾ö°ì·¨
 // println "${number1.toString()}"
 
-
-
-// æˆ‘ä»¬å¯ä»¥åœ¨${} å ä½ç¬¦ä¸­åŠ å…¥ä»»æ„è¡¨è¾¾å¼ ï¼Œä½†æ˜¯å½“å ä½ç¬¦ åŒ…å«ä¸€ä¸ªç®­å¤´æ—¶ï¼Œ${->} ,è¯¥è¡¨è¾¾å¼å®é™…æ˜¯ä¸€ä¸ªé—­åŒ…è¡¨è¾¾å¼ï¼Œå¯ä»¥å°†å…¶è§†ä¸ºä¸€ä¸ªå‰ç¼€ä¸º$çš„é—­åŒ…
-// é—­åŒ…æ¯”çº¯ç²¹çš„è¡¨è¾¾å¼æœ‰ä¸€ä¸ªä¼˜åŠ¿ï¼šlazy evaluation
+// ÎÒÃÇ¿ÉÒÔÔÚ${} Õ¼Î»·ûÖĞ¼ÓÈëÈÎÒâ±í´ïÊ½ £¬µ«ÊÇµ±Õ¼Î»·û °üº¬Ò»¸ö¼ıÍ·Ê±£¬${->} ,¸Ã±í´ïÊ½Êµ¼ÊÊÇÒ»¸ö±Õ°ü±í´ïÊ½£¬¿ÉÒÔ½«ÆäÊÓÎªÒ»¸öÇ°×ºÎª$µÄ±Õ°ü
+// ±Õ°ü±È´¿´âµÄ±í´ïÊ½ÓĞÒ»¸öÓÅÊÆ£ºlazy evaluation
 def eagerGstring = "value = ${number1}"
 def lazyGstring = "value = ${->number1}"
 assert eagerGstring == "value = 123.456"
@@ -78,12 +76,10 @@ assert eagerGstring == "value = 123.456"
 assert lazyGstring == "value = 2"
 
 
-//åœ¨GStringä¸­ ä½¿ç”¨é—­åŒ…æ—¶ ä¸å…è®¸æœ‰å¤šä¸ªå‚æ•°
+//ÔÚGStringÖĞ Ê¹ÓÃ±Õ°üÊ± ²»ÔÊĞíÓĞ¶à¸ö²ÎÊı
 def gString1 = "value = ${arg1,arg2->number1}"
 
-
-
-//å½“æˆ‘ä»¬æœŸæœ›ä¸€ä¸ªStringç±»å‹çš„å‚æ•°æ—¶ï¼Œä¼ å…¥ä¸€ä¸ªGStringç±»å‹çš„å‚æ•°ï¼ŒGroovyä¼šè‡ªåŠ¨è°ƒç”¨toString() 
+//µ±ÎÒÃÇÆÚÍûÒ»¸öStringÀàĞÍµÄ²ÎÊıÊ±£¬´«ÈëÒ»¸öGStringÀàĞÍµÄ²ÎÊı£¬Groovy»á×Ô¶¯µ÷ÓÃtoString() 
 String getString(String msg){
     assert msg instanceof String
     return msg
@@ -94,14 +90,14 @@ assert getString(msg1) instanceof String
 
 
 
-// GString å’Œ String çš„hashCODE ä¸åŒ
+// GString ºÍ String µÄhashCODE ²»Í¬
 //println msg1.hashCode()
 //println "hello ${2}".hashCode()
 //println 'hello 2'.hashCode()
 assert msg1.hashCode() != 'hello 2'.hashCode()
 assert "hello ${number1}".hashCode() != 'hello 2'.hashCode()
 
-//ä¸‰é‡ å•å¼•å· å­—ç¬¦ä¸² ,æ”¯æŒå¤šè¡Œ å…¶ä»–ä¸ å•å¼•å·å­—ç¬¦ä¸²ä¸€æ ·
+//ÈıÖØ µ¥ÒıºÅ ×Ö·û´® ,Ö§³Ö¶àĞĞ ÆäËûÓë µ¥ÒıºÅ×Ö·û´®Ò»Ñù
 def quoto1 = '''
 one 
 two
@@ -109,7 +105,7 @@ ${number1}
 '''
 //println quoto1
 
-//ä¸‰é‡ åŒå¼•å· å­—ç¬¦ä¸²  ç±»ä¼¼ åŒå¼•å·å­—ç¬¦ä¸²ï¼ŒåŒºåˆ«å°±æ˜¯å¤šè¡Œçš„,å¹¶ä¸”åœ¨ä¸‰é‡åŒå¼•å·ä¸­  å•å¼•å·å’ŒåŒå¼•å· ä¸éœ€è¦è½¬ä¹‰
+//ÈıÖØ Ë«ÒıºÅ ×Ö·û´®  ÀàËÆ Ë«ÒıºÅ×Ö·û´®£¬Çø±ğ¾ÍÊÇ¶àĞĞµÄ,²¢ÇÒÔÚÈıÖØË«ÒıºÅÖĞ  µ¥ÒıºÅºÍË«ÒıºÅ ²»ĞèÒª×ªÒå
 def msg2 = """
  "one
  '' two 
@@ -122,38 +118,38 @@ def msg2 = """
 
 
 
-// æ–œçº¿å­—ç¬¦ä¸²  é€‚ç”¨äº å®šä¹‰æ­£åˆ™è¡¨è¾¾å¼å’Œpatterns ,å› ä¸ºä¸éœ€è¦è½¬ä¹‰åæ–œçº¿
+// Ğ±Ïß×Ö·û´®  ÊÊÓÃÓÚ ¶¨ÒåÕıÔò±í´ïÊ½ºÍpatterns ,ÒòÎª²»ĞèÒª×ªÒå·´Ğ±Ïß
 def slashy1 = /.*hello*./
 assert slashy1 == '.*hello*.'
 
-// æ–œçº¿å­—ç¬¦ä¸²ï¼Œå…è®¸ä¸è½¬ä¹‰çš„å¸¦ä¸Šåæ–œçº¿
+// Ğ±Ïß×Ö·û´®£¬ÔÊĞí²»×ªÒåµÄ´øÉÏ·´Ğ±Ïß
 def slashy2 = /\one/
-//println //one/  å¤±è´¥
-//println slashy2  æˆåŠŸ
-//println "\one"  å¤±è´¥
-//println "/one"  æˆåŠŸ
+//println //one/  Ê§°Ü
+//println slashy2  ³É¹¦
+//println "\one"  Ê§°Ü
+//println "/one"  ³É¹¦
 
-// æ–œçº¿å­—ç¬¦ä¸²æ”¯æŒ å¤šè¡Œ
+// Ğ±Ïß×Ö·û´®Ö§³Ö ¶àĞĞ
 def slashy3 = /
 \one 
 two /
 //println slashy3
 
-//æ–œçº¿å­—ç¬¦ä¸² æ”¯æŒ å ä½ç¬¦
+//Ğ±Ïß×Ö·û´® Ö§³Ö Õ¼Î»·û
 def slashy4 = /value = $number1/
 def slashy5 = 'value = $number1'
 //println slashy5
 //println slashy4
 
-// ä¸€ä¸ªç©ºçš„æ–œçº¿å­—ç¬¦ä¸² ä¸èƒ½ä½¿ç”¨åŒæ–œçº¿æ¥è¡¨ç¤º,å› ä¸ºGroovyä¼šè®¤ä¸ºè¿™æ˜¯ä¸ªæ³¨è§£æ ‡å¿—
+// Ò»¸ö¿ÕµÄĞ±Ïß×Ö·û´® ²»ÄÜÊ¹ÓÃË«Ğ±ÏßÀ´±íÊ¾,ÒòÎªGroovy»áÈÏÎªÕâÊÇ¸ö×¢½â±êÖ¾
 //assert '' != //
 
 
 
-//   $/ /$  åœ¨å…¶ä¸­çš„å­—ç¬¦ä¸² ä¸éœ€è¦è½¬ä¹‰ &  å’Œ æ–œçº¿, æ”¯æŒå¤šè¡Œï¼Œ å…¶ä»–ä¸GString ç±»ä¼¼
-// é€šè¿‡$ç¬¦å·è¿›è¡Œè½¬ä¹‰  ï¼Œ å¯ä»¥è½¬ä¹‰ $å’Œ æ–œæ  
-// æ­£æ–œæ ä¸éœ€è¦è½¬ä¹‰  ï¼Œ åæ–œæ éœ€è¦è½¬ä¹‰
-// &ç¬¦å·å¯ä»¥åšå ä½ç¬¦ ï¼Œå’Œå­—ç¬¦ä¸²ä¸€èµ·ä½¿ç”¨æ—¶ éœ€è¦è½¬ä¹‰
+//   $/ /$  ÔÚÆäÖĞµÄ×Ö·û´® ²»ĞèÒª×ªÒå &  ºÍ Ğ±Ïß, Ö§³Ö¶àĞĞ£¬ ÆäËûÓëGString ÀàËÆ
+// Í¨¹ı$·ûºÅ½øĞĞ×ªÒå  £¬ ¿ÉÒÔ×ªÒå $ºÍ Ğ±¸Ü 
+// ÕıĞ±¸Ü²»ĞèÒª×ªÒå  £¬ ·´Ğ±¸ÜĞèÒª×ªÒå
+// &·ûºÅ¿ÉÒÔ×öÕ¼Î»·û £¬ºÍ×Ö·û´®Ò»ÆğÊ¹ÓÃÊ± ĞèÒª×ªÒå
  
 def name = "Guillaume"
 def date = "April, 1st"
@@ -176,7 +172,7 @@ def dollarSlashy = $/
 
 
 
-//ä¸‰ç§æŒ‡å®šç±»å‹çš„æ–¹å¼
+//ÈıÖÖÖ¸¶¨ÀàĞÍµÄ·½Ê½
 char c1 = 'A'
 def c2 = 'A' as char
 def c3 = (char)'A'
@@ -190,17 +186,17 @@ assert c3 instanceof Character
 /*
 byte char short int long java.lang.BigInteger
 */
-//å¯ä»¥ä½¿ç”¨ä»¥ä¸‹æ–¹å¼å®šä¹‰æ•´æ•°
-//primitive types åŸå§‹ç±»å‹
+//¿ÉÒÔÊ¹ÓÃÒÔÏÂ·½Ê½¶¨ÒåÕûÊı
+//primitive types Ô­Ê¼ÀàĞÍ
 byte byte1 =1
 char char1 = 2
 short short1 = 3
 long long1 = 4
 int int1 = 5
-//infinite precision  æ— é™ç²¾åº¦
+//infinite precision  ÎŞÏŞ¾«¶È
 BigInteger bi1 = 6
 
-//å¦‚æœä½¿ç”¨def å®šä¹‰æ•´æ•°ï¼Œé‚£ä¹ˆå˜é‡çš„ç±»å‹ä¼šé€‚åº”è¿™ä¸ªæ•´æ•°å€¼
+//Èç¹ûÊ¹ÓÃdef ¶¨ÒåÕûÊı£¬ÄÇÃ´±äÁ¿µÄÀàĞÍ»áÊÊÓ¦Õâ¸öÕûÊıÖµ
 def a = 1
 assert a instanceof Integer
 
@@ -220,7 +216,7 @@ assert d instanceof Long
 def e = 9223372036854775808
 assert e instanceof BigInteger
 
-//è´Ÿæ•°
+//¸ºÊı
 def na = -1
 assert na instanceof Integer
 
@@ -243,23 +239,23 @@ assert ne instanceof BigInteger
 
 
 
-//äºŒè¿›åˆ¶   0b å‰ç¼€
+//¶ş½øÖÆ   0b Ç°×º
 int xInt2 = 0b11
 assert xInt2 == 3
 
-//å…«è¿›åˆ¶ 0å‰ç¼€ åé¢è·Ÿå…«è¿›åˆ¶æ•°å­—
+//°Ë½øÖÆ 0Ç°×º ºóÃæ¸ú°Ë½øÖÆÊı×Ö
 int xInt8 = 077
 assert xInt8 == 63
 
-//åå…­è¿›åˆ¶ 0x å‰ç¼€
+//Ê®Áù½øÖÆ 0x Ç°×º
 int xInt16 = 0x3a
 assert xInt16 == 58
 
-//å…è®¸åœ¨ æ•°å­—ä¸­ä½¿ç”¨ ä¸‹åˆ’çº¿ ç”¨æ¥æ–¹ä¾¿çš„é˜…è¯»
+//ÔÊĞíÔÚ Êı×ÖÖĞÊ¹ÓÃ ÏÂ»®Ïß ÓÃÀ´·½±ãµÄÔÄ¶Á
 long reditCardNumber = 123_456
 assert reditCardNumber == 123456
 
-// å¯ä»¥é€šè¿‡æ·»åŠ åç¼€ æŒ‡å®šæ•°å­—ç±»å‹
+// ¿ÉÒÔÍ¨¹ıÌí¼Óºó×º Ö¸¶¨Êı×ÖÀàĞÍ
 // BigInteger G or g
 // Long L or l
 //Integer I or i
@@ -277,20 +273,20 @@ short var3 = 456
 int var4 = 1
 long var5 = 123
 
-// byte char short å’Œ int è¿›è¡Œè®¡ç®—  ç»“æœæ˜¯ int ç±»å‹
+// byte char short ºÍ int ½øĞĞ¼ÆËã  ½á¹ûÊÇ int ÀàĞÍ
 assert (var1 + var4).class == Integer
 assert (var2 + var4).class == Integer
 assert (var3 + var4).class == Integer
 
-//long å’Œ byte char short int  è¿›è¡Œè®¡ç®—  ç»“æœæ˜¯long ç±»å‹
-// å¤ªå¤šäº†ã€‚ã€‚ å¹³å¸¸ç”¨ä¸åˆ°   çœ‹åˆ°äº†å»çœ‹å®˜æ–¹æ–‡æ¡£å§ã€‚ã€‚ã€‚
+//long ºÍ byte char short int  ½øĞĞ¼ÆËã  ½á¹ûÊÇlong ÀàĞÍ
+// Ì«¶àÁË¡£¡£ Æ½³£ÓÃ²»µ½   ¿´µ½ÁËÈ¥¿´¹Ù·½ÎÄµµ°É¡£¡£¡£
 
 
 
-//Groovy ä¸æä¾›ä¸“ç”¨çš„æ•´é™¤è¿ç®—ç¬¦å·  åªèƒ½é€šè¿‡intdiv å‡½æ•°
+//Groovy ²»Ìá¹©×¨ÓÃµÄÕû³ıÔËËã·ûºÅ  Ö»ÄÜÍ¨¹ıintdiv º¯Êı
 //println 4.intdiv(5)
 
-//å¦‚æœ åœ¨é™¤æ³•ä¸­ å­˜åœ¨ä¸€ä¸ª float æˆ– doubleç±»å‹çš„æ•°æ®ï¼Œé‚£ä¹ˆç»“æœå°±æ˜¯Doubleç±»å‹ ã€‚å¦åˆ™ç»“æœéƒ½æ˜¯BigDecimalç±»å‹
+//Èç¹û ÔÚ³ı·¨ÖĞ ´æÔÚÒ»¸ö float »ò doubleÀàĞÍµÄÊı¾İ£¬ÄÇÃ´½á¹û¾ÍÊÇDoubleÀàĞÍ ¡£·ñÔò½á¹û¶¼ÊÇBigDecimalÀàĞÍ
 assert (4/3).class == BigDecimal
 assert (4d/3).class == Double
 assert (4f/3).class == Double
@@ -298,22 +294,22 @@ assert (4l/3).class == BigDecimal
 
 
 
-//æ¬¡æ–¹è¿ç®—  ç¬¦å·:**   åŸºæ•° ** æŒ‡æ•°
-// å¦‚æœæŒ‡æ•°æ˜¯å°æ•° ï¼Œå¦‚æœå¯ä»¥è¿”å› integer é‚£å°±è¿”å›integer  ï¼Œ å¯ä»¥è¿”å›Long å°±è¿”å›Long ï¼Œ å¦åˆ™çš„è¯ç»Ÿä¸€è¿”å›Double
+//´Î·½ÔËËã  ·ûºÅ:**   »ùÊı ** Ö¸Êı
+// Èç¹ûÖ¸ÊıÊÇĞ¡Êı £¬Èç¹û¿ÉÒÔ·µ»Ø integer ÄÇ¾Í·µ»Øinteger  £¬ ¿ÉÒÔ·µ»ØLong ¾Í·µ»ØLong £¬ ·ñÔòµÄ»°Í³Ò»·µ»ØDouble
 assert 2**0.1 instanceof Double
 assert 2**-0.1 instanceof Double
 assert 1**-0.3f instanceof Integer
 assert 9.9**1.9 instanceof Double
 
-//å‰æï¼šæŒ‡æ•°æ˜¯æ•´æ•°
-//å¦‚æœ è´Ÿæ•´æ•° ï¼Œé‚£ä¹ˆä¹…æŒ‰ç…§æ•°æ®æ˜¯å¦æ»¡è¶³æ¡ä»¶  è¿”å›Integer Long or Double
+//Ç°Ìá£ºÖ¸ÊıÊÇÕûÊı
+//Èç¹û ¸ºÕûÊı £¬ÄÇÃ´¾Ã°´ÕÕÊı¾İÊÇ·ñÂú×ãÌõ¼ş  ·µ»ØInteger Long or Double
 assert 10**-1 instanceof Double
 assert 1**-1 instanceof Integer
-//å¦‚æœ æ˜¯æ­£æ•´æ•°æˆ–è€…é›¶ï¼Œ é‚£ä¹ˆæ ¹æ® åŸºæ•°æ¥åˆ†ç±»
-//å¦‚æœ åŸºæ•°æ˜¯ BigDecimal  é‚£ä¹ˆè¿”å› BigDecimal
-//å¦‚æœ åŸºæ•°æ˜¯BigInteger é‚£ä¹ˆè¿”å›BigInteger
-//å¦‚æœ åŸºæ•°æ˜¯Integer é‚£ä¹ˆè¿”å›Integer ï¼Œå½“æ•°æ®æ”¾ä¸ä¸‹æ—¶  å°±è¿”å› BigInteger
-//å¦‚æœ åŸºæ•°æ˜¯Long ï¼Œé‚£ä¹ˆè¿”å›Long ï¼Œ å½“æ•°æ®æ”¾ä¸ä¸‹æ—¶  å°±è¿”å›BigInteger
+//Èç¹û ÊÇÕıÕûÊı»òÕßÁã£¬ ÄÇÃ´¸ù¾İ »ùÊıÀ´·ÖÀà
+//Èç¹û »ùÊıÊÇ BigDecimal  ÄÇÃ´·µ»Ø BigDecimal
+//Èç¹û »ùÊıÊÇBigInteger ÄÇÃ´·µ»ØBigInteger
+//Èç¹û »ùÊıÊÇInteger ÄÇÃ´·µ»ØInteger £¬µ±Êı¾İ·Å²»ÏÂÊ±  ¾Í·µ»Ø BigInteger
+//Èç¹û »ùÊıÊÇLong £¬ÄÇÃ´·µ»ØLong £¬ µ±Êı¾İ·Å²»ÏÂÊ±  ¾Í·µ»ØBigInteger
 assert new BigDecimal(10) ** 0 instanceof BigDecimal
 assert new BigInteger(10) ** 1 instanceof BigInteger
 assert 10i ** 1 instanceof Integer
@@ -323,15 +319,15 @@ assert 10l ** 100 instanceof BigInteger
 
 
 
-// å¸ƒå°”å€¼  true false
+// ²¼¶ûÖµ  true false
 def bool1 = true
 assert bool1 instanceof Boolean
 
 
 
-// Lists  é›†åˆ
-//list å˜é‡ç”± [] å®šä¹‰ ï¼Œå¹¶ä¸”å¯ä»¥ç›´æ¥é€šè¿‡ç´¢å¼•è¿›è¡Œå­˜å–ï¼Œå¦‚æœç´¢å¼•è¶…è¿‡å½“å‰é“¾è¡¨é•¿åº¦ï¼Œlistä¼šè‡ªåŠ¨å¾€è¯¥ç´¢å¼•æ·»åŠ å…ƒç´ 
-// ä¸€èˆ¬List ç”¨ ArrayListä½œä¸ºçœŸæ­£çš„å®ç°
+// Lists  ¼¯ºÏ
+//list ±äÁ¿ÓÉ [] ¶¨Òå £¬²¢ÇÒ¿ÉÒÔÖ±½ÓÍ¨¹ıË÷Òı½øĞĞ´æÈ¡£¬Èç¹ûË÷Òı³¬¹ıµ±Ç°Á´±í³¤¶È£¬list»á×Ô¶¯Íù¸ÃË÷ÒıÌí¼ÓÔªËØ
+// Ò»°ãList ÓÃ ArrayList×÷ÎªÕæÕıµÄÊµÏÖ
 def numbers2 = [1,2,3] as LinkedList
 assert numbers2 instanceof LinkedList
 
@@ -340,19 +336,19 @@ assert numbers1 instanceof List
 assert numbers1.size ==3
 assert numbers1 instanceof ArrayList
 assert numbers1[1]==2
-//å¯ä»¥é€šè¿‡ << leftShift æ“ä½œç¬¦ æ¥å¾€Listæœ«å°¾ æ·»åŠ ä¸€ä¸ª æ•°æ®
+//¿ÉÒÔÍ¨¹ı << leftShift ²Ù×÷·û À´ÍùListÄ©Î² Ìí¼ÓÒ»¸ö Êı¾İ
 numbers1<< 4
 assert numbers1[-1] ==4
 assert numbers1[0,-1] == [1,4]
 assert numbers1[0..-1] == [1,2,3,4]
-//list è¿˜å¯ä»¥åŒ…å«å¦å¤–ä¸€ä¸ªlist
+//list »¹¿ÉÒÔ°üº¬ÁíÍâÒ»¸ölist
 def multi = [[0,1],[2,3]]
 assert multi[1][1]==3
 
 
 
-// Arrays  æ•°ç»„
-//Listå¦‚æœ ä½¿ç”¨def å®šä¹‰ é»˜è®¤æ˜¯Arraylist ç±»å‹ ,é™¤éä½¿ç”¨äº† as æŒ‡å®šç±»å‹
+// Arrays  Êı×é
+//ListÈç¹û Ê¹ÓÃdef ¶¨Òå Ä¬ÈÏÊÇArraylist ÀàĞÍ ,³ı·ÇÊ¹ÓÃÁË as Ö¸¶¨ÀàĞÍ
 int[] arry1 = [1,2,3]
 Integer[] arry2 = [1,2,3]
 def arry3 = [1,2,3]
@@ -361,11 +357,11 @@ assert arry4 instanceof int[]
 assert arry3 instanceof ArrayList
 assert arry1 instanceof int[]
 assert arry2 instanceof Integer[]
-//Arrays å–å¤§å° ä¸èƒ½ä½¿ç”¨  size... è€Œå¾—ç”¨ size() 
+//Arrays È¡´óĞ¡ ²»ÄÜÊ¹ÓÃ  size... ¶øµÃÓÃ size() 
 assert arry1.size() ==3
 //println arry1.class
 //println arry2.class
-// Arrays ä¹Ÿå¯ä»¥ ä½¿ç”¨å¤šé‡æ•°ç»„
+// Arrays Ò²¿ÉÒÔ Ê¹ÓÃ¶àÖØÊı×é
 def multi2 = new Integer[2][2]
 assert multi2.size() == 2
 assert multi2[0][0]==null
@@ -377,37 +373,36 @@ assert p1 instanceof Integer[][]
 
 
 
-//Maps å­—å…¸ é”®å€¼å¯¹
-//map ä»¥[key:value]å­˜åœ¨ï¼Œ key å¯ä»¥ç”¨ å•å¼•å· ï¼ŒåŒå¼•å· æˆ–è€…ä¸ç”¨å¼•å· åŒ…è£¹
+//Maps ×Öµä ¼üÖµ¶Ô
+//map ÒÔ[key:value]´æÔÚ£¬ key ¿ÉÒÔÓÃ µ¥ÒıºÅ £¬Ë«ÒıºÅ »òÕß²»ÓÃÒıºÅ °ü¹ü
 def maps1 = [red:'#FF0000',green:'#00FF00',blue:'#0000ff']
 assert maps1 instanceof Map
 assert maps1 instanceof HashMap
 assert maps1 instanceof LinkedHashMap
 
-//å–å€¼
+//È¡Öµ
 assert maps1.red == '#FF0000'
 assert maps1['red'] == '#FF0000'
 
-// å»å–ä¸€ä¸ªä¸å­˜åœ¨çš„key  ä¼šè¿”å›null
+// È¥È¡Ò»¸ö²»´æÔÚµÄkey  »á·µ»Ønull
 assert maps1.yellow == null
 
-//å¯ä»¥ä½¿ç”¨ String  int ä½œä¸ºkey
-//ä½†æ˜¯ç”¨int ä½œä¸ºkeyçš„è¯ å–å€¼çš„æ—¶å€™ ä¸èƒ½ç›´æ¥ ç”¨ .key æ¥å–å€¼  å¿…é¡»ä½¿ç”¨  map[key]æ¥å–å€¼
+//¿ÉÒÔÊ¹ÓÃ String  int ×÷Îªkey
+//µ«ÊÇÓÃint ×÷ÎªkeyµÄ»° È¡ÖµµÄÊ±ºò ²»ÄÜÖ±½Ó ÓÃ .key À´È¡Öµ  ±ØĞëÊ¹ÓÃ  map[key]À´È¡Öµ
 def maps2 = [1:2,3:4]
 assert maps2[1]==2
 
-//å¦‚æœä½¿ç”¨ä¸€ä¸ªå˜é‡çš„name ä½œä¸ºkey  é‚£ä¹ˆä¼šæŠŠè¿™ä¸ª nameå½“æˆkey
+//Èç¹ûÊ¹ÓÃÒ»¸ö±äÁ¿µÄname ×÷Îªkey  ÄÇÃ´»á°ÑÕâ¸ö nameµ±³Ékey
 def key1  = 'hello'
 def maps3 = [key1:'world']
 assert maps3.containsKey('key1')
 assert !maps3.containsKey('hello')
 
-//å¦‚æœå°±æ˜¯è¦ä½¿ç”¨name ï¼ŒåŒæ—¶è®©ä»–å–valueå½“åškey
+//Èç¹û¾ÍÊÇÒªÊ¹ÓÃname £¬Í¬Ê±ÈÃËûÈ¡valueµ±×ökey
 def maps4 = [(key1):'world']
 assert maps4.containsKey('hello')
 assert !maps4.containsKey('key1')
 
-//ç›´æ¥æ·»åŠ key
+//Ö±½ÓÌí¼Ókey
 maps4.anotherKey = "i am map"
 println maps4
-
