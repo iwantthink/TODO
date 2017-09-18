@@ -11,6 +11,12 @@
 ## 1.Gradle基本概念
 - build.gradle 又被称作构建脚本
 
+- 每一个待编译的工程都可以成为一个Project，每一个Project在构建的时候都包含一系列的Task，例如：一个Android APK的编译可能包含：Java源码编译Task，资源编译Task，JNI编译Task，Lint检查Task，打包生成apk的Task，签名的Task
+
+- 一个Project包含多少个Task是由编译脚本添加的插件所决定的，插件就是定义了Task，并具体执行这些Task的东西
+
+- Gradle是一个框架，作为框架，它负责定义流程和规则。而具体的编译工作则是通过插件的方式来完成的
+
 - gradle为我们提供了许多默认的配置以及通常的默认值
 
 - Gradle是一种基于Groovy的动态DSL，而Groovy是一种基于jvm的动态语言
@@ -20,20 +26,82 @@
 
 - 每个project至少有一个task,task里面又包含了很多action，action就是一个代码块里面包含了需要被执行的代码
 
-- 每一个build.gradle代表一个project
+- build.gradle就是对应Project的编译脚本，project和build.gradle是一种一对一的关系
 
-- task在build.gradle中定义
+- 每一个Library和每一个module都是单独的Project。根据Gradle的要求，每一个Project在其根目录下都需要有一个build.gradle
+
+- task在build.gradle中被定义
 
 
-### 1.2 Gradle编译
+### 1.2 Gradle工作流程
 在编译过程中， Gradle 会根据 build 相关文件，聚合所有的project和task，执行task 中的 action。因为 build.gradle文件中的task非常多，先执行哪个后执行那个需要一种逻辑来保证。这种逻辑就是依赖逻辑，几乎所有的Task 都需要依赖其他 task 来执行，没有被依赖的task 会首先被执行。所以到最后所有的 Task 会构成一个 有向无环图（DAG Directed Acyclic Graph）的数据结构。
 
-编译过程分为三个阶段：
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fjnug3z25hj20q7065t9d.jpg)
 
-- **初始化阶段**：创建 Project 对象，如果有多个build.gradle，也会创建多个project.
-- **配置阶段**：在这个阶段，会执行所有的编译脚本，同时还会创建project的所有的task，为后一个阶段做准备。
-- **执行阶段**：在这个阶段，gradle 会根据传入的参数决定如何执行这些task,真正action的执行代码就在这里.
+#### 1.2.1编译过程分为三个阶段
 
+1.  **初始化阶段**：执行settings.gradle.创建 Project 对象，如果有多个build.gradle，也会创建多个project.
+
+2.  **配置阶段**：在这个阶段，会解析每个Project中的build.gradle(执行所有的编译脚本)，同时还会创建project的所有的task，并创建一个有向图来描述Task之间的依赖关系
+
+3.  **执行阶段**：在这个阶段，gradle 会根据传入的参数决定如何执行这些task,真正action的执行代码就在这里.
+
+- Gradle有一个初始化流程,这个时候setting.gradle会执行
+
+- 在配置阶段，每个Project都会被解析，其内部任务也被添加到一个有向图里，用于解决执行过程中的依赖关系
+
+- 执行阶段，执行任务，gradle会将这个任务链上的所有任务按依赖顺序执行一遍
+
+
+#### 1.2.2 Gradle编程模型
+[gradle-DSL](https://docs.gradle.org/current/dsl/)
+
+- Gradle基于Groovy，Groovy基于java。所以Gradle执行的时候和Groovy一样，会把脚本转换成Java对象。
+
+- Gradle主要有三种对象，这三种对象和三种不同的脚本文件对应，在gradle执行的时候，会将脚本转换成对应的对象：
+	- Gradle对象：当我们执行gradle xxx或者什么的时候，gradle会从默认的配置脚本中构造出一个Gradle对象。在整个执行过程中，只有这么一个对象。Gradle对象的数据类型就是Gradle。我们一般很少去定制这个默认的配置脚本。
+	- Project对象：每一个build.gradle会转换成一个Project对象。
+	- Setting对象：每一个settings.gradle都会转换成一个Settings对象
+	
+	>对于其他的gradle文件，除非定义了class,否则会转换成一个实现了Script接口的对象(与Groovy类似)
+
+##### 1.2.2.1 Gradle对象
+	//在settings.gradle中，则输出"In settings,gradle id is"  
+	println "In posdevice, gradle id is " +gradle.hashCode()  
+	println "Home Dir:" + gradle.gradleHomeDir  
+	println "User Home Dir:" + gradle.gradleUserHomeDir  
+	println "Parent: " + gradle.parent  
+
+- settings.gradle和module下的build.gradle ,得到的gradle实例对象是一样的(根据hashCode判断)
+- HomeDir是gradle可执行程序的路径
+- User Home Dir:gradle配置的目录,存储了一些配置文件,以及编译过程中的缓存文件，生成的类文件，编译过程中依赖的插件等
+
+##### 1.2.2.2 Project对象
+- 每个build.gradle文件会转换成一个Project对象.
+- 在Gradle术语中，Project对象对应的是`BuildScript`
+- Project包含若干Task.由于Project对应具体的工程，所以需要为Project加载所需要的插件，比如为Java工程加载Java插件。其实，**一个Project包含多少Task往往是插件决定的**。
+
+通常的Project执行流程：
+1. 加载插件
+	通过Project的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
+	>Groovy支持函数调用的时候通过 参数名1：参数值1，参数名2：参数值2 的方式来传递参数
+	
+	- 除了加载二进制文件,还可以加载gradle文件
+		>from: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
+		plugin: Plugin的Id或者是插件的具体实现类 
+		to: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
+	
+2. 配置插件。例如设置哪里读取源文件。
+3. 设置属性
+
+
+#### 1.2.3 Lifecycle
+There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
+
+- Create a Settings instance for the build.
+- Evaluate the settings.gradle script, if present, against the Settings object to configure it.
+- Use the configured Settings object to create the hierarchy of Project instances.
+- Finally, evaluate each Project by executing its build.gradle file, if present, against the project. The projects are evaluated in breadth-wise order, such that a project is evaluated before its child projects. This order can be overridden by calling Project.evaluationDependsOnChildren() or by adding an explicit evaluation dependency using Project.evaluationDependsOn(java.lang.String).
 
 ### 1.3 项目结构
 
@@ -76,8 +144,29 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 	可以改变distributionUrl 来改变gradle版本
 
 ### 1.5 基本构建命令
+- gradle projects 
+	**查看工程信息**,直接查看setting.gradle也可以得到结果
 
-- 获取所有有分组的可运行tasks，可以添加--all参数  来查看task的依赖关系
+- gradle tasks
+	**获取所有有分组的可运行task**
+	- 查看指定Project的任务，`gradlew project-path:tasks`,project-path 是目录名，这是在根目录的情况。如果已经在某个Project的目录下了 ，则不需要指定
+
+			gradlew hmt_sdk:tasks
+		
+			cd XXXModule
+			gradlew tasks
+
+	- `gradlew tasks`会列出每个任务的描述
+
+	- 添加--all参数  来查看task的依赖关系
+
+- gradlew task-name
+	执行指定名称的任务
+
+	- task 与task之间往往是有依赖关系的
+
+
+- 获取所有有分组的可运行tasks，可以
 		gradlew tasks
 
 - 创建一个指定buildType的apk
@@ -352,9 +441,11 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 执行`task`的时候可以通过添加`--profile`参数生成一份执行报告在`reports/profile`中
 
 
-## 2. 实例
 
-### 2.1 keystore 保护
+
+
+## 3.实例
+### 3.1 keystore 保护
 如果我们将store的密码明文的写在signingConfigs里面，对安全性不好，所以需要构建一个动态加载任务，在编译release源码的时候从本地文件(git忽略名单中的文件)获取keystore信息
 
 	task getReleasePsw << {
@@ -380,7 +471,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 	}
 
 
-### 2.2 hook Android编译插件 重命名apk
+### 3.2 hook Android编译插件 重命名apk
 
 	android.applicationVariants.all{variant->
 		variant.outputs.each{output->
@@ -394,7 +485,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 生成类似 `app-debug-1.0.apk`
 
 
-## 3 引用说明
+## 4 引用说明
 [深入理解Android之Gradle](http://blog.csdn.net/innost/article/details/48228651)
 
 [Gradle之完整指南](http://www.jianshu.com/p/9df3c3b6067a)
