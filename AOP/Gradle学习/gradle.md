@@ -117,8 +117,9 @@
 	- utils中的ext 就是对应project的ext。
 
 
-##### 1.2.2.3 Task介绍
-- Task 是Gradle中的一种数据类型，代表了一些要执行或todo的工作。不同插件可以添加不同的Task。每一个Task都需要和一个Project关联
+
+#### 1.2.3 Task介绍
+>Task 是Gradle中的一种数据类型，代表了一些要执行或todo的工作。不同插件可以添加不同的Task。每一个Task都需要和一个Project关联
 
 - 定义Task，Task是和Project关联的，所以，我们要利用Project的task函数来创建一个Task  
 
@@ -129,17 +130,37 @@
 		task myTask(type: SomeType) { configure closure }
 
 - 一个Task包含若干Action.所以Task提供了doFirst和doLast俩个函数 方便开发者使用，这俩个函数分别是用于最先执行的和最后执行的action。**Action就是一个闭包**
+
 - Task创建的时候可以指定Type，通过`type:typeName`表达。作用就是告诉Gradle，该Task是从哪个基类Task 派生。 则新建的Task也具有基类Task的功能。例如：`task mTask(type:Copy)`，mTask也是一个Copy Task
+
 -  task mTask{configure closure}。花括号代表一个Closure，会在Gradle创建这个Task之后返回给用户之前，先执行这个Closure的内容
+
 -  task mTask<<{xxx},意思是把closure作为一个action添加到Task的action队列，并且最后才去执行它(`<<`符号是doLast的代表)
 
-#### 1.2.3 Lifecycle
+- doLast的快捷键`<<`,会在Gradle5.0中遗弃
+
+##### 1.2.3.1 Task依赖
+task 可以依赖于另外一个task 通过`dependsOn`,另外task依赖任务时
+
+	task funcX(dependsOn:funcY)<<{
+		
+	}
+
+	task funcY()<<{
+	}
+
+
+#### 1.2.4 Lifecycle
 There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
 
 - Create a Settings instance for the build.
 - Evaluate the settings.gradle script, if present, against the Settings object to configure it.
 - Use the configured Settings object to create the hierarchy of Project instances.
 - Finally, evaluate each Project by executing its build.gradle file, if present, against the project. The projects are evaluated in breadth-wise order, such that a project is evaluated before its child projects. This order can be overridden by calling Project.evaluationDependsOnChildren() or by adding an explicit evaluation dependency using Project.evaluationDependsOn(java.lang.String).
+
+
+
+
 
 ### 1.3 项目结构
 
@@ -476,8 +497,9 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 	}
 
 #### 1.6.4 指令
-执行`task`的时候可以通过添加`--profile`参数生成一份执行报告在`reports/profile`中
+- 执行`task`的时候可以通过添加`--profile`参数生成一份执行报告在`reports/profile`中
 
+- `-q`可以抑制gradle日志消息
 
 
 
