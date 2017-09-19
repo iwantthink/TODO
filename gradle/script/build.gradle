@@ -863,5 +863,5 @@ task task22<<{
 //task 执行图绘制完毕
 //应该是配置结束
 gradle.taskGraph.whenReady{
-	println "taskGraph.whenReady =  $it.name"
+	println "taskGraph.whenReady =  $it"
 }
