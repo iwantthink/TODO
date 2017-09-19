@@ -63,7 +63,7 @@
 	- Project对象：每一个build.gradle会转换成一个Project对象。
 	- Setting对象：每一个settings.gradle都会转换成一个Settings对象
 	
-	>对于其他的gradle文件，除非定义了class,否则会转换成一个实现了Script接口的对象(与Groovy类似)
+	>**对于其他的gradle文件，除非定义了class,否则会转换成一个实现了Script接口的对象(与Groovy类似)**
 
 ##### 1.2.2.1 Gradle对象
 	//在settings.gradle中，则输出"In settings,gradle id is"  
@@ -75,13 +75,14 @@
 - settings.gradle和module下的build.gradle ,得到的gradle实例对象是一样的(根据hashCode判断)
 - HomeDir是gradle可执行程序的路径
 - User Home Dir:gradle配置的目录,存储了一些配置文件,以及编译过程中的缓存文件，生成的类文件，编译过程中依赖的插件等
+- gradle对象 默认是Settings和Project的成员变量.
 
 ##### 1.2.2.2 Project对象
 - 每个build.gradle文件会转换成一个Project对象.
 - 在Gradle术语中，Project对象对应的是`BuildScript`
 - Project包含若干Task.由于Project对应具体的工程，所以需要为Project加载所需要的插件，比如为Java工程加载Java插件。其实，**一个Project包含多少Task往往是插件决定的**。
 
-通常的Project执行流程：
+**通常的Project需要执行的内容：**
 1. 加载插件
 	通过Project的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
 	>Groovy支持函数调用的时候通过 参数名1：参数值1，参数名2：参数值2 的方式来传递参数
@@ -92,8 +93,45 @@
 		to: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
 	
 2. 配置插件。例如设置哪里读取源文件。
+	
 3. 设置属性
+	- 如果是单个脚本，则不需要考虑属性的跨脚本使用。但是Gradle往往包含不止一个build.gradle文件！例如,build.gradle,settings.gralde 和自定义的build.gradle.**Gradle提供了一种名为extra property的方法**
+	- **extra property是额外属性的意思**，在第一次定义该属性的时候需要通过ext前缀来标示它是一个额外的属性。定义好之后，后面的存取就不需要ext前缀了。**ext属性支持Project和Gradle对象即Project和Gradle对象都可以设置ext属性**
+	- 属性值可以从local.properties中读取
+			Properties p = new Properties()
+			File pF = new File(rootDir.getAbsolutePath()+'/local.properties')
+			properties.load(pF.newDataInputStream())
+	- **可以直接获取ext前缀，表明操作的是外置属性**，表明操作的是外置属性.定义属性或设置属性时需要ext前缀。读取时就不需要ext前缀了
+			gradle.ext.api = p.getProperty('sdk.api')
+			println gradle.api 
+	除了`ext.xxx=value`这种定义方式之外，还可以使用`ext{}`这种书写方式。**ext{}不是ext函数传入Closure，但是ext{}中的{}的确是Closure**
+			ext{
+				    getVersionNameAdvanced = this.&getVersionNameAdvanced  
+			}
+	- **加载utils.gradle的Project对象**和**utils.gradle对象本身所代表的Script对象**的关系。
+		- 当一个Project apply一个gradle文件时，这个gradle文件会转换成一个Script对象
+		- Script中有一个delegate对象，这个delegate默认是被设置为 加载Script的Project对象(即调用apply的project)
+		- 在apply中有一个to参数，可以将delegate指定为别的对象
+		- **delegate作用**：当Script中操作一些不是Script自己定义的变量或函数时，gradle会到Script的delegate对象去找，看看有没有定义这些变量或函数
+	- utils.gradle对应的project就是加载utils.gradle的project
+	- utils中的ext 就是对应project的ext。
 
+
+##### 1.2.2.3 Task介绍
+- Task 是Gradle中的一种数据类型，代表了一些要执行或todo的工作。不同插件可以添加不同的Task。每一个Task都需要和一个Project关联
+
+- 定义Task，Task是和Project关联的，所以，我们要利用Project的task函数来创建一个Task  
+
+		task myTask  <==myTask是新建Task的名字  
+		task myTask { configure closure }  
+		task myType << { task action } <==注意，<<符号是doLast的缩写  
+		task myTask(type: SomeType)  
+		task myTask(type: SomeType) { configure closure }
+
+- 一个Task包含若干Action.所以Task提供了doFirst和doLast俩个函数 方便开发者使用，这俩个函数分别是用于最先执行的和最后执行的action。**Action就是一个闭包**
+- Task创建的时候可以指定Type，通过`type:typeName`表达。作用就是告诉Gradle，该Task是从哪个基类Task 派生。 则新建的Task也具有基类Task的功能。例如：`task mTask(type:Copy)`，mTask也是一个Copy Task
+-  task mTask{configure closure}。花括号代表一个Closure，会在Gradle创建这个Task之后返回给用户之前，先执行这个Closure的内容
+-  task mTask<<{xxx},意思是把closure作为一个action添加到Task的action队列，并且最后才去执行它(`<<`符号是doLast的代表)
 
 #### 1.2.3 Lifecycle
 There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
