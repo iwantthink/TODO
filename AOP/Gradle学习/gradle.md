@@ -79,10 +79,17 @@
 
 ##### 1.2.2.2 Project对象
 - 每个build.gradle文件会转换成一个Project对象.
+
 - 在Gradle术语中，Project对象对应的是`BuildScript`
+
 - Project包含若干Task.由于Project对应具体的工程，所以需要为Project加载所需要的插件，比如为Java工程加载Java插件。其实，**一个Project包含多少Task往往是插件决定的**。
 
-**通常的Project需要执行的内容：**
+- build.gradle中所有未定义的方法/属性，都会委派给Project对象去使用
+		println "name = $name"
+
+-  局部变量 用def 声明，且只能在被定义的地方可见(Groovy特征)
+
+**通常Project需要执行的内容：**
 1. 加载插件
 	通过Project的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
 	>Groovy支持函数调用的时候通过 参数名1：参数值1，参数名2：参数值2 的方式来传递参数
@@ -140,14 +147,69 @@
 - doLast的快捷键`<<`,会在Gradle5.0中遗弃
 
 ##### 1.2.3.1 Task依赖
-task 可以依赖于另外一个task 通过`dependsOn`,另外task依赖任务时
+- task 可以依赖于另外一个task 通过`dependsOn`
 
-	task funcX(dependsOn:funcY)<<{
+		task funcX()
+		task funcY(dependsOn:funcX)		
+
+- Lazy DependsOn task依赖task时可以在task定义之前
+
+		task funcX(dependsOn:funcY)<<{
+		}
+
+		task funcY()<<{
+		}
+
+- Gradle可以动态创建 Task
+		4.times{
+			task "task$it"{
+				doLast{
+					println "i am task $it"
+				}
+			}
+		}
+
+- 创建任务之后,可以在运行时动态添加依赖关系
+		task0.dependsOn(task1,task2,task3)
+
+- 可以通过API来访问task，用来添加action
+		task func<<{
+			println 'normal'
+		}
+
+		func.doFirst{
+			println 'before normal'
+		}
+
+		func.doLast{
+			println 'after normal'
+		}
+
+		func{
+			doLast{
+				println 'after after normal'
+			}
+		}
+
+- 通过`ext.xxxx`来替task设置额外属性
+		task func{
+			ext.nameProperty = 'ryan'
+		}
+
+		task func1<<{
+			println "hello my name is $func.nameProperty"
+		}
+
+- Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(当没有其他task明确被执行时),例如:`gradle -q`时，会去执行task `clean`
 		
-	}
+		defaultTasks 'clean'
 
-	task funcY()<<{
-	}
+		task clean<<{
+			println 'default cleaning'
+		}
+
+
+
 
 
 #### 1.2.4 Lifecycle
