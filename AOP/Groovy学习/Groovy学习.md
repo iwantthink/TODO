@@ -502,12 +502,14 @@ Groovy中容器类有三种:
 	}
 
 形式2：
+
 	def aClosure = {
 		//无参数，纯code
 		//其实有一个隐含的参数  it
 	}
 
 形式3：
+
 	def aClosure = {
 	-> doSomething...//这种写法表示不能给closure传参数
 	}
