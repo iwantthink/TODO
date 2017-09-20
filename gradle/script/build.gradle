@@ -831,16 +831,25 @@ task zip1(type:Zip){
 //除了构建脚本 build.gradle之外，gradle 还提供了一个 settings.gradle 
 //settings.gradle 在初始化阶段执行。另外 多项目构建 必须有settings.gradle 
 
+println '------------------------------------------'
 println "this is executed during the Configuration phase"
+println '------------------------------------------'
 
 task configured{
+	println '------------------------------------------'
 	println "this is executed during the Configuration phase"
+	println '------------------------------------------'
+
 	doLast{
+		println '------------------------------------------'
 		println "this is executed during the Execution phase"
+		println '------------------------------------------'
 	}
 
 	doFirst{
+		println '------------------------------------------'
 		println "this is executed during the Execution phase"
+		println '------------------------------------------'
 	}
 
 }
