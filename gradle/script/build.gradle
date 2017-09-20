@@ -489,7 +489,8 @@ taskC.shouldRunAfter taskA
 
 //通过group 设置分组
 //通过 description 设置描述
-
+taskC.group = 'test'
+taskC.description = '-------------'
 
 
 //通过overwrite  覆盖任务
