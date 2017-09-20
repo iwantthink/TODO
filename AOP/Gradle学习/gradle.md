@@ -21,6 +21,54 @@
 
 - Gradle是一种基于Groovy的动态DSL，而Groovy是一种基于jvm的动态语言
 
+- **方法中最后一个参数为Closure时，可以把闭包放在方法调用之后！**
+		
+		//方法定义，以下三种方法都是一样的效果
+		def method(Closure cl){
+			cl()
+		}
+		//调用方式1
+		method(){	
+			println 'method--1'
+		}
+		//调用方式2
+		method({println 'method--2'})
+		//调用方式3
+		method{println 'method--3'}
+
+
+- gradle 自动帮开发者导入了 一大堆的库，gradle可以通过 tooling api 来标记不同的任务结果
+
+	- 标签： no label or EXECUTED     说明：任务已经执行完成
+	情况： 
+
+		1. 当任务有动作且gradle确定task 是作为构建的一部分
+
+	- 标签：UP-TO-DATE    说明：任务输出没有改变
+	情况： 
+
+	 	1. 当一个任务有输入有输出并且这些没有改变
+	 	2. 当一个任务有action，并且task输出没有改变
+	 	3. 当一个任务没有action，但是又 dpendencies 。并且这些dependencies 已经是UP-TO-DATE,SKIPPED or from CACHE
+	 	4. 当一个任务没有acton，也没有dependencies
+
+	- 标签:FROM-CACHE 说明：任务的输出是从之前的执行结果中获得
+	情况:
+
+		1. 当任务存有构建输出缓存
+
+	- 标签：SKIPPED 说明：任务action'被跳过
+	情况:
+
+		1. 当一个任务被明确的从 命令行中排除在外
+		2. 当一个任务 返回了 false
+
+	- 标签：NO-SOURCE 说明：任务无需执行其action
+	情况: 
+		
+		1. 任务有输入有输出，但是没有source ，例如：source files are .java files for JavaCompile
+
+
 ### 1.1 Project和tasks
 - 每个项目的编译至少有一个project
 
@@ -32,6 +80,8 @@
 
 - task在build.gradle中被定义
 
+- 根据Groovy的语法，一个Property会自动生成get/set方法
+
 
 ### 1.2 Gradle工作流程
 在编译过程中， Gradle 会根据 build 相关文件，聚合所有的project和task，执行task 中的 action。因为 build.gradle文件中的task非常多，先执行哪个后执行那个需要一种逻辑来保证。这种逻辑就是依赖逻辑，几乎所有的Task 都需要依赖其他 task 来执行，没有被依赖的task 会首先被执行。所以到最后所有的 Task 会构成一个 有向无环图（DAG Directed Acyclic Graph）的数据结构。
@@ -42,15 +92,33 @@
 
 1.  **初始化阶段**：执行settings.gradle.创建 Project 对象，如果有多个build.gradle，也会创建多个project.
 
-2.  **配置阶段**：在这个阶段，会解析每个Project中的build.gradle(执行所有的编译脚本)，同时还会创建project的所有的task，并创建一个有向图来描述Task之间的依赖关系
+2.  **配置阶段**：在这个阶段，会解析每个Project中的build.gradle(执行所有的编译脚本)，同时还会创建project的所有的task，并创建一个有向图来描述Task之间的依赖关系.作为构建一部分的构建脚本会被执行
 
-3.  **执行阶段**：在这个阶段，gradle 会根据传入的参数决定如何执行这些task,真正action的执行代码就在这里.
+3.  **执行阶段**：在这个阶段，gradle 会根据传入的参数决定如何执行这些task（在配置阶段被创建和配置的）,真正action的执行代码就在这里.gradle按顺序执行每个任务。
 
 - Gradle有一个初始化流程,这个时候setting.gradle会执行
 
 - 在配置阶段，每个Project都会被解析，其内部任务也被添加到一个有向图里，用于解决执行过程中的依赖关系
 
 - 执行阶段，执行任务，gradle会将这个任务链上的所有任务按依赖顺序执行一遍
+
+
+
+	println "this is executed during the Configuration phase"
+
+	task configured{
+
+		println "this is executed during the Configuration phase"
+
+		doLast{
+			println "this is executed during the Execution phase"
+		}
+
+		doFirst{
+			println "this is executed during the Execution phase"
+		}
+
+	}
 
 
 #### 1.2.2 Gradle编程模型
@@ -128,14 +196,6 @@
 #### 1.2.3 Task介绍
 >Task 是Gradle中的一种数据类型，代表了一些要执行或todo的工作。不同插件可以添加不同的Task。每一个Task都需要和一个Project关联
 
-- 定义Task，Task是和Project关联的，所以，我们要利用Project的task函数来创建一个Task  
-
-		task myTask  <==myTask是新建Task的名字  
-		task myTask { configure closure }  
-		task myType << { task action } <==注意，<<符号是doLast的缩写  
-		task myTask(type: SomeType)  
-		task myTask(type: SomeType) { configure closure }
-
 - 一个Task包含若干Action.所以Task提供了doFirst和doLast俩个函数 方便开发者使用，这俩个函数分别是用于最先执行的和最后执行的action。**Action就是一个闭包**
 
 - Task创建的时候可以指定Type，通过`type:typeName`表达。作用就是告诉Gradle，该Task是从哪个基类Task 派生。 则新建的Task也具有基类Task的功能。例如：`task mTask(type:Copy)`，mTask也是一个Copy Task
@@ -146,7 +206,50 @@
 
 - doLast的快捷键`<<`,会在Gradle5.0中遗弃
 
-##### 1.2.3.1 Task依赖
+- 通过group设置分组，通过description 设置描述
+
+		task taskB{
+			group = 'test'
+			description = 'desc'
+		}
+	
+		taskA.group = 'test'
+		taskA.description = 'desc'
+
+
+##### 1.2.3.1 定义Task
+Task是和Project关联的，所以要利用Project的task函数来创建一个Task  
+
+>task myTask  <==myTask是新建Task的名字  
+>task myTask { configure closure }  
+>task myType << { task action } <==注意，<<符号是doLast的缩写  
+>task myTask(type: SomeType)  
+>task myTask(type: SomeType) { configure closure }
+
+	task('task1')<<{println 'task1 is created'}
+	task(task2,type:Copy){
+		from 'xxxx'
+		into 'yyyy'
+	}
+	task task3<<{println 'task3 is created'}
+
+- Task另外一种创建方式
+		tasks.create(name:'task4'){
+			group 'test'
+			description 'i am task4'
+			doLast{
+				println 'task4 is created'
+			}	
+		}
+		
+		tasks.create(name:'task5',type:Copy){
+			group 'test'
+			from 'xxx'
+			into 'yyy'
+		}
+		
+
+##### 1.2.3.2 Task依赖
 - task 可以依赖于另外一个task 通过`dependsOn`
 
 		task funcX()
@@ -172,46 +275,147 @@
 - 创建任务之后,可以在运行时动态添加依赖关系
 		task0.dependsOn(task1,task2,task3)
 
-- 可以通过API来访问task，用来添加action
-		task func<<{
-			println 'normal'
-		}
-
-		func.doFirst{
-			println 'before normal'
-		}
-
-		func.doLast{
-			println 'after normal'
-		}
-
-		func{
-			doLast{
-				println 'after after normal'
+- 可以为task添加来自其他project的依赖
+	
+		project(':moduleA'){
+			task task1(dependsOn:':moduleB:tasks2')<<{
+				println 'moduleA task1 is run'
 			}
 		}
 
-- 通过`ext.xxxx`来替task设置额外属性
-		task func{
-			ext.nameProperty = 'ryan'
+		project(':moduleB'){
+			task task2<<{
+				println 'moduleB task2 is run'
+			}
 		}
 
-		task func1<<{
-			println "hello my name is $func.nameProperty"
+- 依赖可以使用一个闭包来返回闭包
+
+		task6.dependsOn {
+			tasks.findAll{
+				it.name.startWidth('task')
+			}
 		}
 
-- Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(当没有其他task明确被执行时),例如:`gradle -q`时，会去执行task `clean`
+
+##### 1.2.3.3 设置默认Task
+Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(当没有其他task明确被执行时),例如:`gradle -q`时，会去执行task `clean`
 		
-		defaultTasks 'clean'
+	defaultTasks 'clean'
 
-		task clean<<{
-			println 'default cleaning'
+	task clean<<{
+		println 'default cleaning'
+	}
+
+##### 1.2.3.4 Task额外属性
+通过`ext.xxxx`来替task设置额外属性
+
+	task func{
+		ext.nameProperty = 'ryan'
+	}
+
+	task func1<<{
+		println "hello my name is $func.nameProperty"
+	}
+
+##### 1.2.3.5 Task的使用
+
+- 可以通过`tasks.getByPath()`方法 来获取  使用任务名称 ，相对路径 或者绝对路径调用该方法
+
+		project(':moduleA'){
+			task taskA
 		}
 
+		println tasks.getByPath('tasksA').path
+		println tasks.getByPath(':script:tasksA').path
 
+- 可以将Task作为属性来使用
 
+		println task1.name
+		println project.task1.name
 
+- 可以通过tasks collection来访问Task
+		
+		println tasks.tasks1.name
+		println tasks['tasks1'].name
 
+##### 1.2.3.6 配置Task
+
+- 方式1
+
+		Copy copy1 = task(task10,type:Copy)
+		copy1.from '/'
+		copy1.into 'task10'
+		copy1.include('**.txt')
+
+- 方式2
+		task task11(type:Copy)
+
+		task11{
+			from '/'
+			into 'task11'
+			include '**.txt'
+		}
+
+- 方式3
+		task (task12,type:Copy){
+			from '/'
+			into 'task12'
+			include '**.gradle'
+		}
+
+##### 1.2.3.7 Task的Action
+可以通过API来访问task，用来添加action
+
+	task func<<{
+		println 'normal'
+	}
+
+	func.doFirst{
+		println 'before normal'
+	}
+
+	func.doLast{
+		println 'after normal'
+	}
+
+	func{
+		doLast{
+			println 'after after normal'
+		}
+	}
+
+##### 1.2.3.8 覆盖任务
+可以通过`overwrite`覆盖任务，如果不添加`overwrite`,会抛出一个异常，表示任务已经存在
+
+	task taskA<<{
+		println 'hello'
+	}
+
+	task taskA(overwrite:true)<<{
+		println 'overwrite hello'
+	}
+
+##### 1.2.3.9 设置任务执行条件
+	task taskA<<{
+		println 'hello gradle'
+	}
+
+	tasksA.onlyIf{
+		!project.hasProperty('xxxx')
+	}
+
+##### 1.2.3.10 中断Task
+
+- 通过`throw new StopExcutionException()`抛出异常
+
+	taskA.doFirst{
+		throw new StopExcutionException()
+	}
+
+- Task用有一个`enabled` 的属性
+
+		taskA.enabled = false
 #### 1.2.4 Lifecycle
 There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
 
@@ -558,12 +762,268 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 		}
 	}
 
-#### 1.6.4 指令
+#### 1.6.4 命令参数(指令)
 - 执行`task`的时候可以通过添加`--profile`参数生成一份执行报告在`reports/profile`中
 
 - `-q`可以抑制gradle日志消息
 
+- 执行Task时， 添加`--continue` 可以在任务失败之后 继续执行
 
+- 通过`-P`设置属性，注意大小写
+		gradle -q taskA -P xxxx
+
+## 2.文件
+### 2.1 获取File对象
+- 使用相对路径
+
+		File file1 = file('hello.txt')
+		println "file1 = ${file1.getText()}"
+
+- 使用绝对路径
+
+		File file2 = file(file1.absolutePath)
+		println "file2 = ${file2.getText()}"		
+
+- 使用具有相对路径的File对象
+
+		File file3 = file(new File('hello.txt'))
+		println "file3 = ${file3.getText()}"
+
+### 2.2 获取FileCollection
+
+- 通过`files()`获取，可以将 集合，迭代 映射 和数组传给此方法。这些将会被展开并转换成实例
+		FileCollection collection1 = files('hello.txt',new File('other.gradle'))
+		FileCollection collection2 = files('hello.txt')
+		collection1.each{
+			println "file name =${it.name}"
+		}
+
+- 将FileCollection转换成　各种类型
+		Set set1 = collection1.files
+		Set set2 = collection1 as Set
+		List list1 = collection1 as List
+		String path1 = collection1.asPath
+
+- 以下俩个方法当FileCollection只存在一个 File时可以使用
+		File file4 = collection2.singleFile
+		File file5 = collection2 as File
+
+
+
+- 添加和减去 FileCollection
+		def union1 = collection1 + files('build.gradle')
+		union1.each{
+			println "union1 file name = ${it.name}"
+		}
+		def different1 = collection1 - files('hello.txt')
+		different1.each{
+			println "different1 file name = ${it.name}"
+		}
+
+- 通过`listFiles()`方法可以将`dir` 转换成`FileCollection`
+
+
+### 2.3 文件树 FileTree
+
+- 文件树是按照层次排列文件的集合,由FileTree 表示，其扩展了FileCollection ,`Project.fileTree(Map)`
+
+		FileTree tree1 = fileTree(dir:'src')
+
+- 添加 包含和不包含的规则
+
+	- 添加方式1
+
+			tree1.include '*.txt'
+			tree1.exclude '*.gradle'
+			tree1.each{
+				println "FileTree $it.name"
+			}
+
+	- 添加方式2
+	
+			tree1 = fileTree('src').include('*.gradle')
+
+	- 添加方式3
+
+			tree1 = fileTree('src'){
+				include '*.txt'
+			}
+
+	- 添加方式4 通过map创建
+
+			tree1 = fileTree(dir:'src',include:'*.txt')
+			tree1 = fileTree(dir:'src',include:['*.txt','*.gradle'])
+			tree1 = fileTree(dir:'src',include:'*',exclude:'')
+
+- 筛选FileTree
+
+		FileTree filtered1 = tree1.matching{
+			include '*.txt'
+		}
+
+- 遍历FileTree
+		filtered1.each{
+			println "file name = $it.name"
+		}
+
+
+- Add trees together
+
+		FileTree sum = filtered1 + fileTree(dir: 'src',include:'*.txt')
+
+- Visit the elements of the tree
+		sum.visit {element ->
+    		println "$element.relativePath => $element.file"
+		}
+
+
+
+- 可以将 zip or tar 作为文件树 ，以下俩个方法会返回FileTree
+		Project.zipTree(Object)
+		Project.tarTree(Object)
+
+		FileTree someTar1 = tarTree(resources.gzip('xxx.ext'))
+		someTar1.each{
+			println it.name
+		}
+
+- 指定一组输入文件
+		task compile1(type:JavaCompile){
+			source = file('src')
+		}
+		source= file('src') 接受一个file对象
+		source = 'src' 接收路径
+		source = ['src','dest']  可以使用集合来指定多个源目录
+		source = fileTree(dir:'src').matching{ include '*.gradle'} 可以接收一个fileTree
+		source = { file('src').listFiles().findAll{ it.name.endsWith('.zip')}.collect{zipTree(it)}   }
+ 
+
+
+### 2.4 Copying file
+
+- 复制文件时，可以过滤内容 ，**需要提供 from   into  ** 
+
+		task copy2(type:Copy){
+			from 'src'
+			into 'dest'
+		}
+
+- from 可以接收一个files()方法作为参数
+	- 当参数被解析时，如果是目录，则该目录下的所有内容将被递归复制到目标目录下（注意：不是目录本身）
+	- 当参数被解析后，不存在，则会忽略
+	- 当参数是task时，即取 task 的输出结果，并且该task会被添加为Copy task的依赖
+
+			task copy3(type:Copy){
+ 			//目录
+ 			from 'src'
+ 			//单个文件
+ 			from 'src/b.txt'
+ 			//task的输出
+ 			// from copyTask
+ 			//明确指定任务的输出
+ 			// from copyTaskWithPatterns.outputs
+ 			//指定zip file
+ 			// from zipTree('src/xx.zip')
+ 			// into { getDestDir()}
+ 			}
+
+
+
+
+- 在copy时，对输入文件进行筛选
+
+		task copy4(type:Copy){
+			from 'src'
+			into 'copy4'
+			include '*.txt'
+			//传入闭包的话 会给闭包一个 FileTree 参数
+			exclude {
+				it.file.name.startsWith 'a'
+			}
+		}
+
+
+
+- 复制文件除了使用 定义一个task 指定Copy 类型外，  Project 也提供了copy 方法
+
+		task copy5<<{
+ 			copy{
+ 				from 'src'
+ 				into 'copy5'
+ 			}
+ 		}
+
+		task copy6{
+			inputs.file copy2
+			outputs.dir 'copy6'
+			doLast{
+				copy{
+					from copy2
+					into 'copy6'
+				}
+			}
+		}
+
+- 重命名 file
+
+		task rename1(type:Copy){
+			from 'hello.txt'
+			into '/'
+			rename{
+				it.replace('hello','hi')
+			}
+		}
+
+- 嵌套输出 
+
+		task copy7(type:Copy){
+			into 'copy7'
+			exclude '*.txt'
+			from('src'){
+				include '*'
+			}
+
+			into('copy7') {
+				exclude '*.java'
+				from 'src'
+			}
+		}
+
+### 2.5 Sync
+- Sync 是扩展自Copy
+- 与copy的区别就是， Sync 会将文件先全部复制到 目标目录下，然后再将不需要的删除
+
+		task copy8(type:Sync){
+			from 'src'
+			into 'copy8'
+		}
+
+
+
+### 2.6 zip
+- 创建zip，默认 应该是生成在buiild下，命名规则应该是 `projectName-version.type` 
+	- version 可以在task中指定。。 貌似在 全局设置version 没用！
+	- baseName 可以替换掉 projectName 
+	- baseName - appendix - version - classifier .type
+
+			task zip1(type:Zip){
+				version = 1.5
+				baseName = 'xixixixi'
+				appendix = 'appendix'
+				classifier = 'classifier'
+				from 'src'
+			}
+
+
+
+### 2.7 Settings file
+- 除了构建脚本 build.gradle之外，gradle 还提供了一个 settings.gradle 
+
+- settings.gradle 在初始化阶段执行。另外 多项目构建 必须有settings.gradle 
+
+- build.gradle中属性访问 和 方法调用 被project 代理
+
+- 同理 属性访问 和 方法调用 在settings.gradle 中 被 settings 代理
 
 
 ## 3.实例
@@ -605,6 +1065,30 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 	}
 
 生成类似 `app-debug-1.0.apk`
+
+
+### 3.3 设置默认值
+
+- 通过以下设置 可以在 task被添加到project时立刻接收到通知
+- 这可以用来设置一些默认值或行为（task在Build file中可用之前）
+
+
+	tasks.whenTaskAdded{
+		it.ext.srcDir = 'src'
+	}
+
+	task task22<<{
+		println "task22 srcDir =$srcDir "
+	}
+
+### 3.4 配置结束回调
+- task 执行图绘制完毕，应该是配置结束
+
+		gradle.taskGraph.whenReady{
+			println "taskGraph.whenReady =  $it"
+		}
+
+
 
 
 ## 4 引用说明
