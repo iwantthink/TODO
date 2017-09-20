@@ -69,6 +69,8 @@
 		1. 任务有输入有输出，但是没有source ，例如：source files are .java files for JavaCompile
 
 
+- Gradle文件包含了一些Script Block(Build script structure) 用来配置相关的信息。这些SB通常都是一个函数，并要求传入一个Closure
+
 ### 1.1 Project和tasks
 - 每个项目的编译至少有一个project
 
@@ -1088,10 +1090,34 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 			println "taskGraph.whenReady =  $it"
 		}
 
+### 3.5 buildTypesScriptBlock
 
+- buildTypes和上面的signingConfigs，当我们在build.gradle中通过{}配置它的时候， 其背后的所代表的对象是NamedDomainObjectContainer<BuildType>和NamedDomainObjectContainer<SigningConfig> 
+
+- 注意，NamedDomainObjectContainer<BuildType/或者SigningConfig>是一种容器，容器的元素是BuildType或者SigningConfig。
+
+- 我们在debug{}要填充BuildType或者SigningConfig所包的元素，比如storePassword就是SigningConfig类的成员。而proguardFile等是BuildType的成员。 
+
+
+- 为什么要使用NamedDomainObjectContainer这种数据结构呢？因为往这种容器里添加元素可以采用这样的方法： 
+	比如signingConfig为例 
+    	signingConfig{//这是一个NamedDomainObjectContainer<SigningConfig> 
+       		test1{//新建一个名为test1的SigningConfig元素，然后添加到容器里 
+        		 //在这个花括号中设置SigningConfig的成员变量的值 
+       		} 
+      		test2{//新建一个名为test2的SigningConfig元素，然后添加到容器里 
+         		//在这个花括号中设置SigningConfig的成员变量的值 
+      		} 
+    	} 
+
+- 在buildTypes中，Android默认为这几个NamedDomainObjectContainer添加了debug和release对应的对象。如果我们再添加别的名字的东西，那么gradleassemble的时候也会编译这个名字的apk出来。比如，我添加一个名为test的buildTypes，那么gradle assemble 就会编译一个xxx-test-yy.apk。在此，test就好像debug、release一样。 
+
+### 3.6 
 
 
 ## 4 引用说明
 [深入理解Android之Gradle](http://blog.csdn.net/innost/article/details/48228651)
 
 [Gradle之完整指南](http://www.jianshu.com/p/9df3c3b6067a)
+
+[Android-Script Block-DSL](https://developer.android.com/tools/building/plugin-for-gradle.html)
