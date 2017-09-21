@@ -6,6 +6,10 @@
 - Gradle 因为采用的Groovy语言，所以具备Groovy的特点DSL(Domain Specific Language)
 
 - 学习Gradle需要掌握俩个点：1是Groovy的语法，2是Gradle的使用方法
+- [Gradlede 的版本库](http://services.gradle.org/distributions/)
+
+- Gradle版本在AS中的位置：项目名\gradle\wrapper\gradle-wrapper.properties
+
 
 
 ## 1.Gradle基本概念
