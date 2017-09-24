@@ -168,7 +168,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	        return TransformManager.CONTENT_JARS;
 	    }
 
-	- TransformManger.CONTENT_JARS，其实就是之前说的`CotnentType`那个枚举类被一个类似set的集合保存。这一段的意思就是：`Proguard`这个Transform可以接受俩种输入文件，一种是class文件(含jar)，另一种是资源文件，这个Task是做混淆用的，class文件就是`ProguardTransform`依赖的上一个Transform的输出产物，而资源文件可以是混淆时使用的配置文件。
+	- TransformManger.CONTENT_JARS，其实就是之前说的`CotnentType`那个枚举类被一个类似set的集合保存。这一段的意思就是：`Proguard`这个Transform存在俩种输入文件，一种是class文件(含jar)，另一种是资源文件，这个Task是做混淆用的，class文件就是`ProguardTransform`依赖的上一个Transform的输出产物，而资源文件可以是混淆时使用的配置文件。
 
 			public static final Set<ContentType> CONTENT_JARS = ImmutableSet.<ContentType>of(CLASSES, RESOURCES);
 				
@@ -179,9 +179,11 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	- For后面跟的是buildType+productFlavor，比如QihooDebug，XiaomiRelease，Debug，Release。
 
 ### 1.3.3 输出产物的目录生成规则
-- 输出产物的目录指的是`/proguard/release/jars/3/1f/main.jar`
+1. 输出产物的目录指的是`/proguard/release/jars/3/1f/main.jar`
 
-- `proguard`上面说了，是`getName()`方法返回的，而`release`则是`buildType`的名字，注意这里不一定是只有`buildType`，如果你的项目中指定了`productFlavor`，那么可能`release`的上一个节点还有`productFlaovor`，就像这样`/proguard/qihoo/release/`。可以看到`ProGuardTransform`中重写了`getScopes`方法，我们先忽略`isLibrary`的情况，因为我们的app module不是library，是一个app。可以看到最终返回的是`TransformManager.SCOPE_FULL_PROJECT`
+2. `proguard`上面说了，是`getName()`方法返回的，而`release`则是`buildType`的名字，注意这里不一定是只有`buildType`，如果你的项目中指定了`productFlavor`，那么可能`release`的上一个节点还有`productFlaovor`，就像这样`/proguard/qihoo/release/`。
+
+3. 在`ProGuardTransform`中重写了`getScopes`方法，先忽略`isLibrary`的情况，先分析作为app module不是library的情况。可以看到最终返回的是`TransformManager.SCOPE_FULL_PROJECT`
 		
 		public Set<Scope> getScopes() {
 		  if (isLibrary) {
@@ -191,7 +193,36 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 		  return TransformManager.SCOPE_FULL_PROJECT;
 		}
 
+	**TransformManager.SCOPE\_FULL\_PROJECT的值如下**：
+	
+		public static final Set<Scope> SCOPE_FULL_PROJECT = Sets.immutableEnumSet(
+            Scope.PROJECT,
+            Scope.PROJECT_LOCAL_DEPS,
+            Scope.SUB_PROJECTS,
+            Scope.SUB_PROJECTS_LOCAL_DEPS,
+            Scope.EXTERNAL_LIBRARIES);
 
+	将这五个Scope的值加一起正好是`1f`,这就是目录中的`1f`的来源。
 
+4. 目录中的`3`是根据`TransformManager.CONTENT_JAR`中的俩个值相加所得，`ImmutableSet.<ContentType>of(CLASSES, RESOURCES)` 表示Proguard 的输入文件既有class文件又有资源文件，这俩个枚举的值相加等于3!
 
+5. `ProguardTransform`中有如下一段代码,`asJar`这个变量在构造函数中被赋值为true
 
+		File outFile = output.getContentLocation("main", outputTypes, scopes,asJar ? Format.JAR : Format.DIRECTORY);
+	
+	`Format.JAR`代表输出文件有一个后缀jar,如果是`Format.DIRECTORY`则代表输出文件是目录结构。
+
+	从这段代码还可以看到输出文件的文件名为`main`,最终输出文件是`main.jar`
+
+	`Format.JAR`还代表是在`jars`目录下面的子目录中。如果是`Format.DIRECTORY`,那就是在`folders`目录下的子目录中
+
+6. **文件目录=》jars，outputTypes=》3，scopes=》1f，文件名=》main.jar**组成了`jars/3/1f/main.jar`,这就是输出产物的目录结构，即`ProguardTransform`的产物。另外这个文件路径中还可能会包含`buildType`和`productFlavor`!
+		
+		/proguard/qihoo/release/jars/3/1f/main.jar
+		/proguard/qihoo/debug/jars/3/1f/main.jar
+		/proguard/xiaomi/release/jars/3/1f/main.jar
+		/proguard/xiaomi/debug/jars/3/1f/main.jar
+
+7. 这个`ProguardTransform`的输出产物，会作为下一个依赖它的`Transform`的输入产物。~~~当然，输入产物是根据`getInputTypes`方法中返回的文件类型去对应的目录读取输入文件，同时如果定义了输入文件为`class`文件，那么资源文件就会被过滤然后传递到下一个`Transform`中~~~\
+
+8. 在没有开启混淆的情况下
