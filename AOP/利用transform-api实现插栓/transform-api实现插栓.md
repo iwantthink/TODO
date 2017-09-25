@@ -225,4 +225,69 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 7. 这个`ProguardTransform`的输出产物，会作为下一个依赖它的`Transform`的输入产物。~~~当然，输入产物是根据`getInputTypes`方法中返回的文件类型去对应的目录读取输入文件，同时如果定义了输入文件为`class`文件，那么资源文件就会被过滤然后传递到下一个`Transform`中~~~\
 
-8. 在没有开启混淆的情况下
+### 1.3.4 输出输入的关系
+在没有开启混淆的情况下,ProguardTransform的下一个Transform是DexTransform。 
+
+下面分俩种情况,debug 模式 不开启混淆，release 开启混淆,然后打印输入和输出文件情况：
+
+	project.afterEvaluate {
+	    project.android.applicationVariants.each { variant ->
+	        def proguardTask = project.tasks.findByName("transformClassesAndResourcesWithProguardFor${variant.name.capitalize()}")
+	        if (proguardTask) {
+	            project.logger.error "proguard=>${variant.name.capitalize()}"
+	
+	            proguardTask.inputs.files.files.each { File file->
+	                project.logger.error "file inputs=>${file.absolutePath}"
+	            }
+	
+	            proguardTask.outputs.files.files.each { File file->
+	                project.logger.error "file outputs=>${file.absolutePath}"
+	            }
+	        }
+	
+	        def dexTask = project.tasks.findByName("transformClassesWithDexFor${variant.name.capitalize()}")
+	        if (dexTask) {
+	            project.logger.error "dex=>${variant.name.capitalize()}"
+	
+	            dexTask.inputs.files.files.each { File file->
+	                project.logger.error "file inputs=>${file.absolutePath}"
+	            }
+	
+	            dexTask.outputs.files.files.each { File file->
+	                project.logger.error "file outputs=>${file.absolutePath}"
+	            }
+	        }
+	    }
+	}
+
+输出日志：
+
+	dex=>Debug
+	//省略部分输出日志
+	******
+	proguard=>Release
+	//省略部分输出日志
+	file outputs=>E:\github\CustomizePluginDemo\app\build\intermediates\transforms\proguard\release
+	dex=>Release
+	file inputs=>E:\github\CustomizePluginDemo\app\build\intermediates\transforms\proguard\release
+	//省略部分输出日志
+
+可以看到proguard的产物`transforms\proguard\release`变成了 dex的输入文件.
+
+- 结论：可以向gradle plugin 注册一个Transform ,这个Transform注册之后，需要在编译成成字节码之后被执行，执行完之后再去执行混淆的`ProguardTransform`。这样`ProguardTransform`的输入文件就变成自定义的Transform的输入文件，然后自定义的Transform的输出文件就变成了 `ProguardTransform`的输入文件。 
+
+	开启混淆其实也是类似的做法，只是把`ProguardTransform`换成了`DexTransform`
+
+
+### 1.3.5 自定义Transform
+1. 注册一个Transform,在插件的apply方法中注册
+		
+		/**
+		* 注册transform接口
+		*/
+		def isApp = project.plugins.hasPlugin(AppPlugin)
+		if (isApp) {
+		      def android = project.extensions.getByType(AppExtension)
+		      def transform = new TransformImpl(project)
+		      android.registerTransform(transform)
+		}
