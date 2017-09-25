@@ -1125,3 +1125,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 [Gradle之完整指南](http://www.jianshu.com/p/9df3c3b6067a)
 
 [Android-Script Block-DSL](https://developer.android.com/tools/building/plugin-for-gradle.html)
+
+[Gradle-旧版本文档](https://sites.google.com/a/android.com/tools/tech-docs/new-build-system/user-guide#TOC-Advanced-Build-Customization)
+
+[Android-Dsl-APi](https://google.github.io/android-gradle-dsl/current/index.html)
