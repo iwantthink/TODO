@@ -845,3 +845,8 @@ Groovy支持class形式和script形式
 		import java.util.Date as jud
 		assert new jud() instanceof java.util.Date
 
+# 2 Groovy的功能
+
+## 2.1 遍历文件夹
+`file.traverse{}`, 在GDK 文档中File 下的方法
+//TODO
