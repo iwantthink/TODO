@@ -23,7 +23,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 
 # 1.Transform
-- 该API 是1.5.0-beta1之后出现的，使用前应该修改`com.android.tools.build:gradle:xxxx`和gradle文件夹下的`distributionUrl`地址
+- 该API 是1.4.0-beta2之后出现的，使用前应该修改`com.android.tools.build:gradle:xxxx`和gradle文件夹下的`distributionUrl`地址
 
 
 **使用方式**：
