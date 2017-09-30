@@ -280,7 +280,10 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 
 ### 1.3.5 自定义Transform
-1. 注册一个Transform,在插件的apply方法中注册
+[Android-Plugin-DSL-Reference](https://google.github.io/android-gradle-dsl/current/index.html)
+- **有一个很重要的规则，在编写groovy文件的时候一定要记得写包名，另外一些包一定记得import,~~~Android studio 如果你只是复制代码进文件，不会自动添加。。。必须重写一遍。。。 可能是需要设置~~~**
+
+1. 在插件的apply方法中注册一个Transform
 		
 		/**
 		* 注册transform接口
@@ -288,6 +291,300 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 		def isApp = project.plugins.hasPlugin(AppPlugin)
 		if (isApp) {
 		      def android = project.extensions.getByType(AppExtension)
-		      def transform = new TransformImpl(project)
+		      def transform = new MyTransform(project)
 		      android.registerTransform(transform)
 		}
+
+	- 这里的`extensions.getByType(AppExtension)`是去获取插件对象，就是我们在`build.gradle`中添加的`apply plugin: 'com.android.application'`,**除了`AppExtension`之外，还有`com.android.library projects`对应`LibraryExtension`,`TestExtension`对应`com.android.test projects`**
+	- 通过这个`AppExtension`，可以获取许多`Android`的属性
+	- 这里指定插件适应于`app`而不是`library`
+	- 换一种写法`project.extensions.getByName('android')` 也能实现同样的功能.**`AppExtension` 就是扩展的类型，`android`就是AppExtension的名称**
+
+2. Transform具体的实现，需要注意的是`Transform`是在`package com.android.build.api`下的.除了实现一些抽象方法之外，还需要去重写一个`transform(TransformInvocation transformInvacation)`方法
+
+		class MyTransform extends Transform{
+		
+		    @Override
+		    String getName() {
+		        return null
+		    }
+		
+		    @Override
+		    Set<QualifiedContent.ContentType> getInputTypes() {
+		        return null
+		    }
+		
+		    @Override
+		    Set<? super QualifiedContent.Scope> getScopes() {
+		        return null
+		    }
+		
+		    @Override
+		    boolean isIncremental() {
+		        return false
+		    }
+		
+		    @Override
+		    void transform(TransformInvocation transformInvocation) throws com.android.build.api.transform.TransformException, InterruptedException, IOException {
+		        super.transform(transformInvocation)
+		    }
+		}
+
+3. 在`MyTransform的transfrom()`方法中，可以获取该Transform的输入文件，输入文件有俩类 一种是：`directoryInput`,另一种是:`jarInputs`。前者是输入`.class`文件,后者是输入`.jar`文件
+
+        transformInput.directoryInputs.findAll { DirectoryInput directoryInput ->
+            File dest = transformInvocation.outputProvider.getContentLocation(
+                    directoryInput.name, directoryInput.contentTypes, directoryInput.scopes, Format.DIRECTORY
+            )
+            
+            FileUtils.copyDirectory(directoryInput.file, dest);
+			//TODO 处理directory下的class 进行字节码注入
+        }
+
+		 transformInput.jarInputs.findAll { JarInput jarInput ->
+		                String destName = jarInput.name
+		                def hexName = DigestUtils.md5Hex(jarInput.file.absolutePath)
+		                if (destName.endsWith(".jar")) {
+		                    destName = destName.substring(0, destName.length() - 4)
+		                }
+		                File dest = transformInvocation.outputProvider.getContentLocation(
+		                        destName + "_" + hexName, jarInput.contentTypes, jarInput.scopes, Format.JAR
+		                )
+		                FileUtils.copyFile(jarInput.file, dest)
+						//TODO 处理JAR进行字节码注入
+		            }
+		
+	- inputJar输入路径如下：
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\11c54790ff4ad70dd516e92b124412031e233308\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\cdb003da677181616841cbde22313188da74858c\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\6542b9eeb85d9a97bff471a595a332ea1f76cf29\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\0837cda07f168f5cf5f1a53128afa242f7df27bb\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\c1ce52a9925745448899f2f64fab670f2ddf3bf8\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\81379c51ac83ab95be3844a95a8790c7ccd393be\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\607e64fb4b0903b7418588a4a6af6ca27ba62ff5\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\c0eb07f32bf544d0c7c1fdba1f54b0bf220a8580\output\jars\classes.jar
+			log: MyTransform jarinput path = E:\sdk\extras\android\m2repository\com\android\support\support-annotations\25.3.1\support-annotations-25.3.1.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\f48922dbc0641d50d385fd74aa662575552d735c\output\jars\classes.jar
+			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\1847cb314b40784e3716b3be490b8e694e5e9f42\output\jars\classes.jar
+	- directoryInput输入路径如下：
+			log: MyTransform directoryInput path = E:\github\CustomizePluginDemo\app\build\intermediates\classes\apple\release
+
+4. 最后只用在TODO的地方对需要修改的文件 进行ASM操作即可，记得先删除，再保存回`dest`中
+
+
+### 1.3.6 定义扩展
+创建`extensions`，包含`includePkg`,`excludeClass`,`mappingDir`。`includePkg`表示什么包名下的类会被修改，`excludeClass`可以指定哪些类名被排除在外，`mappingDir`表示mapping文件的地址，用在混淆操作时
+
+定义：  
+
+	public class MyExtension {
+	    List<String> includePkg = []
+	    List<String> excludeClass = []
+	    String oldDir
+	
+	    MyExtension(Project project) {
+	
+	    }
+	}
+
+    project.extensions.create('RYAN', MyExtension, project)
+
+使用：
+
+	RYAN {
+	    excludeClass = ["Test.class"]
+	    includePkg = ["com.hmt.analytics.customizeplugin"]
+	    oldDir = "$project.buildDir/outputs/ryan"
+	}
+
+- TODO这里有一个待验证的行为,就是如果对Application的子类进行字节码修改。。可能会报出来一个`ClassNotFound`..
+
+### 1.3.7 从manifest文件找到application
+
+
+	def processManifestTask = project.tasks.findByName("process${buildAndFlavor}Manifest")
+	def manifestFile = processManifestTask.outputs.files.files[0]
+	def applicationName = getApplication(manifestFile)
+
+	public static String getApplication(File manifestFile) {
+        def manifest = new XmlParser().parse(manifestFile)
+        def androidTag = new groovy.xml.Namespace("http://schemas.android.com/apk/res/android", 'android')
+        def applicationName = manifest.application[0].attribute(androidTag.name)
+
+        if (applicationName != null) {
+            return applicationName.replace(".", "/") + ".class"
+        }
+        return null;
+    }
+
+### 1.3.8 文件对比-hash值
+举个栗子：
+例如1.0的版本，已经打包发布，这时候 最好将每个class文件的`hash`值保存下来。 这样进行热修复 打补丁时， 我们在修改完对应 .java文件之后，在编译过程 执行到`MyTransform`的时候，与`1.0`版本保存下来的`hash`值 进行对比。。就可以知道哪些类是需要打进补丁包内的！
+
+### 1.3.9 字节码注入操作
+- 在`1.3.5`当中，已经得知`transform()`方法 可以获取到输入文件，只需要在TODO的地方进行操作即可
+
+- groovy提供了及其方便的遍历的 函数`traverse`,具体使用去看groovy文档接口
+
+- `transform`的输入文件，并不全都是需要进行字节码修改的文件，另外还需要根据之前定义的`extensions` 来对文件进行过滤。
+
+	    boolean filterFile(File file) {
+	        def needDeal = false
+	        mExtension.includePkg.each { String item ->
+	            log("includePkg = $item")
+	            def replacedPath = file.absolutePath.replace("\\$file.name", "")
+	            def replacedItem = item.replace(".", "\\")
+	            log("replacedItem = $replacedItem")
+	            log("replacedPath = $replacedPath")
+	            //指定包名，并且不是以R开头的资源文件，不是BuildConfig.class
+	            //TODO 完善判断过滤文件的机制
+	            if (replacedPath.endsWith(replacedItem) &&
+	                    !file.name.startsWith("R\$") &&
+	                    !file.name.startsWith("BuildConfig") &&
+	                    !file.name.equals("R.class")) {
+	                log("file $file.name need modify")
+	                needDeal = true
+	                //排除忽略的类文件
+	                mExtension.excludeClass.each {
+	                    log("excludeClass = $it")
+	                    if (it.equals(file.name)) {
+	                        log("file in excludeClass")
+	                        needDeal = false
+	                    }
+	                }
+	            }
+	        }
+	        return needDeal
+	    }
+
+- 遍历并过滤之后，这里的做法是 将被修改过的文件记录下来，等输入文件输出到`MyTransform`路径下之后，再去`MyTransform`输出路径下去替换这些文件！**在这里只是处理了diretory下的class，其实jar也是差不多的**
+
+		directoryInput.file.traverse(type: FileType.FILES, nameFilter: ~/.*\.class/) { File classFile ->
+	                    log("classFile = $classFile.name")
+	                    boolean needModify = filterFile(classFile)
+	                    if (needModify) {
+	                        try {
+	                            File modifiedFile = Inject.injectClass(directoryInput.file, classFile, transformInvocation.context)
+	                            modifyMap.put(classFile.absolutePath.replace(directoryInput.file.absolutePath, ""), modifiedFile)
+	                        } catch (Exception e) {
+	                            log(e.message)
+	                        }
+	                        log("over")
+	                    }
+	                }
+		 //输出到MyTransform的输出路径下
+		 FileUtils.copyDirectory(directoryInput.file, dest);
+
+		 modifyMap.each {
+		                 log("key = $it.key")
+		                 log("value = $it.value.absolutePath")
+		                 File targetFile = new File(dest.absolutePath + "\\$it.key")
+		                 if (targetFile.exists()) {
+		                        targetFile.delete()
+		                    }
+		                 FileUtils.copyFile(it.value, targetFile)
+		                }
+
+	- 在这一步当中，还可以做文件`hash`值校验，更新(输出新的hash值到文件，以备下次校验)
+
+### 1.3.10 拷贝mapping文件
+- mapping文件就是混淆的对应规则。。如果下一次打补丁包，有可能会需要进行混淆,那么就需要应用mapping文件。。 那这个混淆规则 就必须得保持一致！
+
+- mapping文件是混淆完成后输出的,因此需要hook掉混淆的task，在task完成的时候输出文件！
+
+- mapping文件实例部分内容：
+
+		android.support.annotation.Keep -> android.support.annotation.Keep:
+		android.support.graphics.drawable.AndroidResources -> android.support.a.a.a:
+	    int[] styleable_VectorDrawableTypeArray -> a
+	    int[] styleable_VectorDrawableGroup -> b
+	    int[] styleable_VectorDrawablePath -> c
+	    int[] styleable_VectorDrawableClipPath -> d
+	    int[] styleable_AnimatedVectorDrawable -> e
+	    int[] styleable_AnimatedVectorDrawableTarget -> f
+	    void <clinit>() -> <clinit>
+
+- 代码：
+
+        project.afterEvaluate {
+            def flavorsAndTypes = getProductFlavorsBuildTypes(project)
+            flavorsAndTypes.each { item ->
+                copyMappingFile(project, item)
+            }
+        }
+
+	    def copyMappingFile(Project project, String flavorsAndTypes) {
+	        def changedFlavorsAndTypes = capitalize(flavorsAndTypes)
+	        def proguardTask = project.tasks.findByName("transformClassesAndResourcesWithProguardFor${changedFlavorsAndTypes}")
+	        if (proguardTask) {
+	            proguardTask.doLast {
+	                def mapFile = new File("$project.buildDir/outputs/mapping/$flavorsAndTypes/mapping.txt")
+	                def mapCopyDir = new File("$project.buildDir/outputs/ryan/$flavorsAndTypes")
+	                if (!mapCopyDir.exists()) {
+	                    mapCopyDir.mkdirs()
+	                }
+	                def mapCopyFile = new File("$mapCopyDir.absolutePath/mapping.txt")
+	                if (!mapCopyFile.exists()) {
+	                    mapCopyFile.createNewFile()
+	                }
+	                FileUtils.copyFile(mapFile, mapCopyFile)
+	                List<File> fileList = getProguardConfigFile(proguardTask)
+	                mProguardConfigFile.put(flavorsAndTypes, fileList)
+	            }
+	
+	        }
+	    }
+		//capitalize 就是将首字母替换成大写的
+		// Gstring提供了这个函数。
+		String capitalize(String flavorsAndTypes) {
+	        String[] arrays = flavorsAndTypes.split("\\\\")
+	        def changedFlavorsAndTypes = ""
+	        arrays.each {
+	            //changedFlavorsAndTypes += it.replace(it.substring(0, 1), it.substring(0, 1).toUpperCase())
+				changedFloavrosAndTypes += it.capitalize()
+	        }
+	        changedFlavorsAndTypes
+	    }
+
+
+
+### 1.3.11 获取productFlavorsBuildTypes
+- `AppExtension`中有一个方法`applicationVariants`
+
+	    project.extensions.getByType(AppExtension).applicationVariants.findAll {
+	        System.err.println("application variants = $it.name")
+	    }
+		//输出内容
+		application variants = orangeDebug
+		application variants = orangeRelease
+		application variants = appleDebug
+		application variants = appleRelease
+
+
+
+- 也可以通过`AppExtension`中的`productFlavors`和`buildTypes`自己进行组合。这里获取到productFlavors&buildTypes 主要是为了放到路径中去使用，所以自己单独做了处理。没有特殊要求 可以用上面那种
+
+	    List getProductFlavorsBuildTypes(Project project) {
+	        def app = project.extensions.getByType(AppExtension)
+	        List composedList = []
+	        def flavors = app.productFlavors
+	        def types = app.getBuildTypes()
+	        if (flavors) {
+	            flavors.each { productFlavor ->
+	                if (types) {
+	                    types.each { buildType ->
+	                        composedList.add("$productFlavor.name\\$buildType.name")
+	                    }
+	                } else {
+	                    composedList.add("$productFlavor.name")
+	                }
+	            }
+	        } else {
+	            types.each { buildType ->
+	                composedList.add("$buildType.name")
+	
+	            }
+	        }
+	        return composedList
+	    }
+
