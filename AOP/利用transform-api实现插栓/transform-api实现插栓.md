@@ -373,7 +373,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 
 ### 1.3.6 定义扩展
-创建`extensions`，包含`includePkg`,`excludeClass`,`mappingDir`。`includePkg`表示什么包名下的类会被修改，`excludeClass`可以指定哪些类名被排除在外，`mappingDir`表示mapping文件的地址，用在混淆操作时
+创建`extensions`，包含`includePkg`,`excludeClass`,`mappingDir`。`includePkg`表示什么包名下的类会被修改，`excludeClass`可以指定哪些类名被排除在外，`oldDir`表示mapping文件的地址，用在混淆操作时(其实是想用这个参数作为指定补丁包的类所在的地址)
 
 定义：  
 
@@ -534,7 +534,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	
 	        }
 	    }
-		//capitalize 就是将首字母替换成大写的
+		//capitalize 就是将首字母替换成大写的,可以查看gradle console 中输出的 task日志，都是驼峰式的
 		// Gstring提供了这个函数。
 		String capitalize(String flavorsAndTypes) {
 	        String[] arrays = flavorsAndTypes.split("\\\\")
@@ -588,3 +588,210 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	        return composedList
 	    }
 
+### 1.3.12 获取proguardConfigFile
+- **获取混淆的配置文件，这样在打补丁包的时候 就可以使用**
+
+- 可以在获取mapping的时候 顺便做这个事情。。因为都在获取`proguardTask`..也可以单独的做
+
+- 这里的`proguardTask`就是通过`project.tasks.getByName("transformClassesAndResourcesWithProguardFor${changedFlavorsAndTypes}")` 获取到的一个`task`.可以通过打印该task的 `metaClass`，会发现它的类型是`TransformTask`而不是`Transform`的实现。 这个`TransformTask`是一个包装类，里面包装了`Transform`
+
+- `getAllConfigurationFiles`拿到了所有的配置文件，这些配置文件包括了在build.gradle中定义的混淆配置以及aapt的混淆配置
+
+	    def getProguardConfigFile(TransformTask proguardTask) {
+	        //proguardTask 存在一个方法获取transform
+	        ProGuardTransform proGuardTransform = proguardTask.getTransform()
+	        //获取所有的混淆的配置文件。。 这个方法是ProguardTRansform 的接口中的方法
+	        //代码好像不提示。。。 但是 我打出来之后是可以使用
+	        proGuardTransform.getAllConfigurationFiles()
+	    }
+
+### 1.3.13 获取sdk路径
+先从root路径下的local.properties中获取sdk路径.如果没有该文件，就通过系统环境变量来获取sdk的路径
+
+	   def getSdkDir(Project project) {
+	        //确定sdkDir的路径
+	        def sdkDir
+	        Properties properties = new Properties()
+	        File localProps = project.rootProject.file('local.properties')
+	        if (localProps.exists()) {
+	            properties.load(localProps.newDataInputStream())
+	            sdkDir = properties.getProperty('sdk.dir')
+	        } else {
+	            sdkDir = System.getenv('ANDROID_HOME')
+	        }
+	    }
+
+### 1.3.14 获取存储下来的mapping文件
+
+    def getMappingFile(Project project, String flavorAndType) {
+        def TAG = "getMappingFile :"
+        def mExtension = project.extensions.findByName('RYAN') as MyExtension
+        def mappingDir = new File(mExtension.oldDir)
+        if (mappingDir.exists()) {
+            logE("$TAG mappingDir exist")
+            logE("$TAG $mappingDir.absolutePath/$flavorAndType/mapping.txt")
+            def mappingFile = new File("$mappingDir.absolutePath/$flavorAndType/mapping.txt")
+            logE("$TAG mappingFile path = $mappingFile.absolutePath")
+            mappingFile
+        }
+
+    }
+
+### 1.3.15 保存输入文件的路径
+- 保存`Transform`的输入文件，因为在打补丁包的时候，需要添加 这些补丁包的 依赖类！！所以建议在`Transform`遍历文件的时候把这些输入文件的路径保存下来！方便 在做dex操作时使用
+
+		proguardLibfiles.add(directoryInput.file)
+		proguardLibfiles.add(jarInput.file)
+		
+		if (proguardLibfiles && proguardLibfiles.size()) {
+		            File output = new File(mProject.buildDir.absolutePath + "\\tmp\\libFiles.txt")
+		            if (!output.exists()) {
+		                output.createNewFile()
+		            }
+		            output.withDataOutputStream { strem ->
+		                proguardLibfiles.findAll { File file ->
+		                    strem.write("$file.absolutePath\n".getBytes())
+		                    strem.flush()
+		                }
+		            }
+		        }
+
+
+### 1.3.16 读取保存的输入文件路径
+
+	  def getProguardLibFiles() {
+	        List<File> proguardLibFiles = new ArrayList<>()
+	        File output = new File(mProject.buildDir.absolutePath + "\\tmp\\libFiles.txt")
+	        output.withDataInputStream { input ->
+	            input.eachLine { path ->
+	                logE("proguardLibFiels = $path")
+	                proguardLibFiles.add(new File(path))
+	            }
+	        }
+	        proguardLibFiles
+	    }
+
+### 1.3.13 dex操作
+- 这一步主要完成的就是将class文件打成dex文件。这里需要知道一点就是之前自定义的`Transform`是在混淆操作之前的！ **所以输出的文件 也是未经混淆的**。如果是将未混淆的文件 打成dex包，下发到app端，进行热修复 肯定是错误的！
+
+- 因此需要判断是否存在混淆的task，如果存在 则需要手动混淆，混淆的时候应用之前记录下来的`configurationFiles`,并且还需要应用上次发版时的`mapping`文件 以保持类名的对应
+
+- 关键的一点就是需要将混淆的代码加入到`configuration.programJars`中去，混淆的依赖代码加入到`configuration.libraryJars`中去，而依赖的代码就是transform的输入文件，需要将这些输入文件一一保存起来，这样混淆的时候才能拿到。我们只需在遍历输入文件的时候加入到一个变量中即可
+
+- 打包准备过程：
+
+		 def prepareDex(Project project) {
+		        def TAG = 'method dex:  '
+		        List<String> flavorsAndTypes = getProductFlavorsBuildTypes(project)
+		        flavorsAndTypes.each { item ->
+		            File classDir = new File("$project.buildDir\\tmp\\$item")
+					//判断被打包的文件夹是否存在
+		            if (classDir.exists() && classDir.listFiles().size() > 0) {
+		                logE("$TAG $item classDir has subFile or dir")
+						//获取sdk 的地址
+		                def sdkDir = getSdkDir(project)
+		                logE("$TAG sdkDir = $sdkDir")
+		                if (sdkDir) {
+		                    def changedFlavorsAndTypes = capitalize(item)
+		                    def proguardTask = project.tasks.
+		                            findByName("transformClassesAndResourcesWithProguardFor${changedFlavorsAndTypes}")
+		                    if (proguardTask) {
+		                        logE("$TAG proguardTask can be find")
+		                        def mappingFile = getMappingFile(project, item)
+		                        //混淆的配置
+		                        Configuration configuration = new Configuration()
+		                        //使用混合的类名，这样不同的类混淆后将使用同一类名
+		                        configuration.useMixedCaseClassNames = false
+		                        configuration.programJars = new ClassPath()
+		                        configuration.libraryJars = new ClassPath()
+		                        //应用mapping文件
+		                        configuration.applyMapping = mappingFile
+		                        //打开日志
+		                        configuration.verbose = true
+		                        //输出配置文件
+		                        configuration.printConfiguration = new File("$classDir.absolutePath/dump.txt")
+		                        //不过滤没有引用的文件....应该是我们打的这些都都没有引用的文件，所以必须不过滤
+		                        configuration.shrink = false
+		                        //将android.jar和apache库加入依赖
+		                        def compileSdkVersion = project.android.compileSdkVersion
+		                        logE("compileSdkVersion = $compileSdkVersion")
+		                        ClassPathEntry androidEntry = new ClassPathEntry(new File("$sdkDir/platforms/$compileSdkVersion/android.jar"), false)
+		                        configuration.libraryJars.add(androidEntry)
+		
+		                        File apacheFile = new File("$sdkDir/$compileSdkVersion/platforms/optional/org.apache.http.legacy.jar")
+		                        //android-23 以下才存在apache包
+		                        if (apacheFile.exists()) {
+		                            ClassPathEntry apacheEntry = new ClassPathEntry(apacheFile, false)
+		                            configuration.libraryJars.add(apacheFile)
+		                        }
+		                        List<File> proguardLibFiles = getProguardLibFiles()
+		                        //将MyTransform的所有输入文件都添加到混淆依赖jar
+		                        if (proguardLibFiles) {
+		                            ClassPathEntry jarFile
+		                            proguardLibFiles.findAll { file ->
+		                                jarFile = new ClassPathEntry(file, false)
+		                                configuration.libraryJars.add(jarFile)
+		                            }
+		                        }
+		
+		                        //设置待dex未混淆的目录
+		                        ClassPathEntry classPathEntry = new ClassPathEntry(classDir, false)
+		                        configuration.programJars.add(classPathEntry)
+		
+		                        //定义混淆输出路径
+		                        File proguardOutPut = new File("$project.buildDir.absolutePath/tmp/$item/proguard")
+		                        //第二个参数表示是输出
+		                        ClassPathEntry classPathEntryOut = new ClassPathEntry(proguardOutPut, true)
+		                        configuration.programJars.add(classPathEntryOut)
+		
+		                        //外部定义的混淆文件的获取并应用
+		                        def file = mProguardConfigFile.get(item)
+		                        file.findAll { proguardFile ->
+		                            logE("$TAG proguard外部定义的混淆文件 = $proguardFile.absolutePath")
+		                            ConfigurationParser proguardParser = new ConfigurationParser(proguardFile, System.getProperties())
+		                            try {
+		                                proguardParser.parse(configuration)
+		                            } catch (Exception e) {
+		                                logE(e.message)
+		                            }
+		                        }
+		
+		                        //执行混淆
+		                        ProGuard proGuard = new ProGuard(configuration)
+		                        proGuard.execute()
+								//这里的这个路径 就是做完混淆之后的那些需要dex的类的路径！
+		                        classDir = proguardOutPut
+		
+		                    }
+		
+		                    dex(project, sdkDir, classDir)
+		
+		                } else {
+		                    logE("$TAG android sdk dir not defined")
+		                }
+		            }
+		        }
+		    }
+
+
+- 实际打包过程
+
+		 def dex(Project project, String sdkDir, File classDir) {
+		        def TAG = "dex :　"
+		        logE("$TAG dex begining")
+		        def cmdExt = Os.isFamily(Os.FAMILY_WINDOWS) ? '.bat' : ''
+		        def stdout = new ByteArrayOutputStream()
+		        project.exec {
+		            commandLine "${sdkDir}/build-tools/${project.android.buildToolsVersion}/dx${cmdExt}",
+		                    '--dex',
+		                    "--output=${new File(classDir, 'ryan_dex.jar').absolutePath}",
+		                    "${classDir.absolutePath}"
+		            standardOutput = stdout
+		        }
+		        def error = stdout.toString().trim()
+		        if (error) {
+		            logE("$TAG dex error = $error")
+		        }
+		    }
+
+- 具体的混淆代码。。建议看gradle的源码，因为上面的这些步骤 就是对gradle混淆的源码的复现
