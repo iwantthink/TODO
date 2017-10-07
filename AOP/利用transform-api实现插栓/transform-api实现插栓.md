@@ -794,4 +794,4 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 		        }
 		    }
 
-- 具体的混淆代码。。建议看gradle的源码，因为上面的这些步骤 就是对gradle混淆的源码的复现
+- 具体的混淆的逻辑。。建议看gradle的源码，因为上面的这些步骤 就是对gradle混淆的源码的复现
