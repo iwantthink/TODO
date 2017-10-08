@@ -28,18 +28,19 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 
 	规则如下：
 
-	基本类型字符---对应类型
-	B------------------byte
-	C------------------char
-	D------------------double
-	F------------------float
-	I------------------int
-	S------------------short
-	J------------------long
-	Z------------------boolean
-	V------------------void
-	L+classname +;-----对象类型
-	[------------------数组类型
+		基本类型字符---对应类型
+
+		B------------------byte
+		C------------------char
+		D------------------double
+		F------------------float
+		I------------------int
+		S------------------short
+		J------------------long
+		Z------------------boolean
+		V------------------void
+		L+classname +;-----对象类型
+		[------------------数组类型
 
 	例如：
 
@@ -49,6 +50,7 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 
 
 - 方法描述符
+
 	用来描述方法的参数列表(数量、类型以及顺序)和返回值。
 
 	格式：(参数描述符列表)返回值描述符。 例如：Object m(int i, double d, Thread t) {..} ==> IDLjava/lang/Thread;)Ljava/lang/Object;
@@ -113,15 +115,15 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 ## 3.4 访问标识
 2个字节代表，标示用于识别一些类或者接口层次的访问信息.
 
->标识名-------------------标识值----------解释
->ACC_PUBLIC------------------- 0x0001----------声明为public;可以从包外部访问
->ACC_FINAL-------------------0x0010----------被声明为final;不允许子类修改
->ACC_SUPER-------------------0x0020----------当被invokespecial指令调用时，将特殊对待父类的方法
->ACC_INTERFACE-------------------0x0200----------接口标识符
->ACC_ABSTRACT-------------------0x0400----------声明为abstract;不能被实例化
->ACC_SYNTHETIC-------------------0x1000----------声明为synthetic;不存在于源代码，由编译器生成
->ACC_ANNOTATION-------------------0x2000----------声明为注释类型
->ACC_ENUM-------------------0x4000----------声明为枚举类型
+	标识名-------------------标识值----------解释
+	ACC_PUBLIC------------------- 0x0001----------声明为public;可以从包外部访问
+	ACC_FINAL-------------------0x0010----------被声明为final;不允许子类修改
+	ACC_SUPER-------------------0x0020----------当被invokespecial指令调用时，将特殊对待父类的方法
+	ACC_INTERFACE-------------------0x0200----------接口标识符
+	ACC_ABSTRACT-------------------0x0400----------声明为abstract;不能被实例化
+	ACC_SYNTHETIC-------------------0x1000----------声明为synthetic;不存在于源代码，由编译器生成
+	ACC_ANNOTATION-------------------0x2000----------声明为注释类型
+	ACC_ENUM-------------------0x4000----------声明为枚举类型
 
 ## 3.5 类/父类索引
 当前类索引和父类索引占用大小都为u2类型，由于一个类只能继承一个父类，故父类索引只有一个。除了java.lang.Object对象的父类索引为0，其他所有类都有父类。
@@ -141,19 +143,19 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
     attribute_info attributes[attributes_count];  //属性表的具体内容
 	}
 
-	字段访问标识如下：(表中加粗项是字段独有的)
+- 字段访问标识如下：(表中加粗项是字段独有的)
 
-	>标识名	标识值	解释
-	>ACC_PUBLIC	0x0001	声明为 public; 可以从包外部访问
-	>ACC_PRIVATE	0x0002	声明为 private; 只有定义的类可以访问
-	>ACC_PROTECTED	0x0004	声明为 protected;只有子类和相同package的类可访问
-	>ACC_STATIC	0x0008	声明为 static；属于类变量
-	>ACC_FINAL	0x0010	声明为 final; 对象构造后无法直接修改值
-	>**ACC_VOLATILE**	0x0040	声明为 volatile; 不会被缓存,直接刷新到主屏幕
-	>**ACC_TRANSIENT**	0x0080	声明为 transient; 不能被序列化
-	>ACC_SYNTHETIC	0x1000	声明为 synthetic; 不存在于源代码，由编译器生成
-	>ACC_ENUM	0x4000	声明为enum
-	Java语法中，接口中的字段默认包含ACC_PUBLIC, ACC_STATIC, ACC_FINAL标识。ACC_FINAL，ACC_VOLATILE不能同时选择等规则。
+		标识名	标识值	解释
+		ACC_PUBLIC	0x0001	声明为 public; 可以从包外部访问
+		ACC_PRIVATE	0x0002	声明为 private; 只有定义的类可以访问
+		ACC_PROTECTED	0x0004	声明为 protected;只有子类和相同package的类可访问
+		ACC_STATIC	0x0008	声明为 static；属于类变量
+		ACC_FINAL	0x0010	声明为 final; 对象构造后无法直接修改值
+		**ACC_VOLATILE**	0x0040	声明为 volatile; 不会被缓存,直接刷新到主屏幕
+		**ACC_TRANSIENT**	0x0080	声明为 transient; 不能被序列化
+		ACC_SYNTHETIC	0x1000	声明为 synthetic; 不存在于源代码，由编译器生成
+		ACC_ENUM	0x4000	声明为enum
+		Java语法中，接口中的字段默认包含ACC_PUBLIC, ACC_STATIC, ACC_FINAL标识。ACC_FINAL，ACC_VOLATILE不能同时选择等规则。
 
 	紧跟其后的name_index和descriptor_index是对常量池的引用，分别代表着字段的简单名和方法的描述符。
 
@@ -197,7 +199,7 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
     u1 info[attribute_length]; //属性的具体内容
 	}
 
-属性表的限制相对宽松，不需要各个属性表有严格的顺序，只有不与已有的属性名重复，任何自定义的编译器都可以向属性表中写入自定义的属性信息，Java虚拟机运行时会忽略掉无法识别的属性。 关于虚拟机规范中预定义的属性，这里不展开讲了，列举几个常用的。
+属性表的限制相对宽松，不需要各个属性表有严格的顺序，只要不与已有的属性名重复，任何自定义的编译器都可以向属性表中写入自定义的属性信息，Java虚拟机运行时会忽略掉无法识别的属性。 关于虚拟机规范中预定义的属性，这里不展开讲了，列举几个常用的。
 
 
 	属性名	使用位置	解释
@@ -230,9 +232,9 @@ Code属性的格式如下：
     attribute_info attributes[attributes_count]; //具体的属性内容
 	}
 
-- slot是虚拟机未局部变量分配内存使用的最小单位。对于byte/char/float/int/short/boolean/returnAddress等长度不超过32位的局部变量，每个占用1个Slot；对于long和double这两种64位的数据类型则需要2个Slot来存放。
+- slot是虚拟机中局部变量分配内存使用的最小单位。对于byte/char/float/int/short/boolean/returnAddress等长度不超过32位的局部变量，每个占用1个Slot；对于long和double这两种64位的数据类型则需要2个Slot来存放。
 - 实例方法中有隐藏参数this, 显式异常处理器的参数，方法体定义的局部变量都使用局部变量表来存放。
-- max_locals，不是所有局部变量所占Slot之和，因为Slot可以重用，javac编译器会根据变量的作用域来分配Slot给各个变量使用，从而计算出max_locals大小。
+- max_locals，不是所有局部变量所占Slot之和，因为Slot可以重用，javac编译器会根据变量的作用域来分配Slot给各个变量使用，从而计算出max\_locals大小。
 - 虚拟机规范限制严格方法不允许超过65535个字节码，否则拒绝编译。
 
 Code属性是Class文件中最重要的属性，Java程序的幸福课分为代码(方法体中的Java代码)和元数据(包含类、接口、字段、方法定义以及其他信息)两部分。
