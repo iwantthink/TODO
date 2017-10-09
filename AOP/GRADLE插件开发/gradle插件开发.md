@@ -12,21 +12,21 @@ Gradle支持俩种类型的Task：
 ## 1.1 增强型任务
 - 增强型任务的属性或行为通过一个类来定义，需要指定Task的type或class
 
-## 1.2 Task class 源码放置位置
+## 1.2 Task class 源码存放位置
 
-- Build script:可以直接在构建脚本中定义任务类。有利于任务类自动编译并，并且这个任务类自动的会被包含在构建脚本的类路径中。缺点就是任务类在构建脚本外部不可见，所以就无法在没有定义任务类的地方去使用
+- **Build script：**可以直接在构建脚本中定义任务类。有利于任务类自动编译并，并且这个任务类自动的会被包含在构建脚本的类路径中。缺点就是任务类在构建脚本外部不可见，所以就无法在没有定义任务类的地方去使用
 
-- buildScr Project:可以将任务类的源码放在 `rootProjectDir/buildSrc/src/main/groovy`目录下。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外任务类对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+- **buildScr Project：**可以将任务类的源码放在 `rootProjectDir/buildSrc/src/main/groovy`目录下。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外任务类对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
 
-- Standalone project:在独立的项目里编写任务类,打成Jar包使用 或发布到仓库，之后可以直接引用。
+- **Standalone project：**在独立的项目里编写任务类,打成Jar包使用 或发布到仓库，之后可以直接引用。
 
 
 ## 1.3 编写简单的任务类
 - 要实现自定义任务类，需要创建一个类并继承`DefaultTask`类
 
-- 通过`TaskAction`注释 向任务类添加方法，当任务执行时，Gradle会自动调用该action
+- 通过`TaskAction`注解 向任务类添加方法，当任务执行时，Gradle会自动调用该action
 
-- 定义的时候可以不使用方法+注释的 方式 替 任务类添加行为。可以在创建任务类对象的时候调用doFirst()或doLast()的cloasure 来添加
+- 定义的时候可以不使用方法+注解的 方式 替 任务类添加行为。可以在创建任务类对象的时候调用doFirst()或doLast()的cloasure 来添加
 
 - 可以替任务类 添加属性，这样在定义任务类的时候 就可以设置这个属性的值
 
@@ -97,7 +97,7 @@ Gradle支持俩种类型的Task：
 ## 2.1 编写简单的插件
 以下的例子都是在build.gradle中编写的,有些GradleAPI 在AndroidStudio中 不存在，因为Gradle的版本问题。。一些API 在特定版本之后才出现
 ---
-- 给出的例子中设置的插件类型是Project类型的，可以在Plugin<>设置更多的类型参数（目前不太可能）
+- 给出的例子中设置的插件类型是Project类型的，可以在Plugin<>泛型中设置更多的类型参数（目前不太可能）
 
 		apply plugin:GreetingPlugin //直接依赖 去使用！
 	
@@ -111,7 +111,7 @@ Gradle支持俩种类型的Task：
 	    	}
 		}
 
-## 2.2 从构建从获取输入
+## 2.2 从构建中获取输入信息
 - 其实就是从apply插件的 build.gradle 中 传递参数给插件！
 
 - 大多数插件需要从构建脚本获取一些配置，可以通过`extension objects`方法实现。具体就是与Gradle Project 相关联的一个 `ExtensionContainer`对象实现参数的传递。
