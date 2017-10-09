@@ -12,11 +12,11 @@
 
 - groovyConsole(open GroovyConsole),ctrl+w(clear output window),ctrl+r(run groovy code)
 
-- Groovy注解标记和Java一样,支持// 和 单行注释`/*content*/` 和评论`/**content*/`(评论可以添加@param,@return等)
+- Groovy注解标记和Java一样,支持`//` 单行注释,`/*content*/`多行注释 和评论`/**content*/`(评论可以添加@param,@return等)
 
 - Groovy标识符可以以英文，下划线，$开头，但是不能以数字开头
 
-- 转义字符:`\`
+- 转义字符:`\` 反斜杠
 
 - Groovy可以不用分号`;` 结尾
 
@@ -82,7 +82,8 @@
 - 占位符`${ }`之内允许添加任意表达式，其返回值根据最后一句
 
 - 当占位符中包含一个箭头时`${->}`,该表达式实际是一个闭包表达式，可以将其视为一个前缀为`$`的闭包,另外`${->}`比纯粹的`${}`有一个优势，就是lazy evalution
-	
+
+		def number1 = 123.456	
 		def eagerGstring = "value = ${number1}"
 		def lazyGstring = "value = ${->number1}"
 		assert eagerGstring == "value = 123.456"
@@ -107,7 +108,7 @@
 		assert msg.hashCode()!="hello abc".hashCode()
 
 ### 1.1.3 三个引号 ` ```content ```  `
-内容支持随意换行,类似于双引号字符串，区别是支持多行，并且在三重双引号中，单引号和双引号 不需要转义
+内容支持随意换行,类似于双引号字符串，区别是支持多行，并且在三重双引号中，**单引号和双引号 不需要转义**
 
 	def multieLine = ``` begin  
 	line1  
@@ -163,8 +164,8 @@
 ### 1.2.1 基本数据类型
 - 作为动态语言，Groovy世界中的所有事物都是对象。所以，int，boolean这些Java中的基本数据类型，在Groovy代码中其实对应的是它们的包装数据类型。比如int对应为Integer，boolean对应为Boolean。
 
-	def int x = 1
-	println x.getClass().getCanonicalName()// java.lang.Integer
+		def int x = 1
+		println x.getClass().getCanonicalName()// java.lang.Integer
 
 - 原始类型： byte,char,short,int,long 无限精度：java.lang.BigInteger
 
@@ -321,14 +322,18 @@ Groovy中容器类有三种:
 			def multi = [[0,1],[2,3]]
 			assert multi[1][1]==3	 
 
-2. Map由`[:]`定义，冒号左边是key，右边是value。key建议是字符串，value可以是任何对象。另外key可以用单引号或双引号包裹，也可以不包裹  
+2. Map由`[:]`定义，冒号左边是key，右边是value。key建议是字符串，value可以是任何对象。另外key可以用单引号或双引号包裹，也可以不包裹
+  
 		def aMap = ['key1':'value1','key2':'value2']
 		aMap.keyName //取值方式1
 		aMap.['keyName']//取值方式2
 		assert aMap.yellow == null//取不存在的值会返回null
-		aMap.anotherkey = 'i am map'//添加新元素
+		aMap.anotherkey = 'i am map'//添加新元素，anotherkey是key的名称
 
-	- 可以使用String或int 作为key，但是key类型为int时，取值不能直接用`.key`，而必须使用`map[key]`
+	- 可以使用String或int 作为key，但是key类型为int时，取值不能直接用`.key`，而必须使用`map[key]`。另外添加新的key时，也可以是数字 但是需要用`''`包裹
+
+			aMap.'3' = 2
+			assert aMap.containsKey('3')
 
 	- 如果使用一个变量的name作为key，那么会把这个name当做key，而不是这个name对应的内容.可以通过添加`()`括号来使用其对应内容当做key。
 			def key  = 'hello'
@@ -341,7 +346,7 @@ Groovy中容器类有三种:
 			assert maps.containsKey('hello')
 			assert !maps.containsKey('key1')
 
-	- 通过`anotherKey= 'value'`直接添加key
+	- 通过`anotherKey= 'value'`直接添加key-value
 			def maps = ['a':1]
 			maps.anotherKey = 'b'
 			assert map.containsKey('anotherKey')
@@ -372,7 +377,7 @@ Groovy中容器类有三种:
 
 - 如果不使用def 定义 Closure的话 ， 可以使用Closure  
 
-		Closure listener2 = {->println "hi $it"}
+		Closure listener2 = {println "hi $it"}
 		Closure<Boolean> listener3 = {File file->
 			file.name.endWith('.txt')
 		}
@@ -400,6 +405,7 @@ Groovy中容器类有三种:
 		assert vargsFunc2('1','2','3')=='123'
 
 - Closure中如果除了 可变参数外 还要有参数，那么可变参数需要放到最后
+
 		def vargsFunc3 = {int i,String... args
 			->
 			println "i=$i ,args = $args"
@@ -409,11 +415,13 @@ Groovy中容器类有三种:
 
 
 - 函数中的最后一个参数如果是闭包，则可以省略函数调用的那个括号`()`
-	def func(int i,Closure c){
-    	c.call(i)
-	}
 
-	func 1,{println "param is $it"}
+		def func(int i,Closure c){
+	    	c.call(i)
+		}
+	
+		func 1,{println "param is $it"}
+		func(1){println 'param ...'}
 
 - 在Gstring中使用Closure  
 
@@ -453,6 +461,7 @@ Groovy中容器类有三种:
 		assert curry6(2,3)==6
 
 - Composition，将一个 闭包的结果 作为另外一个闭包的 参数
+
 		def plus2 = {it+2}
 		def times3 = {it * 3}
 		def timesInPlus = plus2<<times3
@@ -576,7 +585,6 @@ Groovy中容器类有三种:
 		def e1 = new EnclosingOwner()		
 		e1.run()
 
-
 		class InnerOwnerClass{
    	 		class Inner{
         		Closure cl = {owner}
@@ -591,11 +599,11 @@ Groovy中容器类有三种:
 
 		class NestedClosure2{
     		void run(){
-        		def nestedMethod = {
+        		def nestedClosure = {
             		def cl = {owner}
             		cl()
         		}
-       		assert nestedMethod()==nestedMethod
+       		assert nestedClosure()==nestedClosure
 			}
 		}
 		def e3 = new NestedClosure2()
@@ -705,7 +713,7 @@ Groovy支持class形式和script形式
 
 - 脚本中的所有代码都会放到run函数中。比如，println 'Groovy world'，这句代码实际上是包含在run函数里的。
 
-- 如果脚本中定义了函数，则函数会被定义在类中。、
+- 如果脚本中定义了函数，则函数会被定义在类中。
 
 #### 1.3.1.2 脚本中的变量和作用域
 例如：  
@@ -849,4 +857,25 @@ Groovy支持class形式和script形式
 
 ## 2.1 遍历文件夹
 `file.traverse{}`, 在GDK 文档中File 下的方法
-//TODO
+
+>**public void traverse(Map options, Closure closure)
+**
+
+Map 可以设置一些过滤条件，例如type,nameFilter等等
+
+- 如下例子
+
+		def totalSize = 0
+		def count = 0
+		def sortByTypeThenName = { a, b ->
+		    a.isFile() != b.isFile() ? a.isFile() <=> b.isFile() : a.name <=> b.name
+		}
+		rootDir.traverse(
+		        type         : FILES,
+		        nameFilter   : ~/.*\.groovy/,
+		        preDir       : { if (it.name == '.svn') return SKIP_SUBTREE },
+		        postDir      : { println "Found $count files in $it.name totalling $totalSize bytes"
+		                        totalSize = 0; count = 0 },
+		        postRoot     : true
+		        sort         : sortByTypeThenName
+		) {it -> totalSize += it.size(); count++ }
