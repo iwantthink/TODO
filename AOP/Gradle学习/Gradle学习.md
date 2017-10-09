@@ -25,7 +25,7 @@
 
 - Gradle是一种基于Groovy的动态DSL，而Groovy是一种基于jvm的动态语言
 
-- **方法中最后一个参数为Closure时，可以把闭包放在方法调用之后！**
+- **方法中最后一个参数为Closure时，可以把闭包放在方法调用之后！（这是groovy特性）**
 		
 		//方法定义，以下三种方法都是一样的效果
 		def method(Closure cl){
@@ -75,10 +75,14 @@
 
 - Gradle文件包含了一些Script Block(Build script structure) 用来配置相关的信息。这些SB通常都是一个函数，并要求传入一个Closure
 
-### 1.1 Project和tasks
+- **Groovy支持函数调用的时候通过 参数名1：参数值1，参数名2：参数值2 的方式来传递参数**
+
+		apply plugin:'com.android.library
+
+### 1.1 Project和tasks和action
 - 每个项目的编译至少有一个project
 
-- 每个project至少有一个task,task里面又包含了很多action，action就是一个代码块里面包含了需要被执行的代码
+- 每个project至少有一个task,task里面又包含了很多action，action就是一个代码块，里面包含了需要被执行的代码
 
 - build.gradle就是对应Project的编译脚本，project和build.gradle是一种一对一的关系
 
@@ -128,7 +132,7 @@
 
 
 #### 1.2.2 Gradle编程模型
-[gradle-DSL](https://docs.gradle.org/current/dsl/)
+- Gradle Build Language Reference ：[Gradle-DSL-Reference](https://docs.gradle.org/current/dsl/)
 
 - Gradle基于Groovy，Groovy基于java。所以Gradle执行的时候和Groovy一样，会把脚本转换成Java对象。
 
@@ -141,7 +145,7 @@
 
 ##### 1.2.2.1 Gradle对象
 	//在settings.gradle中，则输出"In settings,gradle id is"  
-	println "In posdevice, gradle id is " +gradle.hashCode()  
+	println "In settings.gradle, gradle id is " +gradle.hashCode()  
 	println "Home Dir:" + gradle.gradleHomeDir  
 	println "User Home Dir:" + gradle.gradleUserHomeDir  
 	println "Parent: " + gradle.parent  
@@ -152,7 +156,7 @@
 - gradle对象 默认是Settings和Project的成员变量.
 
 ##### 1.2.2.2 Project对象
-- 每个build.gradle文件会转换成一个Project对象.
+- 每个`build.gradle`文件会转换成一个Project对象.
 
 - 在Gradle术语中，Project对象对应的是`BuildScript`
 
@@ -163,39 +167,41 @@
 
 -  局部变量 用def 声明，且只能在被定义的地方可见(Groovy特征)
 
-**通常Project需要执行的内容：**
-1. 加载插件
+
+- **通常Project需要执行的内容：**
+	1. 加载插件
+
 	通过Project的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
-	>Groovy支持函数调用的时候通过 参数名1：参数值1，参数名2：参数值2 的方式来传递参数
 	
-	- 除了加载二进制文件,还可以加载gradle文件
+		- 除了加载二进制文件,还可以加载gradle文件
 		>from: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
 		plugin: Plugin的Id或者是插件的具体实现类 
 		to: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
 	
-2. 配置插件。例如设置哪里读取源文件。
+	2. 配置插件。例如设置哪里读取源文件。
 	
-3. 设置属性
-	- 如果是单个脚本，则不需要考虑属性的跨脚本使用。但是Gradle往往包含不止一个build.gradle文件！例如,build.gradle,settings.gralde 和自定义的build.gradle.**Gradle提供了一种名为extra property的方法**
-	- **extra property是额外属性的意思**，在第一次定义该属性的时候需要通过ext前缀来标示它是一个额外的属性。定义好之后，后面的存取就不需要ext前缀了。**ext属性支持Project和Gradle对象即Project和Gradle对象都可以设置ext属性**
-	- 属性值可以从local.properties中读取
-			Properties p = new Properties()
-			File pF = new File(rootDir.getAbsolutePath()+'/local.properties')
-			properties.load(pF.newDataInputStream())
-	- **可以直接获取ext前缀，表明操作的是外置属性**，表明操作的是外置属性.定义属性或设置属性时需要ext前缀。读取时就不需要ext前缀了
-			gradle.ext.api = p.getProperty('sdk.api')
-			println gradle.api 
-	除了`ext.xxx=value`这种定义方式之外，还可以使用`ext{}`这种书写方式。**ext{}不是ext函数传入Closure，但是ext{}中的{}的确是Closure**
-			ext{
-				    getVersionNameAdvanced = this.&getVersionNameAdvanced  
-			}
-	- **加载utils.gradle的Project对象**和**utils.gradle对象本身所代表的Script对象**的关系。
-		- 当一个Project apply一个gradle文件时，这个gradle文件会转换成一个Script对象
-		- Script中有一个delegate对象，这个delegate默认是被设置为 加载Script的Project对象(即调用apply的project)
-		- 在apply中有一个to参数，可以将delegate指定为别的对象
-		- **delegate作用**：当Script中操作一些不是Script自己定义的变量或函数时，gradle会到Script的delegate对象去找，看看有没有定义这些变量或函数
-	- utils.gradle对应的project就是加载utils.gradle的project
-	- utils中的ext 就是对应project的ext。
+	3. 设置属性
+
+		- 如果是单个脚本，则不需要考虑属性的跨脚本使用。但是Gradle往往包含不止一个build.gradle文件！例如,build.gradle,settings.gralde 和自定义的build.gradle.**Gradle提供了一种名为extra property的方法**
+		- **extra property是额外属性的意思**，在第一次定义该属性的时候需要通过ext前缀来标示它是一个额外的属性。定义好之后，后面的存取就不需要ext前缀了。**ext属性支持Project和Gradle对象即Project和Gradle对象都可以设置ext属性**
+		- 属性值可以从local.properties中读取
+				Properties p = new Properties()
+				File pF = new File(rootDir.getAbsolutePath()+'/local.properties')
+				properties.load(pF.newDataInputStream())
+		- **可以直接获取ext前缀，表明操作的是外置属性**，表明操作的是外置属性.定义属性或设置属性时需要ext前缀。读取时就不需要ext前缀了
+				gradle.ext.api = p.getProperty('sdk.api')
+				println gradle.api 
+		除了`ext.xxx=value`这种定义方式之外，还可以使用`ext{}`这种书写方式。**ext{}不是ext函数传入Closure，但是ext{}中的{}的确是Closure**
+				ext{
+					    getVersionNameAdvanced = this.&getVersionNameAdvanced  
+				}
+		- **加载utils.gradle的Project对象**和**utils.gradle对象本身所代表的Script对象**的关系。
+			- 当一个Project apply一个gradle文件时，这个gradle文件会转换成一个Script对象
+			- Script中有一个delegate对象，这个delegate默认是被设置为 加载Script的Project对象(即调用apply的project)
+			- 在apply中有一个to参数，可以将delegate指定为别的对象
+			- **delegate作用**：当Script中操作一些不是Script自己定义的变量或函数时，gradle会到Script的delegate对象去找，看看有没有定义这些变量或函数
+		- utils.gradle对应的project就是加载utils.gradle的project
+		- utils中的ext 就是对应project的ext。
 
 
 
@@ -224,10 +230,12 @@
 
 
 ##### 1.2.3.1 定义Task
-Task是和Project关联的，所以要利用Project的task函数来创建一个Task  
+- Task是和Project关联的，所以要利用Project的task函数来创建一个Task  
+
+- 在创建task时，通常可以传入一个Closure,**这个Closure是用来配置task的，会在task返回之前执行。**
 
 >task myTask  <==myTask是新建Task的名字  
->task myTask { configure closure }  
+>task myTask { configure closure } //closure用来设置配置
 >task myType << { task action } <==注意，<<符号是doLast的缩写  
 >task myTask(type: SomeType)  
 >task myTask(type: SomeType) { configure closure }
@@ -403,6 +411,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 	}
 
 ##### 1.2.3.9 设置任务执行条件
+
 	task taskA<<{
 		println 'hello gradle'
 	}
@@ -415,24 +424,21 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 
 - 通过`throw new StopExcutionException()`抛出异常
 
-	taskA.doFirst{
-		throw new StopExcutionException()
-	}
+		taskA.doFirst{
+			throw new StopExcutionException()
+		}
 
 - Task用有一个`enabled` 的属性
 
 		taskA.enabled = false
+
 #### 1.2.4 Lifecycle
-There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
+>There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
 
 - Create a Settings instance for the build.
 - Evaluate the settings.gradle script, if present, against the Settings object to configure it.
 - Use the configured Settings object to create the hierarchy of Project instances.
 - Finally, evaluate each Project by executing its build.gradle file, if present, against the project. The projects are evaluated in breadth-wise order, such that a project is evaluated before its child projects. This order can be overridden by calling Project.evaluationDependsOnChildren() or by adding an explicit evaluation dependency using Project.evaluationDependsOn(java.lang.String).
-
-
-
-
 
 ### 1.3 项目结构
 
@@ -472,7 +478,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
    	distributionUrl=https\://services.gradle.org/distributions/
    	gradle-2.4-all.zip
 	
-	可以改变distributionUrl 来改变gradle版本
+	- **可以改变distributionUrl 来改变gradle版本**
 
 ### 1.5 基本构建命令
 - gradle projects 
@@ -1027,9 +1033,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 - settings.gradle 在初始化阶段执行。另外 多项目构建 必须有settings.gradle 
 
-- build.gradle中属性访问 和 方法调用 被project 代理
-
-- 同理 属性访问 和 方法调用 在settings.gradle 中 被 settings 代理
+- build.gradle中属性访问 和 方法调用 被project 代理. 同理 属性访问 和 方法调用 在settings.gradle 中 被 settings 代理
 
 
 ## 3.实例
@@ -1096,9 +1100,9 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 ### 3.5 buildTypesScriptBlock
 
-- buildTypes和上面的signingConfigs，当我们在build.gradle中通过{}配置它的时候， 其背后的所代表的对象是NamedDomainObjectContainer<BuildType>和NamedDomainObjectContainer<SigningConfig> 
+- buildTypes和上面的signingConfigs，当我们在build.gradle中通过{}配置它的时候， 其背后的所代表的对象是NamedDomainObjectContainer< BuildType>和NamedDomainObjectContainer < SigningConfig> 
 
-- 注意，NamedDomainObjectContainer<BuildType/或者SigningConfig>是一种容器，容器的元素是BuildType或者SigningConfig。
+- 注意，NamedDomainObjectContainer< BuildType/SigningConfig>是一种容器，容器的元素是BuildType或者SigningConfig。
 
 - 我们在debug{}要填充BuildType或者SigningConfig所包的元素，比如storePassword就是SigningConfig类的成员。而proguardFile等是BuildType的成员。 
 
@@ -1116,7 +1120,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 - 在buildTypes中，Android默认为这几个NamedDomainObjectContainer添加了debug和release对应的对象。如果我们再添加别的名字的东西，那么gradleassemble的时候也会编译这个名字的apk出来。比如，我添加一个名为test的buildTypes，那么gradle assemble 就会编译一个xxx-test-yy.apk。在此，test就好像debug、release一样。 
 
-### 3.6 
+### 3.6 NamedDomainObjectContainer使用说明
 
 
 ## 4 引用说明
