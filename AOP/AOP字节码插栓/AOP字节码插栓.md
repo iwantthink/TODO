@@ -1,7 +1,7 @@
 # 1.Android AOP 字节码插栓介绍
 
 # 1.1 简介
-面向切向编程（Aspect Oriented Programming），相对于面向对象编程（ObjectOriented Programming）而言。      
+**面向切向编程**（Aspect Oriented Programming），相对于**面向对象编程**（ObjectOriented Programming）而言。      
 
 OOP是将功能模块化或者问题模块化,AOP就是将涉及到众多模块的某一类问题进行统一管理
 
@@ -44,8 +44,6 @@ OOP是将功能模块化或者问题模块化,AOP就是将涉及到众多模块�
 	- javac:将源文件编译成class格式的文件
 	- dex：将class格式的文件汇总到dex格式的文件中   
 	
-
-
 2. bytecode mainpulate(step2)
 	这个环节主要做俩点：1. 字节码扫描,并按照一定规则进行过滤出哪些class文件需要进行字节码修改。2. 对筛选出来的类进行字节码修改  。 
 
@@ -57,7 +55,7 @@ OOP是将功能模块化或者问题模块化,AOP就是将涉及到众多模块�
 - 图中"dex"节点，表示将class文件打包到dex文件的过程，输入的class文件包括：1. 项目java源文件经过javac后编译生成的class文件 2. 第三方依赖包的class文件
 
 
-- 图中"dex"节点，通过一个dx.jar的jar包进行，存在于Android SDK 的 sdk/build-tools/22.0.1/lib/dx.jar 目录下，通过如下命令，进行将class文件打包为dex文件。  
+- 图中"dex"节点，通过一个dx.jar的jar包进行，存在于Android SDK 的 **sdk/build-tools/22.0.1/lib/dx.jar 目录下**，通过如下命令，进行将class文件打包为dex文件。  
 		java dx.jar com.android.dx.command.Main --dex --num-threads=4 —-output output.jar input.jar
 
 - dex任务是启动一个java进程,执行dx.jar中com.android.dx.command.Main类(对于multidex的项目入口可能不是这个类)的main方法进行dex相关逻辑，具体完成class到dex转换的是如下方法：  
