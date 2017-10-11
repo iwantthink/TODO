@@ -152,7 +152,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 
 ### 1.3.2 getName()
-- `app-build-intermediates-transforms`，这个目录下 有一个`proguard`目录，是Transform `ProguardTransform`产生的，在源码中可以找到其实现了`getName`方法，返回了`proguard`.这个`getName()`方法返回的值就创建了`proguard`这个目录
+- As目录`app-build-intermediates-transforms`，这个目录下 有一个`proguard`目录，是Transform `ProguardTransform`产生的，在源码中可以找到其实现了`getName`方法，返回了`proguard`.这个`getName()`方法返回的值就创建了`proguard`这个目录
 
 		@NonNull
 	    @Override
