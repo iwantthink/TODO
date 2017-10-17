@@ -41,3 +41,12 @@
 - 这个上层类加载器加载的接口，可以使用`InvocationHandler`。
 
 - 还有一个问题，`ProcessBuilder`怎么才能获取到`InvocationHandler`子类的实例？有一个比较巧妙的做法，在`agent`启动的时候，创建`InvocationHandler`实例，并把它赋值给`Logger`的`treeLock`成员。`treeLock`是一个`Object`对象，并且只是用来加锁的，没有别的用途。但`treeLock`是一个`final`成员，所以记得要修改其修饰，去掉`final`。`Logger`同样也是由`Bootstrap ClassLoader`加载，这样`ProcessBuilder`就能通过反射的方式来获取`InvocationHandler`实例了。
+
+# 2. 实例编写
+## 2.1 业务逻辑
+找到类当中的`test`方法，增加一句输出时间戳的代码！
+
+## 2.2 agent 编写
+- agent最终目的是要实现改写`com.android.dx.command.dexer.Main`,在它执行`processClasss`方法内的代码之前通过ASM工具修改其 第二个参数(也就是源class文件的字节码数组)
+
+- `dexer.Main`和`plugin`不在同一个进程中，所以要实现改写`dexer.Main`之前还需要先改写`ProcessBuilder`的`command`成员变量，往其中插入`-javaagent 参数`.同样还是通过ASM工具，当访问到`ProcessBuilder`的`start`方法时，如果`start`的目标是`java`或`dx`,则加入`-javaagent`或`Jjavaagent`
