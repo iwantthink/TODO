@@ -19,8 +19,8 @@
 - `JVMTI`提供了一套“代理”程序机制，可以支持第三方工具程序以代理的方式连接和访问JVM，并利用JVMTI提供的丰富的编程接口，完成很多跟JVM相关的功能。事实上，**`java.lang.instrument`包的实现，也就是基于这种机制的**：在Instrumentation的实现当中，存在一个JVMTI的代理程序，通过调用JVMTI当中Java类相关的函数来完成Java类的动态操作。除开Instrumentation功能外，JVMTI还在虚拟机内存管理，线程控制，方法和变量操作等等方面提供了大量有价值的函数，具体可以参考[JVMTI官方文档](http://docs.oracle.com/javase/7/docs/platform/jvmti/jvmti.html)
 
 # 2 Instrumentation的实现
-- Jave SE5
-- Jave SE6
+- Jave SE5,premain **以命令行方式在VM启动前指定代理jar**
+- Jave SE6,agentmain，**动态添加agent.jar，在VM启动后**
 
 ## 2.1 Java SE5
 - 在Java SE5时代，Instrumentation只提供了`premain(命令行)`一种方式，即在真正的应用程序(包含main方法的程序)main方法启动之前启动一个代理程序。
@@ -92,3 +92,99 @@
 
 - `premain`是通过命令行参数 或 系统参数 指定的agent.jar.`agentmain`是通过`Attach API`指定的jar
 
+### 2.2.4 agentmain 实例（命令行）
+
+1. 编写包含`agentmain`方法的agent.jar.与包含`premain`方法的agent.jar相似。需要提供MANIFEST.MF,一个包含`agentmain`的类,自定义的`ClassFileTransformer`.并打成jar包(**注意：要将三方jar包字节码也加入jar包，还需要指定MANIFEST.MF**)。
+
+	    public static void agentmain(String args, Instrumentation inst) {
+			inst.addTransformer(new MyClassTransformer(), true);
+		}
+		//提供一个打包的task..出错了不管~
+		task makeJar(type: Jar) {
+		    manifest{
+		        from('/src/main/resources/META-INF/MANIFEST.MF')
+		    }
+		    baseName = 'apmagent'
+		    from zipTree('/libs/asm-all-5.2.jar')
+		    from '/build/classes/java/main'
+		    into '/'
+		}
+
+2. 编写一个**被修改的类**，提供一个`test()`方法即可,step1中的自定义`ClassFileTransformer`也只是对test方法进行修改，插入输出时间戳的字节码。
+
+		public class ModifedClass {
+		    public void test() {
+		        System.out.println("i am in modifedClass");
+		    }
+		}
+
+3. 编写一个长时间运行的类，里面会创建并调用`被修改的类的test方法`。可以在这个类中输出当前`jvm的pid`,也可以通过`jps`指令在cmd中查看!(JPS这个命令是和javac 同一个目录下的)
+
+4. 编写一个`Attach API`的使用类，用作连接step3 中的类并`loadAgent`
+
+		***省略若干代码***
+		 System.setProperty("java.library.path",
+		                            "C:\\Program Files\\Java\\jdk1.8.0_112\\jre\\bin");
+		                    Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
+		                    fieldSysPath.setAccessible(true);
+		                    fieldSysPath.set(null, null);
+			
+		                    String pid = input.split("-")[1];
+		                    int indexOf = pid.indexOf('@');
+		                    if (indexOf > 0) {
+		                        pid = pid.substring(0, indexOf);
+		                    }
+		                    System.out.println("pid = " + pid);
+		
+		                    // attach to target VM
+		                    VirtualMachine vm = VirtualMachine.attach(pid);
+		
+		                    // get system properties in target VM
+		                    Properties props = vm.getSystemProperties();
+		
+		                    // construct path to management agent
+		                    String agent = "C:\\Users\\Administrator\\Documents\\CustomizePluginDemo\\agenttest\\libs\\apmagent.jar";
+		
+		                    // load agent into target VM
+		                    vm.loadAgent(agent);
+		
+		                    // detach
+		                    vm.detach();
+
+	- 代码前四句是必须的！否则会报如下错误
+
+			java.util.ServiceConfigurationError: com.sun.tools.attach.spi.AttachProvider: Provider sun.tools.attach.WindowsAttachProvider could not be instantiated: java.lang.UnsatisfiedLinkError: no attach in java.library.path
+			Exception in thread "main" com.sun.tools.attach.AttachNotSupportedException: no providers installed
+				at com.sun.tools.attach.VirtualMachine.attach(VirtualMachine.java:208)
+				at client.Client.main(Client.java:29)
+
+5. 分别编译运行俩个类即可。
+
+- **被动态修改的类**，不能跟**长时间运行的类**放在一起,否则会报错
+
+		java.lang.reflect.InvocationTargetException
+		at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+		at sun.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
+		at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+		at java.lang.reflect.Method.invoke(Unknown Source)
+		at sun.instrument.InstrumentationImpl.loadClassAndStartAgent(Unknown Source)
+		at sun.instrument.InstrumentationImpl.loadClassAndCallAgentmain(Unknown Source)
+		Caused by: java.lang.UnsupportedOperationException: class redefinition failed: attempted to add a method
+		at sun.instrument.InstrumentationImpl.retransformClasses0(Native Method)
+		at sun.instrument.InstrumentationImpl.retransformClasses(Unknown Source)
+		at io.fengfu.learning.instrument.DynamicAgent.agentmain(DynamicAgent.java:14)
+		... 6 more
+
+### 2.3.5 MANIFEST.MF中的属性
+
+- Premain-Class: 当在VM启动时，在命令行中指定代理jar时，必须在manifest中设置Premain-Class属性，值为代理类全类名，并且该代理类必须提供premain方法。否则JVM会异常终止。
+
+- Agent-Class: 当在VM启动之后，动态添加代理jar包时，代理jar包中manifest必须设置Agent-Class属性，值为代理类全类名，并且该代理类必须提供agentmain方法，否则无法启动该代理。
+
+- Boot-Class-Path: Bootstrap class loader加载类时的搜索路径，可选。
+
+- Can-Redefine-Classes: true/false；标示代理类是否能够重定义类。可选。
+
+- Can-Retransform-Classes: true/false；标示代理类是否能够转换类定义。可选。
+
+- Can-Set-Native-Prefix::true/false；标示代理类是否需要本地方法前缀，可选。
