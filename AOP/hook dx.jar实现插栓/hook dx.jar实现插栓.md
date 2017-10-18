@@ -50,3 +50,4 @@
 - agent最终目的是要实现改写`com.android.dx.command.dexer.Main`,在它执行`processClasss`方法内的代码之前通过ASM工具修改其 第二个参数(也就是源class文件的字节码数组)
 
 - `dexer.Main`和`plugin`不在同一个进程中，所以要实现改写`dexer.Main`之前还需要先改写`ProcessBuilder`的`command`成员变量，往其中插入`-javaagent 参数`.同样还是通过ASM工具，当访问到`ProcessBuilder`的`start`方法时，如果`start`的目标是`java`或`dx`,则加入`-javaagent`或`Jjavaagent`
+
