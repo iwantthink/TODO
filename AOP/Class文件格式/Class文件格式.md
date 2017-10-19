@@ -3,6 +3,8 @@
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fjgkeieb0mj20lt098gls.jpg)
 
+[Class文件格式实例解析](http://www.acyouzi.com/2016/11/10/jvm-class-file-structure/)
+
 # 2.Class组成
 Class文件是一组以8位字节为单位的二进制流，中间没有任何分隔符，非常紧凑。 当需要占用8位以上的数据时，会按照Big-endian顺序，高位在前，低位在后的方式来分割成多个8位字节来存储。
 
@@ -18,7 +20,7 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 ## 2.1 相关概念
 
 - 全限定名
-	是指把类全名中的“.”号，用“/”号替换，并且在最后加入一个“；”分号后生成的名称。比如java.lang.Object对应的全限定名为java/lang/Object; 。
+	是指把类全名中的“.”号，用“/”号替换，并且在最后加入一个“；”分号后生成的名称。比如`java.lang.Object`对应的全限定名为`java/lang/Object; `
 
 - 简单名
 	这个比较好理解，就是直接的方法名或者字段。比如toString()方法，不需要包名作为前缀了。
@@ -90,27 +92,30 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 ## 3.3 常量池
 常量池是Class文件空间最大的数据项之一，长度不固定。
 
-1. 常量池长度 用u2类型代表常量池容量计数值，u2紧跟版本号。u2的大小等于常量池的常量个数+1。对于u2=0的特殊情况，代表没有使用常量池。
+1. 常量池长度 用u2类型代表常量池容量计数值，u2紧跟版本号。u2的大小等于常量池的常量个数+1（**计数是从1开始,如果数值是35 则实际常量池有34项常量**）。**对于u2=0的特殊情况，代表没有使用常量池**。
 2. 常量池内容,格式如下：
 		cp_info {
     		u1 tag;
     		u1 info[];
 		}
 	
-	包括两个类常量，字面量和符号引用：
+	包括两个类常量，**字面量和符号引用**：
 
-	字面量：与Java语言层面的常量概念相近，包含文本字符串、声明为final的常量值等。
-	符号引用：编译语言层面的概念，包括以下3类：
+	- 字面量：与Java语言层面的常量概念相近，包含文本字符串、声明为final的常量值等。
+	- 符号引用：编译语言层面的概念，包括以下3类：
 	类和接口的全限定名
 	字段的名称和描述符
 	方法的名称和描述符
 
-	常量池中每一项常量都是一个表结构，每个表的开始第一位是u1类型的标志位tag, 代表当前这个常量的类型。在JDK 1.7.中共有14种不同的表结构的类型，如下：
+	- 常量池中每一项常量都是一个表结构，每个表的开始第一位是u1类型的标志位tag, 代表当前这个常量的类型。在JDK 1.7.中共有14种不同的表结构的类型，如下：
 
 	![](http://ww1.sinaimg.cn/large/6ab93b35gy1fjglcxzk5uj20p80cn7aq.jpg)
 
 	Class文件都是二进制格式，可通过Jdk/bin/javap.exe工具，分析Class文件字节码。关于javap用法，可通过javap --help来查看。
 
+- java代码编译时没有连接的概念，而是在虚拟机加载class文件的时候动态的连接，所以class文件中没有保存方法字段的最终内存布局。当虚拟机运行时需要从常量池中获取符号引用然后翻译到具体内存地址中
+
+- `constant_Utf8_info`类型的常量，这个类型能标示的最大长度就是(65535),也就是最长的变量或方法名长度
 
 ## 3.4 访问标识
 2个字节代表，标示用于识别一些类或者接口层次的访问信息.
@@ -133,7 +138,7 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 一个类可以实现多个接口，故利用interfaces_count来记录该类所实现的接口个数，interfaces[interfaces_count]来记录所有实现的接口内容。
 
 ## 3.7 字段表
-字段表用于描述类或接口中声明的变量，格式如下：
+字段表**用于描述类或接口中声明的变量**，格式如下：
 
 	field_info {
     u2             access_flags; //访问标识
@@ -201,7 +206,6 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 
 属性表的限制相对宽松，不需要各个属性表有严格的顺序，只要不与已有的属性名重复，任何自定义的编译器都可以向属性表中写入自定义的属性信息，Java虚拟机运行时会忽略掉无法识别的属性。 关于虚拟机规范中预定义的属性，这里不展开讲了，列举几个常用的。
 
-
 	属性名	使用位置	解释
 	Code	方法表	方法体的内容
 	ConstantValue	字段表	final关键字定义的常量值
@@ -211,7 +215,8 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 	LocalVariableTable	Code属性	方法的局部变量描述
 	Signature	类、方法表、字段表	用于支持泛型的方法签名，由于Java的泛型采用擦除法，避免类型信息被擦除后导致签名混乱，Signature记录相关信息
 
-Code属性 java程序方法体中的代码，经编译后得到的字节码指令存储在Code属性内，Code属性位于方法表的属性集合中。但与native或者abstract的方法则不会存在Code属性中。
+### 3.9.1 Code属性 
+Code属性java程序方法体中的代码，经编译后得到的字节码指令存储在Code属性内，Code属性位于方法表的属性集合中。但与native或者abstract的方法则不会存在Code属性中。
 
 Code属性的格式如下：
 
@@ -243,3 +248,195 @@ ConstantValue属性 ConstantValue属性是指被static关键字修饰的变量�
 
 - 类变量: 在类构造器方法或者使用ConstantValue属性来赋值
 - 实例变量：在实例构造器方法进行赋值
+
+
+# 4 实例
+
+	public class TestByteCode extends TestClass implements Test {
+	    public static int i = 1;
+	    public final static int j = 1;
+	    public int k = 1;
+	
+	    class TestChild{
+	        public int t_c_i;
+	    }
+	    static {
+	        System.out.println("static");
+	    }
+	    public int function() throws Exception {
+	        try {
+	            this.k = 100;
+	        }catch (Exception e){
+	            System.out.println("error");
+	        }finally {
+	            System.out.println("finally");
+	        }
+	        return this.k;
+	    }
+	    public static int static_function() {
+	        return 2;
+	    }
+	}   
+	
+	其中 TestClass 与 Test 定义分别为：
+	public class TestClass {
+	    public int t_c;
+	}
+	public interface Test {
+	    public int t_i = 10;
+	}
+
+经过`javap -v `后生成的文件内容
+
+	public class com.acyouzi.reflect.TestByteCode extends com.acyouzi.reflect.TestClass implements com.acyouzi.reflect.Test
+	// minor major version
+	minor version: 0
+	major version: 52
+	// 访问标志
+	flags: ACC_PUBLIC, ACC_SUPER
+	// 常量池，总共62项
+	Constant pool:
+	// 第一项是实例构造函数，分别引用了常量池中11行和41行的内容，可以看到完整的方法签名构成
+	#1 = Methodref          #11.#41        // com/acyouzi/reflect/TestClass."<init>":()V
+	#2 = Fieldref           #10.#42        // com/acyouzi/reflect/TestByteCode.k:I
+	.
+	.
+	.
+	#24 = Utf8               Code
+	#25 = Utf8               LineNumberTable
+	#26 = Utf8               LocalVariableTable
+	#27 = Utf8               this
+	.
+	.
+	.
+	#61 = Utf8               println
+	#62 = Utf8               (Ljava/lang/String;)V
+	{
+	// 可以看到父类，接口的参数不会在class文件中体现出来
+	public static int i;
+	    descriptor: I
+	    flags: ACC_PUBLIC, ACC_STATIC
+	
+	public static final int j;
+	    descriptor: I
+	    flags: ACC_PUBLIC, ACC_STATIC, ACC_FINAL
+	    // 前面介绍的关于 static 赋初值的两种方式之2，final + static + 基本数据类型或者String 
+	    ConstantValue: int 1
+	
+	public int k;
+	    descriptor: I
+	    flags: ACC_PUBLIC
+	
+	// 构造函数
+	public com.acyouzi.reflect.TestByteCode();
+	    descriptor: ()V
+	    flags: ACC_PUBLIC
+	    Code:
+	    // 栈深度为2，局部变量所需空间1， args_size
+	    stack=2, locals=1, args_size=1
+	        0: aload_0
+	        // 执行父类的构造方法
+	        1: invokespecial #1                  // Method com/acyouzi/reflect/TestClass."<init>":()V
+	        4: aload_0
+	        5: iconst_1
+	        // 给非静态变量 k 赋值
+	        6: putfield      #2                  // Field k:I
+	        9: return
+	    // 参数名变量对应关系表
+	    LineNumberTable:
+	        line 3: 0
+	        line 6: 4
+	    // 本地变量，可以看到直接持有this指针
+	    LocalVariableTable:
+	        Start  Length  Slot  Name   Signature
+	            0      10     0  this   Lcom/acyouzi/reflect/TestByteCode;
+	
+	// 这部分注意异常情况
+	public int function() throws java.lang.Exception;
+	    descriptor: ()I
+	    flags: ACC_PUBLIC
+	    Code:
+	    stack=2, locals=3, args_size=1
+	        0: aload_0
+	        1: bipush        100
+	        3: putfield      #2                  // Field k:I
+	        6: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+	        9: ldc           #4                  // String finally
+	        11: invokevirtual #5                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+	        // 没有异常就跳到最后的 return 语句
+	        14: goto          48   
+	        17: astore_1
+	        18: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+	        21: ldc           #7                  // String error
+	        23: invokevirtual #5                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+	        26: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+	        29: ldc           #4                  // String finally
+	        31: invokevirtual #5                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+	        34: goto          48
+	        37: astore_2
+	        38: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+	        41: ldc           #4                  // String finally
+	        43: invokevirtual #5                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+	        46: aload_2
+	        47: athrow
+	        48: aload_
+	        49: getfield      #2                  // Field k:I
+	        52: ireturn
+	    // 查表判断异常怎么处理，
+	    Exception table:
+	        from    to  target type
+	            // 0-6 行出现 Exception 类型异常要跳到 17 行执行处理逻辑
+	            0     6    17   Class java/lang/Exceptio
+	            0     6    37   any
+	            17    26    37   any
+	    // 用于类型检查
+	    StackMapTable: number_of_entries = 3
+	        frame_type = 81 /* same_locals_1_stack_item */
+	        stack = [ class java/lang/Exception ]
+	        frame_type = 83 /* same_locals_1_stack_item */
+	        stack = [ class java/lang/Throwable ]
+	        frame_type = 10 /* same */
+	    // 异常属性，列出了可能抛出的异常
+	    Exceptions:
+	    throws java.lang.Exception
+	
+	// 静态方法，不持有 this 指针
+	public static int static_function();
+	    descriptor: ()I
+	    flags: ACC_PUBLIC, ACC_STATIC
+	    Code:
+	    stack=1, locals=0, args_size=0
+	        0: iconst_2
+	        1: ireturn
+	    LineNumberTable:
+	        line 25: 0
+	
+	// 构造代码块 是不是等价于 < clinit >?
+	static {};
+	    descriptor: ()V
+	    flags: ACC_STATIC
+	    Code:
+	    stack=2, locals=0, args_size=0
+	        0: iconst_1
+	        // static 变量 i 赋值初值
+	        1: putstatic     #8                  // Field i:I
+	        4: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
+	        7: ldc           #9                  // String static
+	        9: invokevirtual #5                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+	        12: return
+	    LineNumberTable:
+	        line 4: 0
+	        line 12: 4
+	        line 13: 12
+	}
+	SourceFile: "TestByteCode.java"
+	// InnerClass的内容
+	InnerClasses:
+	    #14= #13 of #10; //TestChild=class com/acyouzi/reflect/TestByteCode$TestChild of class com/acyouzi/reflect/TestByteCode
+
+
+- final static 与 static 变量赋初值的位置，虽然在定义的位置就写出赋值，但是可能并不是声明完就立即赋初值，下面的非静态变量也是一样。
+- this 指针在非静态方法中被默认添加到本地变量表
+- 不管有没有写明，在构造函数第一句都会调用父类的构造方法
+- 非静态变量赋初值会被移动到构造方法中，紧跟在父类构造方法调用语句之后
+- 异常的处理是通过 exception_table
