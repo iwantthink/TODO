@@ -297,20 +297,20 @@ visitEnd`
 - 在`ClassLoader`中改造字节码的话，只能改造被其载入的类，如果想要改造所有的类，需要使用到`ClassFileTransformer`(在`java.lang.instrument`包中被定义)
 
 - 实例如下：
-
-	  public static void premain(String agentArgs, Instrumentation inst) {
-	        inst.addTransformer(new ClassFileTransformer() {
-	            public byte[] transform(ClassLoader l, String name, Class c,
-	                                    ProtectionDomain d, byte[] b)
-	                    throws IllegalClassFormatException {
-	                ClassReader cr = new ClassReader(b);
-	                ClassWriter cw = new ClassWriter(cr, 0);
-	                ClassVisitor cv = new ChangeVersionAdapter(cw);
-	                cr.accept(cv, 0);
-	                return cw.toByteArray();
-	            }
-	        });
-	    }
+	
+		  public static void premain(String agentArgs, Instrumentation inst) {
+		        inst.addTransformer(new ClassFileTransformer() {
+		            public byte[] transform(ClassLoader l, String name, Class c,
+		                                    ProtectionDomain d, byte[] b)
+		                    throws IllegalClassFormatException {
+		                ClassReader cr = new ClassReader(b);
+		                ClassWriter cw = new ClassWriter(cr, 0);
+		                ClassVisitor cv = new ChangeVersionAdapter(cw);
+		                cr.accept(cv, 0);
+		                return cw.toByteArray();
+		            }
+		        });
+		    }
 
 ### 1.2.4 移除类中成员
 - 之前小节中的改造类的java 版本的功能，也可以被应用到`ClassVisitor`中的其他方法中。例如可以通过修改`visitField`和`visitMethod`方法的`access`和`name` 来改变字段或方法的名称和修饰符。 **更进一步的功能是，可以不调用此方法（visitField/visitMethod等)来移除指定元素。**
@@ -428,7 +428,7 @@ visitEnd`
 	- 注意：`fv!=null`在`fv.visitEnd`之前，因为`class visitor`可能会返回null
 
 ### 1.2.6 转换链(Transformation chains)
-- 目前只看到由`ClassReader`,`class adapter`,`ClassWriter`组成的**转换链**，当然也可以组成更复杂的**转换链**，通过添加多个`class adapter`.不同的`class adapter`可以组成独立的类改造以实现复杂的改造
+- 目前只看到由`ClassReader`,`class adapter`,`ClassWriter`组成的**转换链**，当然也可以组成更复杂的**转换链**，通过添加多个`class adapter`.不同的`class adapter`可以实现独立的类改造，组合之后以实现复杂的改造
 
 - **注意： ** 转换链并不是一定需要被设计成线性的。可以编写一个`ClassVisitor`，在它的`visit`方法中，在同一时间调用多个`ClassVisitor`
 
@@ -453,6 +453,8 @@ visitEnd`
 - ASM 在`org.objectweb.asm.utils`包中提供了几个可以在开发类生成器或类适配器时使用的工具(同时在runtime时又不需要的)。另外ASM 也提供了一个在运行时操作`internal names`,`type descriptors`,`method descriptors`的类。
 
 ### 1.3.1 Type
+
+
 ### 1.3.2 TraceClassVisitor
 ### 1.3.3 CheckClassAdapter
 ### 1.3.4 ASMifier
