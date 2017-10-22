@@ -453,8 +453,48 @@ visitEnd`
 - ASM 在`org.objectweb.asm.utils`包中提供了几个可以在开发类生成器或类适配器时使用的工具(同时在runtime时又不需要的)。另外ASM 也提供了一个在运行时操作`internal names`,`type descriptors`,`method descriptors`的类。
 
 ### 1.3.1 Type
+- ASM API暴露出在编译类中的Java类型，例如 `interal names`和`type descriptor`。如果能将Java类型暴露出来就像它在源码中那样，可读性会更强。但这需要在`ClassReader`和`ClassWriter`俩个代表中进行转换，这将降低其性能。这也就是为什么ASM不直接将内部名称和类型描述符转换等效的源代码形式。**但是ASM提供了`Type`类，用于手动进行操作**
 
+
+- `Type`类对象可以用来表示Java Type,可以通过`type descriptor`或`Class object`构造而来。`Type`类 还包含了用来表示基本类型的静态变量，例如 `Type.INF_TYPE`代表`int`
+
+- `Type`类的`getInternalName`能够返回一个类型的内部名称。例如,`Type.getType(String.class).getInternalName()`返回一个`String.class`的`internalName`(java/lang/String).**这个方法只能被用在 class(类) 或 interface types(接口类型)**
+
+- `Type`类的`getDescriptor`方法返回一个类型的描述符。例如，在代码中可以使用`Type.getType(String.class).getDescriptor().`来替代`Ljava/lang/String`。或者 用`Type.INT_TYPE.getDescriptor()`来替代`I`
+
+- `Type`类对象 也可以用来表示 `method type`（方法类型）。可以通过`method descriptor`或`Mehtod`对象来构造。`getDescriptor`方法返回对应类型对象的类型描述符 。此外`getArgumentTypes and getReturnType `可以用来获取方法的 参数类型和返回值类型 相对应的类型对象。例如，`Type.getArgumentTypes("(I)V")`返回一个包含单一元素类型`Type.INT_TYPE`的数组。 再比如，`Type.getReturnType("(I)V") `返回`Type.VOID_TYPE`
 
 ### 1.3.2 TraceClassVisitor
+
+- 为了检查生成或转换的类是否符合预期，`ClassWriter`返回的字节数组是不可读的。如果能用文本来表示，会更可读，而这就是`TraceClassVisitor`提供的功能。这个类扩展了`ClassWriter`,构建被访问类的文本表示，所以可以用`TraceClassVisitor`来替代`ClassWriter` 生成可读的生成的痕迹。或者可以同时使用这俩个类。除了`TraceClassVisitor`默认的行为，还可以将其所有的方法调用委托给另外一个`Visitor`,例如`ClassWriter`
+
+    ClassWriter cw = new ClassWriter(0);
+    TraceClassVisitor tcv = new TraceClassVisitor(cw, printWriter);
+    tcv.visit(...);
+    ...
+    tcv.visitEnd();
+    byte b[] = cw.toByteArray();
+
+	- 这段代码创建了一个`Tcv`,它将所有调用都委托给了cw（打印类,PrintWriter），并打印这些调用的文本表示：
+	
+			// class version 49.0 (49)
+			// access flags 1537
+			public abstract interface pkg/Comparable implements pkg/Mesurable {
+			// access flags 25
+			public final static I LESS = -1
+			// access flags 25
+			public final static I EQUAL = 0
+			// access flags 25
+			public final static I GREATER = 1
+			// access flags 1025
+			public abstract compareTo(Ljava/lang/Object;)I
+			}
+
+- **注意：**可以在生成或转换链的任意点使用`TCV`以便查看该点发生了什么,不仅仅是在cw之前。
+
+- **注意：**这个适配器生成的类的文本表示 可以使用`String.equals()`方法进行比较
+
 ### 1.3.3 CheckClassAdapter
+
+
 ### 1.3.4 ASMifier
