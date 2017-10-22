@@ -18,7 +18,7 @@
 
 
 
-# 1 CoreAPI-Classes部分
+#  CoreAPI-Classes部分
 
 ## 1.1 结构
 - 编译过的类在源码中保留着结构性的信息以及几乎所有的符号,类包含以下几部分：
@@ -495,6 +495,68 @@ visitEnd`
 - **注意：**这个适配器生成的类的文本表示 可以使用`String.equals()`方法进行比较
 
 ### 1.3.3 CheckClassAdapter
+- `ClassWriter`不会检查被调用的方法是否具有适当的顺序 以及参数的有效。所以可能生成被Java虚拟机验证器拒绝的无效类。为了尽快检测出这些错误，可以使用`CheckClassAdapter`类，和`TraceClassVisitor`相似，这个类拓展了`ClassVisitor`类，并将所有的方法调用委托给另外一个`ClassVisitor`（例如tcv或cw）. CCA 会先检查方法是否以适当的顺序调用，使用有效的参数，然后再委托给下一个访问者。在出现错误的情况下，会抛出`IllegalStateException or IllegalArgumentException`
 
+	    ClassWriter cw = new ClassWriter(0);
+	    TraceClassVisitor tcv = new TraceClassVisitor(cw, printWriter);
+	    CheckClassAdapter cv = new CheckClassAdapter(tcv);
+	    cv.visit(...);
+	    ...
+	    cv.visitEnd();
+	    byte b[] = cw.toByteArray();
+
+- **注意：** 如果以不同的顺序将这些 class visitor 添加到一条链上，那么它们的执行顺序会不同。例如如下代码，检查将在跟踪之后
+
+		ClassWriter cw = new ClassWriter(0);
+		CheckClassAdapter cca = new CheckClassAdapter(cw);
+		TraceClassVisitor cv = new TraceClassVisitor(cca, printWriter);
+
+- 与TCV相似，CCA可以在转换链中任意地方被添加而不是仅仅在cw之前去检查类。
 
 ### 1.3.4 ASMifier
+- 这个类为TCV工具 提供了另外一个后端(默认TCV使用 一个Textifier，产生了之前TCV的输出)。这个后端使的TCV类的每个方法都打印Java code 。例如，调用`visitEnd`会打印`cv.visitEnd()`.带一个带有`ASMifier`后台的TCV访问一个类时，将打印出 ASM生成这个类的源代码。
+
+- ASMifier可以用来访问已存在的类，例如，不知道如何使用ASM生成编译类，那么就编写相应的源代码，然后用javac 编译，并使用ASMifier 访问已编译的类，然后就可以得到 ASM生成这个类的代码。
+
+		java -classpath asm.jar:asm-util.jar \org.objectweb.asm.util.ASMifier \java.lang.Runnable
+
+	生成如下代码：
+
+	    package asm.java.lang;
+	    import org.objectweb.asm.*;
+	    public class RunnableDump implements Opcodes {
+	        public static byte[] dump() throws Exception {
+	            ClassWriter cw = new ClassWriter(0);
+	            FieldVisitor fv;
+	            MethodVisitor mv;
+	            AnnotationVisitor av0;
+	            cw.visit(V1_5, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE,
+	                    "java/lang/Runnable", null, "java/lang/Object", null);
+	            {
+	                mv = cw.visitMethod(ACC_PUBLIC + ACC_ABSTRACT, "run", "()V",
+	                        null, null);
+	                mv.visitEnd();
+	            }
+	            cw.visitEnd();
+	            return cw.toByteArray();
+	        }
+	    }
+
+# 2 Method
+## 2.1 Structure 
+###3.1.1. Execution model 
+###3.1.2. Bytecode instructions 
+###3.1.3. Examples 
+###3.1.4. Exception handlers 
+###3.1.5. Frames 
+##3.2. Interfaces and components 
+###3.2.1. Presentation 
+###3.2.2. Generating methods 
+###3.2.3. Transforming methods
+###3.2.4. Stateless transformations 
+###3.2.5. Statefull transformations 
+##3.3. Tools 
+###3.3.1. Basic tools 
+###3.3.2. AnalyzerAdapter 
+###3.3.3. LocalVariablesSorter
+###3.3.4. AdviceAdapter 
