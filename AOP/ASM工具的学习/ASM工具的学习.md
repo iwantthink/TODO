@@ -16,7 +16,7 @@
 	
 	[ASM-PDF 使用介绍](http://download.forge.objectweb.org/asm/asm4-guide.pdf)
 
-
+	[java 虚拟机的堆栈](https://www.zhihu.com/question/29833675)
 
 #  CoreAPI-Classes部分
 
@@ -543,14 +543,297 @@ visitEnd`
 	    }
 
 # 2 Method
+本章介绍了如何通过ASM API 生成 和转换编译过的method。先是介绍了编译过的方法的，然后介绍了生成和转换相应的ASM接口，组件和工具，并提供示例。
 ## 2.1 Structure 
+在编译过的类中，方法代码以一系列字节码指令形式存储。为了生成和转换类，需要了解这些指令以及其工作原理。本节提供了足以开始编写简单的类生成器和转换器指令的概览。如果想了解更完整的定义，应该去阅读java虚拟机规范。
 ###3.1.1. Execution model 
-###3.1.2. Bytecode instructions 
+- **堆是堆（heap），栈是栈（stack）,堆栈就是栈** 
+- **Frame(又称StackFrame/帧栈，方法栈)**
+- **operand stack 操作数栈**
+- **local variable 局部变量**
+- **slot 一种特殊空间**
+
+- 在介绍字节码指令前，需要先介绍java虚拟机执行模型。 
+
+- Java代码在线程中执行，每个线程都有自己的由`frames`（帧栈）组成执行堆栈，每个`frame`表示一个方法调用：即每次调用方法时，一个新的`frame`被push到当前线程的执行堆栈（**thread's execution stack**）。当方法返回时，无论是正常还是异常的情况，这个`frame`从执行堆栈中`pop`，并且在调用方法中继续执行（其`frame`位于栈顶）
+
+- 每个`frame`都包含俩个部分：一个局部变量部分 和 一个**`operand stack`**(操作数栈)部分.局部变量部分包含可以按其索引随意访问的变量。操作数栈部分是被字节码框架当做操作数使用的`stack of value`(栈值)，这意味着栈中的值只能按先进后出的形式来访问。
+ 
+- 不要混淆`operand stack `和`thread's execution stack`,在执行栈中的每一帧都包含它自己的操作数栈。
+
+- 本地变量和操作数栈的大小取决于方法的代码。它在编译时计算，然后和字节码指令一起存储在编译过后的类中。 因此，所有与调用的方法相同frame都有相同的大小，但是对于不同的方法来说 它们的本地变量和操作数栈的大小可能不同
+
+	![An execution stack with 3 frames](http://ww1.sinaimg.cn/large/6ab93b35gy1fks0seayynj209g02xt8l.jpg)
+
+	- 如图显示了带有3`frame`的一个执行栈。 第一个frame包含三个局部变量，**它的操作数栈最大为4个操作数，当前它只包含了2个操作数** 。 第二个frame包含了俩个局部变量，操作数栈中拥有俩个操作数。第三个frame 包含四个局部变量，2个操作数
+	- 当它被创建出来时，frame初始化时带有一个空堆栈(empty stack)，局部变量带有目标对象(非静态方法)和方法的参数。 例如，在调用`a.equals(b)`方法的时候，创建了一个空堆栈的frame,局部变量为 a 和 b (其他局部变量尚未初始化)
+	- 本地变量和操作数栈中的每个`slot`都可以保存除了`long和double`以外的java值(long 和double 需要俩个slot)。这使得本地变量的管理变得复杂，例如 i的th次方中的参数不一定需要存储在 局部变量i中。 举个栗子：调用`Math.max(1L,2L)`,创建了一个存放在前俩个slot的本地变量1L 和 一个存放在后俩个slot 的本地变量
+
+###3.1.2. Bytecode instructions (字节码指令)
+字节码指令是由 可识别该指令的操作码和固定数量参数 组成。
+
+- 操作码是一个无符号的字节值，因此字节码的名称是由`mnemonic symbol`助词符号识别。 例如，值为0的opcode是通过符号 `NOP`设计的，它对应的指令是 什么都不做。
+- 参数指的是定义明确指令行为的静态值，是在opcode 之后赋值的。例如`GOTO`标签指令，它的opcode值为167，作为参数标签它指定下一个被执行的指令。**指令参数不能与指令操作数混淆，参数值是静态的并存储在已编译的代码中，而操作数的值来自操作数栈并只有在运行时才知道**
+
+
+字节码指令可以分为俩类：一组指令用于将值从本地变量传递给操作数栈，或从操作数栈到本地变量。另一组指令值仅作用于操作数栈，将一些值从栈中pop，然后根据这些弹出的值进行计算，最后将结果push回栈中。
+
+- 第一组：
+
+	`ILOAD, LLOAD, FLOAD, DLOAD, and ALOAD`指令用于读取局部变量并将其值push到操作数栈上。这些指令必须以要读取的本地变量的索引作为参数。`ILOAD`用于加载` boolean, byte, char, short, or int `类型的局部变量。`LLOAD,FLOAD,DLOAD`分别用于加载一个`long, float or double `类型的值(LLOAD,DLOAD实际上加载了俩个slot).`ALOAD`用于加载非原始类型的数据，例如对象和数组引用。对称的，还存在`ISTORE,LSTORE,FSTORE,DSTORE,ASTORE`指令从操作数栈pop出一个值，并存储在其索引对应的局部变量中。
+
+	实际上`XLOAD,XSTORE`都是指定了类型的(几乎所有的指令都是类型化的)。这用于确保不发生非法转换。实际上，用不同的类型去读取存储在局部变量中的值是非法的。但是，将当前值以不同的类型存储到局部变量中是合法的。这意味着局部变化的值可以在方法执行过程中改变
+
+- 第二组：可以分类成如下几类
+
+	- Stack:这些指令用于操作-栈上的值,`POP`弹出栈顶的值,`DUP`用于操作栈顶值的副本,`SWAP`用于交换 栈顶的俩个值
+	- Constants：
+	- Arithmetic and logic
+	- Casts
+	- Objects
+	- Fields
+	- Methods
+	- Arrays
+	- Jumps
+	- Return
+
 ###3.1.3. Examples 
+查看一下基本例子，了解字节码具体工作流程，以下是一个bean类：
+
+    package pkg;
+    public class Bean {
+        private int f;
+        public int getF() {
+            return this.f;
+        }
+        public void setF(int f) {
+            this.f = f;
+        }
+    }
+
+get方法对应的字节码指令是:
+
+	ALOAD 0
+	GETFIELD pkg/Bean f I
+	IRETURN
+- 第一个指令是读取局部变量位置0的值，这个值会在这个方法调用frame 创建过程中被初始化，并将值push到操作数栈。
+- 第二个指令从栈中弹出第一个指令的值也就是`this`，并push这个对象的f字段也就是`this.f`。
+- 第三个指令是从栈中弹出值，并返回给调用者
+
+set方法对应的字节码指令是：
+
+	ALOAD 0
+	ILOAD 1
+	PUTFIELD pkg/Bean f I
+	RETURN
+
+- 第一个指令将`this`push到操作数栈
+- 第二个指令将位置1的局部变量push到操作数栈，其值在该方法调用frame创建过程中被初始化并赋值
+- 第三个指令弹出 前俩个指令入栈的值，并将int值类型的f字段存储在引用对象中也就是`this.f`
+- 第四个指令,隐含在源代码中，但是在字节码中是强制的，它会破坏当前执行frame，并返回给它的调用者。
+
+这个bean类有一个默认的公共构造函数，由编译器生成。这个默认生成的构造函数`Bean() { super(); }`。他对应的字节码指令是：
+
+	ALOAD 0
+	INVOKESPECIAL java/lang/Object <init> ()V
+	RETURN
+- 第一个指令用于加载`this`到操作数栈
+- 第二个指令弹出`this`这个值，并调用对象类中定义的`<init>`方法，也就是`super()`(即调用父类的构造函数) 。在源码和字节码中，构造函数的命名方式不同，在字节码中，总是被命名为`<init>`,而在源码中，它们有定义它们类的名称。
+- 第三条指令用于返回给调用者，
+
+
+---
+下面来看一个复杂的例子：
+
+    public void checkAndSetF(int f) {
+        if (f >= 0) {
+            this.f = f;
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+其对应的字节码指令：
+
+		ILOAD 1
+		IFLT label
+		ALOAD 0
+		ILOAD 1
+		PUTFIELD pkg/Bean f I
+		GOTO end
+	label:
+		NEW java/lang/IllegalArgumentException
+		DUP
+		INVOKESPECIAL java/lang/IllegalArgumentException <init> ()V
+		ATHROW
+	end:
+		RETURN
+
+- 第一个指令用于加载局部变量位置1的值到操作数栈上,即`f`
+- 第二个指令`IFLT`将`f`弹出,并与0进行比较，如果小于0 则跳转到名字为`label`的标签处，否则就继续执行下一个指令
+- 第三到第五个指令 与set方法的指令相同
+- 第六个指令`GOTO`，表示无条件的跳转到`end`标签 处的指令,`end`标签处的是返回指令
+- `label`标签处的指令
+	- 第一条，`NEW`指令创建了一个异常对象，并将其push到了操作数栈
+	- 第二条,`DUP`指令在操作数栈上复制了这个值
+	- 第三条，`INVOKESPECIAL`指令pop出了 操作数栈中的 俩个 异常值
+	- 第四条，调用了构造函数
+	- 第五条，`ATHROW`指令，pop出了在操作数栈中剩余的异常值，将其作为一个异常抛出(因此执行流程将不会继续执行指令)
+
 ###3.1.4. Exception handlers 
-###3.1.5. Frames 
+
+并没有catch对应的字节码指令，不过函数会和一系列exception handler(异常处理代码)相关联。当抛出指定的异常时对应的handler代码就会执行。因此exception handler就和try catch代码块类似。
+
+    public static void sleep(long d) {
+        try {
+            Thread.sleep(d);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+编译过后的指令：
+
+	TRYCATCHBLOCK try catch catch java/lang/InterruptedException
+	try:
+		LLOAD 0
+		INVOKESTATIC java/lang/Thread sleep (J)V
+		RETURN
+	catch:
+		INVOKEVIRTUAL java/lang/InterruptedException printStackTrace ()V
+		RETURN
+
+- `try `和 `catch` 标签之间的代码对应try 代码块，`catch`标签之后的代码对应catch代码块。`TRYCATCHBLOCK `指定了一个异常处理器 覆盖范围从 try标签到catch标签.在`catch`中处理`InterruptedException`及其子类的异常，这意味着，如果在try catch 之间任何地方抛出这个异常，都会将异常push到空栈上，并执行catch标签
+
+###3.1.5. Frames（帧）
+Java6及以上版本编译的class文件，包含一系列stack map frames来加速jvm对class的校验。它们甚至在运行前就能告知jvm某个frame的符号表及操作栈的详细信息。为此，可以为frame中的每一个指令创建一个frame来查看其运行时的状态
+
+	//运行前的state frame     对应的指令
+	[pkg/Bean] []           ALOAD 0
+	[pkg/Bean] [pkg/Bean]   GETFIELD
+	[pkg/Bean] [I]          IRETURN
+	
+	//对于 throw new IllegalArgumentException的代码：
+	[pkg/Bean I] []                                             NEW
+	[pkg/Bean I] [Uninitialized(label)]                         DUP
+	[pkg/Bean I] [Uninitialized(label) Uninitialized(label)]    INVOKESPECIAL
+	[pkg/Bean I] [java/lang/IllegalArgumentException]           ATHROW
+
+
+上述的`Uninitialized`只存在于`stack map frame`中，代表内存分配完毕但是构造函数还没调用。`UNINITIALIZED_THIS` 代表被初始化为0 TOP代表未定义类型 NULL代表null
+
+对于编译后的class为了节省空间，实际上并不是每一个指令都对应一个state frame,而是只有跳转指令和异常处理handler 和无条件跳转后面的第一个指令包含state frame. 而其他指令可以从已有的state frames推断出来。为了进一步节省空间，每一个frame只有在和上一个frame不同的时候才会被存储。初始帧由于可以很容易从函数参数中推断，因此不会存储，而后续的帧如果和初始帧相同只需存储 F_SAME即可
+
+	ILOAD 1
+	IFLT label
+	ALOAD 0
+	ILOAD 1
+	PUTFIELD pkg/Bean f I
+	GOTO end
+	label:
+	F_SAME
+	NEW java/lang/IllegalArgumentException
+	        DUP
+	INVOKESPECIAL java/lang/IllegalArgumentException <init> ()V
+	        ATHROW
+	end:
+	F_SAME
+	        RETURN
+
 ##3.2. Interfaces and components 
 ###3.2.1. Presentation 
+
+ASM中的 生成和转换 方法字节码的API 是基于一个 抽象类`MethodVisitor`，它是通过`ClassVisitor`的`visitMethod`方法返回的。
+
+    abstract class MethodVisitor { // public accessors ommited
+        MethodVisitor(int api);
+        MethodVisitor(int api, MethodVisitor mv);
+
+        AnnotationVisitor visitAnnotationDefault();
+        AnnotationVisitor visitAnnotation(String desc, boolean visible);
+        AnnotationVisitor visitParameterAnnotation(int parameter,String desc, boolean visible);
+        void visitAttribute(Attribute attr);
+
+        void visitCode();
+        void visitFrame(int type, int nLocal, Object[] local, int nStack,Object[] stack);
+        void visitInsn(int opcode);
+        void visitIntInsn(int opcode, int operand);
+        void visitVarInsn(int opcode, int var);
+        void visitTypeInsn(int opcode, String desc);
+        void visitFieldInsn(int opc, String owner, String name, String desc);
+        void visitMethodInsn(int opc, String owner, String name, String desc);
+        void visitInvokeDynamicInsn(String name, String desc, Handle bsm,
+                                    Object... bsmArgs);
+        void visitJumpInsn(int opcode, Label label);
+        void visitLabel(Label label);
+        void visitLdcInsn(Object cst);
+        void visitIincInsn(int var, int increment);
+        void visitTableSwitchInsn(int min, int max, Label dflt, Label[] labels);
+        void visitLookupSwitchInsn(Label dflt, int[] keys, Label[] labels);
+        void visitMultiANewArrayInsn(String desc, int dims);
+        void visitTryCatchBlock(Label start, Label end, Label handler,
+                                String type);
+        void visitLocalVariable(String name, String desc, String signature,
+                                Label start, Label end, int index);
+        void visitLineNumber(int line, Label start);
+        void visitMaxs(int maxStack, int maxLocals);
+        void visitEnd();
+    }
+
+- 如果存在 annotations 或attributes 的字节码那必须先被生成，其次是method的字节码(非抽象的方法)。对于`visitCode`和`visitMaxs`可以被看做函数体的开始和结束，最后需要`visitEnd`代表事件结束。
+
+	    visitAnnotationDefault?
+	            ( visitAnnotation | visitParameterAnnotation | visitAttribute )*
+	            ( visitCode
+	            ( visitTryCatchBlock | visitLabel | visitFrame | visitXxxInsn |
+	                    visitLocalVariable | visitLineNumber )*
+	    visitMaxs )?
+	    visitEnd
+
+---
+
+`ClassVisitor`和`MethodVisitor`可以一起使用以生成一个完整的类
+
+	ClassVisitor cv = ...;
+	cv.visit(...);
+	MethodVisitor mv1 = cv.visitMethod(..., "m1", ...);
+	mv1.visitCode();
+	mv1.visitInsn(...);
+	...
+	mv1.visitMaxs(...);
+	mv1.visitEnd();
+	MethodVisitor mv2 = cv.visitMethod(..., "m2", ...);
+	mv2.visitCode();
+	mv2.visitInsn(...);
+	...
+	mv2.visitMaxs(...);
+	mv2.visitEnd();
+	cv.visitEnd();
+
+- **注意：**并不是一个`MethodVisitor`结束了 才能开另外一个`MethodVisitor`的操作.
+
+		ClassVisitor cv = ...;
+		cv.visit(...);
+		MethodVisitor mv1 = cv.visitMethod(..., "m1", ...);
+		mv1.visitCode();
+		mv1.visitInsn(...);
+		...
+		MethodVisitor mv2 = cv.visitMethod(..., "m2", ...);
+		mv2.visitCode();
+		mv2.visitInsn(...);
+		...
+		mv1.visitMaxs(...);
+		mv1.visitEnd();
+		...
+		mv2.visitMaxs(...);
+		mv2.visitEnd();
+		cv.visitEnd();
+
+---
+ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`method`
+- `ClassReader`类用来解析编译过的类中的`method`内容，并调用CV中对应参数
+
+
 ###3.2.2. Generating methods 
 ###3.2.3. Transforming methods
 ###3.2.4. Stateless transformations 
