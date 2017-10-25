@@ -29,7 +29,7 @@
 - agent开发过程注意:
 	- 必须提供`agentmain(String args,Instrumentation inst)`方法，并给`Instrumentation`设置`ClassFileTransformer`，然后在`transformer`中改造`dexer.Main`.当JVM成功执行到`transformer`的时候，会发现传进来的class没有`dexer.Main`.这是因为dx.bat执行dexer.Main,但是和plugin不在一个进程中！
 
-
+ 
 # 1.3 ProcessBuilder
 - dx.bat其实是由`ProcessBuilder`的start方法启动的，**`ProcessBuilder`有一个`command`成员，保存的是启动目标进程携带的参数**，只要给`dx.bat`带上`-javaagent`参数就能给dx.bat所在进程指定`agent`。 所以需要在执行`start`方法之前调用`command`方法以获取`command`，并往`command`中插入`-javaagent`参数。 参数值就是`agent.jar`所在的路径，可以使用`agent.jar`其中一个class实例`getProtectionDomain().getCodeSource().getLocation().toURI().getPath()`获得
 
