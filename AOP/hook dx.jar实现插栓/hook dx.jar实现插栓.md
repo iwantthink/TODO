@@ -3,6 +3,9 @@
 [APM原理链接](http://blog.csdn.net/sgwhp/article/details/50239747)
 [APM实现链接](http://blog.csdn.net/sgwhp/article/details/50438666)
 [APM源码地址](https://github.com/sgwhp/openapm)
+[dx的介绍](https://stackoverflow.com/questions/8487268/android-dx-tool)
+[网易NAPM Andorid SDK实现原理](https://neyoufan.github.io/2017/03/10/android/NAPM%20Android%20SDK/)
+
 # 1.1 dex和processClass方法
 - `APM(性能监控)`的`AOP字节码插栓` 插件会在class编译成dex文件的时候注入相关的代码。关键点就在于编译dex文件的时候注入代码，这个编译的过程是由**dx(dx.bat)**执行的，具体的类和方法是`com.android.dx.command.dexer.Main#processClass`.此方法的第二个参数就是class的byte数组，所以只需要在进入`processClass`方法的时候，利用`ASM`工具对class的byte数组进行改造即可实现插入相关代码。
 
@@ -53,3 +56,13 @@
 
 - `dexer.Main`和`plugin`不在同一个进程中，所以要实现改写`dexer.Main`之前还需要先改写`ProcessBuilder`的`command`成员变量，往其中插入`-javaagent 参数`.同样还是通过ASM工具，当访问到`ProcessBuilder`的`start`方法时，如果`start`的目标是`java`或`dx`,则加入`-javaagent`或`Jjavaagent`
 
+# 3 疑惑
+1.             String jarFilePath = TransformAgent.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath()  这一段代码去加载agent地址。。这些api 分别什么意思？？ 会有缓存
+
+2. 在测试agent 的时候，出现了 日志打印不全。然后clean build 删除不了一些特定的文件。 最后是通过 重启电脑解决的。。。。。。。。
+
+3. Android studio agent 输出日志的时候 会出现 大量NULL。。 
+
+4. gradle plugin 在2.1.0之后的版本，支持dx in-process，它使得dx的过程可以直接在当前的gradle进程中执行，而不需要额外启动一个dx进程，从而缩短应用构建的时间。如果你在使用Android Studio构建应用的时候看到To run dex in process, the Gradle daemon needs a larger heap. It currently has 910 MB这样的一句话，它就是指导用户通过配置gradle daemon进程的堆大小来开启dx in-process特性的。
+
+5. 过来打印一下 HMT_SDK 中 agent的 日志。。 看一下 会不会出现同样的问题！！！！ 
