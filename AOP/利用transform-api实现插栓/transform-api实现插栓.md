@@ -1,6 +1,7 @@
 # 参考链接
 [Android AOP之字节码插栓](http://blog.csdn.net/sbsujjbcy/article/details/50839263)
 
+[Android Gradle和Gradle插件区别](http://blog.csdn.net/jinrall/article/details/53220761)
 
 # 简介
 从`com.android.tools.build:gradle:1.5.0-beta1`开始，gradle插件包含了一个`Transform`接口，允许第三方插件在class文件转成dex文件之前操作编译好的class文件，这个API目标就是简化class文件的自定义操作而不用对Task进行处理
