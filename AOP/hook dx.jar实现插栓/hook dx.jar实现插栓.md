@@ -66,4 +66,10 @@
 
 4. gradle plugin 在2.1.0之后的版本，支持dx in-process，它使得dx的过程可以直接在当前的gradle进程中执行，而不需要额外启动一个dx进程，从而缩短应用构建的时间。如果你在使用Android Studio构建应用的时候看到To run dex in process, the Gradle daemon needs a larger heap. It currently has 910 MB这样的一句话，它就是指导用户通过配置gradle daemon进程的堆大小来开启dx in-process特性的。
 
+		To run dex in process, the Gradle daemon needs a larger heap.
+		It currently has 1024 MB.
+		For faster builds, increase the maximum heap size for the Gradle daemon to at least 1536 MB.
+		To do this set org.gradle.jvmargs=-Xmx1536M in the project gradle.properties.
+		For more information see https://docs.gradle.org/current/userguide/build_environment.html
+
 5. 过来打印一下 HMT_SDK 中 agent的 日志。。 看一下 会不会出现同样的问题！！！！ 
