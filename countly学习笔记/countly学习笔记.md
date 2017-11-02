@@ -163,7 +163,7 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 
 
 ### 2.1.3 init()方法
-在获取对象之后，需要调用`init()`方法去初始化。注意最后俩个参数。`deviceID`是用来标识独立设备的一个id，`idMode`表示`deviceID`的生成策略。
+- 在获取对象之后，需要调用`init()`方法去初始化。注意最后俩个参数。`deviceID`是用来标识独立设备的一个id，`idMode`表示`deviceID`的生成策略。
 
 	   public synchronized Countly init(final Context context, final String serverURL, final String appKey, final String deviceID, DeviceId.Type idMode) {
 			//判断context是否有效
@@ -171,5 +171,47 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 			//removing trailing '/'
 			//判断 appKey 和deviceId 是否有效	
 			//如果deviceID和idMode都为空,会自动为idMode设置值，优先考虑OPEN_UDID，其次是ADVERTISING_ID
-			//判断sdk是否二次初始化，且使用不同的值
+			//判断sdk是否二次初始化且使用不同的值
+			//检查是否能做CountlyMessaging相关的操作---这一块待分析
+			//设置start级别。。。待分析
+			//对app 应用名称进行检查是否是爬虫
+			checkIfDeviceIsAppCrawler() 
+			//判断是否首次初始化
+			if (eventQueue_ == null) {
+	            final CountlyStore countlyStore = new CountlyStore(context);
+	
+	            DeviceId deviceIdInstance;
+	            if (deviceID != null) {
+	                deviceIdInstance = new DeviceId(countlyStore, deviceID);
+	            } else {
+	                deviceIdInstance = new DeviceId(countlyStore, idMode);
+	            }
+	
+	            deviceIdInstance.init(context, countlyStore, true);
+	
+	            connectionQueue_.setServerURL(serverURL);
+	            connectionQueue_.setAppKey(appKey);
+	            connectionQueue_.setCountlyStore(countlyStore);
+	            connectionQueue_.setDeviceId(deviceIdInstance);
+	
+	            eventQueue_ = new EventQueue(countlyStore);
+	
+	            //do star rating related things
+	            CountlyStarRating.registerAppSession(context, starRatingCallback_);
+	        }
+			//赋值`Countly`中的context_
+			//赋值`ConnectionQueue`中的context
 	    }
+
+- `checkIfDeviceIsAppCrawler()`，会去判断deviceName是否是`Calypso AppCrawler`，好像是一个脚本的名称 然后在类`ConnectionProcessor`中发送数据时可以选择屏蔽这个deviceName的机器。[App crawler 参考](https://testerhome.com/wiki/appcrawler)
+
+- 在首次初始化时 创建了`ConnectionQueue`和`EventQueue`,并传入一些参数。
+	- 创建`CountlyStore`，这个类封装了sp用来处理`EventQueue`和`ConnectionQueue`中的数据。
+	- 创建了`DeviceId`
+		- 构造方法需要传入 开发者传入的deviceId或deviceId Type.会优先使用本地存储的deivceID和deivceId Type ...
+		- `init`方法中如果检测到本地已经存在deviceId Type，会优先使用本地的。然后会根据deviceID Type 去生成对应的 deviceID。
+	
+- `OpenUDID`的生成,通过一个`OpenUDIDAdapter`类来管理`OpenUDID_manager`和`OpenUDID_service`。这个类使用反射来执行`OpenUDID_manager/OpenUDID_service`。(TODO待分析为什么采用这种方式)
+	- `getMostFrequentOpenUDID()`这一块的逻辑不太理解，。。。//TODO待分析
+
+- `EventQueue`会在`Countly.init()`方法中被创建
