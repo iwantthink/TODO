@@ -211,7 +211,80 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 		- 构造方法需要传入 开发者传入的deviceId或deviceId Type.会优先使用本地存储的deivceID和deivceId Type ...
 		- `init`方法中如果检测到本地已经存在deviceId Type，会优先使用本地的。然后会根据deviceID Type 去生成对应的 deviceID。
 	
-- `OpenUDID`的生成,通过一个`OpenUDIDAdapter`类来管理`OpenUDID_manager`和`OpenUDID_service`。这个类使用反射来执行`OpenUDID_manager/OpenUDID_service`。(TODO待分析为什么采用这种方式)
-	- `getMostFrequentOpenUDID()`这一块的逻辑不太理解，。。。//TODO待分析
+- `OpenUDID`的生成,通过一个`OpenUDIDAdapter`类来管理`OpenUDID_manager`和`OpenUDID_service`。这个类使用反射来执行`OpenUDID_manager/OpenUDID_service`。(TODO待分析为什么采用这种方式).在调用`sync`方法之后，会去获取所有存在的`OPENUDID_service` 然后遍历这些service 去获取对应的`openudid`并存储到TreeMap中.重复的openudid会使得openudid值自增1，用来做大小的判断。 
+
+	- `getMostFrequentOpenUDID()`会获取使用最多的openudid
 
 - `EventQueue`会在`Countly.init()`方法中被创建
+
+- `setServerURL`
+
+## 2.2 触发点
+
+### 2.2.1 Countly.onCreate(Activity activity)
+获取了启动当前activity的intent，然后获取其data(Uri),保存到`DeviceInfo.deepLink`
+
+	 Intent intent = activity.getIntent();
+	        if (intent != null) {
+	            Uri data = intent.getData();
+	            if (data != null) {
+	                if (sharedInstance().isLoggingEnabled()) {
+	                    Log.d(Countly.TAG, "Data in activity created intent: " + data + " (appLaunchDeepLink " + sharedInstance().appLaunchDeepLink + ") ");
+	                }
+	                if (sharedInstance().appLaunchDeepLink) {
+	                    DeviceInfo.deepLink = data.toString();
+	                }
+	            }
+	        }
+
+### 2.2.2 Countly.onStart()
+标识Activity开始被记录
+
+	 public synchronized void onStart(Activity activity) {
+	        appLaunchDeepLink = false;
+	        if (eventQueue_ == null) {
+	            throw new IllegalStateException("init must be called before onStart");
+	        }
+	
+	        ++activityCount_;
+	        if (activityCount_ == 1) {
+	            onStartHelper();
+	        }
+	
+	        //check if there is an install referrer data
+	        String referrer = ReferrerReceiver.getReferrer(context_);
+	        if (Countly.sharedInstance().isLoggingEnabled()) {
+	            Log.d(Countly.TAG, "Checking referrer: " + referrer);
+	        }
+	        if (referrer != null) {
+	            connectionQueue_.sendReferrerData(referrer);
+	            ReferrerReceiver.deleteReferrer(context_);
+	        }
+	
+	        CrashDetails.inForeground();
+	
+	        if (autoViewTracker) {
+	            recordView(activity.getClass().getName());
+	        }
+	
+	        calledAtLeastOnceOnStart = true;
+	    }
+
+- `appLaunchDeepLink`,默认是true,执行onStart()之后就变成false.
+
+- 通过判断`eventQueue_`是否为空 确定是否已经调用init()
+
+- 用一个`int activityCount`记录当前activity的数量, 如果当前只有一个activity,会执行`onStartHelper()`
+
+	- `onStartHelper()` 发送 `begin session event`,然后初始化session tracking 。。
+	
+			void onStartHelper() {
+		        prevSessionDurationStartTime_ = System.nanoTime();
+		        connectionQueue_.beginSession();
+		    }
+
+
+
+
+
+
