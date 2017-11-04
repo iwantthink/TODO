@@ -11,9 +11,11 @@ code review
 
 ~~~学习gradle插件的开发~~~
 
-学习java instrumentation
+~~~学习java instrumentation~~~
 
 自定义view 加深
+
+分析countly
 
 
 **做一个做计划（记忆曲线）的demo apk**
