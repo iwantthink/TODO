@@ -276,15 +276,18 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 
 - 用一个`int activityCount`记录当前activity的数量, 如果当前只有一个activity,会执行`onStartHelper()`
 
-	- `onStartHelper()` 发送 `begin session event`,然后初始化session tracking 。。
+	- `onStartHelper()` 发送 `begin session event`,然后初始化`ConnectionQueue`的session tracking（根据判断条onTimer()中的判断条件来看，应该是activityCount控制的） 。
 	
 			void onStartHelper() {
 		        prevSessionDurationStartTime_ = System.nanoTime();
 		        connectionQueue_.beginSession();
 		    }
 
+	- `beginSession`记录**session start event**,并发送。主要做的内容是 组装一条data，添加到`CountlyStore`，然后执行`tick()`
+	
+- `ReferrerReceiver`是一个广播类，会接收广播信息 并保存到本地..`Countly` 会收集这些缓存的信息并组装成一条data 发送出去同时删除缓存。
 
+- `CrashDetails`是一个 记录手机状态的类。例如ram等等
 
-
-
+- 判断是否需要trackview,会执行一个`recordView`方法，这个方法手动的记录一个view，然后会发送俩条数据，一条是viewName开始，一条是viewName 持续时间
 
