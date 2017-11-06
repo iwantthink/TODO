@@ -276,7 +276,7 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 
 - 用一个`int activityCount`记录当前activity的数量, 如果当前只有一个activity,会执行`onStartHelper()`
 
-	- `onStartHelper()` 发送 `begin session event`,然后初始化`ConnectionQueue`的session tracking（根据判断条onTimer()中的判断条件来看，应该是activityCount控制的） 。
+	- `onStartHelper()` 发送 `begin session event`,然后初始化`ConnectionQueue`的session tracking（根据判断条onTimer()中的判断条件来看，应该是activityCount控制的） 。`prevSessionDurationStartTime_`会被记录，表示session的开始时间。
 	
 			void onStartHelper() {
 		        prevSessionDurationStartTime_ = System.nanoTime();
@@ -289,5 +289,43 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 
 - `CrashDetails`是一个 记录手机状态的类。例如ram等等
 
-- 判断是否需要trackview,会执行一个`recordView`方法，这个方法手动的记录一个view，然后会发送俩条数据，一条是viewName开始，一条是viewName 持续时间
+- 判断是否需要自动trackview,会执行一个`recordView`方法，这个方法手动的记录一个view，然后会发送俩条数据，一条是activity开始(必发)，一条是上一个activity的持续时间(如果存在上一个activity,`reportViewDuration()`).这个方法可以提供给fragment ，Message Box or transparent activity 使用。
 
+- `calledAtLeastOnceOnStart`字段用来判断 起码调用了一次`onStart（）`
+
+### 2.2.3 Countly.onStop()
+标识Activity停止
+
+    public synchronized void onStop() {
+        if (eventQueue_ == null) {
+            throw new IllegalStateException("init must be called before onStop");
+        }
+        if (activityCount_ == 0) {
+            throw new IllegalStateException("must call onStart before onStop");
+        }
+
+        --activityCount_;
+        if (activityCount_ == 0) {
+            onStopHelper();
+        }
+
+        CrashDetails.inBackground();
+
+        //report current view duration
+        reportViewDuration();
+    }
+
+- `activityCount_` 自减，当前activity为0时 会触发 `onStopHelper()`.
+	- `onStopHelper()`中会调用`connectionQueue_.endSession`组装一条data 然后发送。然后重置`prevSessionDurationStartTime_`为0. 另外会判断`eventQueue_`中是否有缓存的的数据，如果有会取出放入`connectionQueue`去发送。
+
+			void onStopHelper() {
+		        connectionQueue_.endSession(roundedSecondsSinceLastSessionDurationUpdate());
+		        prevSessionDurationStartTime_ = 0;
+		
+		        if (eventQueue_.size() > 0) {
+		            connectionQueue_.recordEvents(eventQueue_.events());
+		        }
+		    }
+	- `CrashDetails.inBackground()`记录当前没有activity，在后台
+
+- `reportViewDuration`,记录上一个view到现在的持续时间.通过`lastView和lastViewStart`进行判断。
