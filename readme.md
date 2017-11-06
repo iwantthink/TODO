@@ -17,6 +17,10 @@ code review
 
 分析countly
 
+学习hotfix
+
+学习设计模式
+
 
 **做一个做计划（记忆曲线）的demo apk**
 
