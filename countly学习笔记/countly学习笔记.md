@@ -52,7 +52,7 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 - `session timer`
 	- Java 线程池中的定时任务线程池，创建了一个单线程执行程序，可以用来处理延迟或定义任务.[参考链接](http://www.cnblogs.com/yangzhilong/p/4789031.html)
 	- Countly在这里创建了一个每隔60秒执行一次`onTimer()`的定时器。
-	- `onTimer()`会判断当前是否有活动的`application session`,如果有就会发送一个 `session hearbeat`。	
+	- `onTimer()`会判断当前是否有活动的`application`,如果有就会发送一个 `session hearbeat`。	
 	- 注意这里的`activityCount_`，这个参数是在Countly.onStart()和Countly.onStop()中改变的
 		
 		    synchronized void onTimer() {
@@ -329,3 +329,32 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 	- `CrashDetails.inBackground()`记录当前没有activity，在后台
 
 - `reportViewDuration`,记录上一个view到现在的持续时间.通过`lastView和lastViewStart`进行判断。
+
+
+## 2.3 数据发送逻辑
+`Countly`的数据发送逻辑在`ConnectionProcessor`中，它是一个runnable，被线程池管理。
+
+	public void run(){
+		while(true){
+		//取出countlyStore中的 数据，进行判断是否存在未发送的，为空则停止
+		//判断deviceId 非空
+		//判断 待发送的 数据是否有 override_id 或 device_id　字段． 正常情况下都不会存在
+		//判断当前设备是否是 App-Crawler 同时  是否需要忽略 App-Crawler这种情况。如果需要忽略，直接将这条数据从本地删除
+		//如果当前设备不是爬虫，创建 URLConnection 并 connect，接着判断 返回码，只要是2xx 形式的 都是成功
+		//如果连接成功，将当前这条数据从本地删除。。还会判断是否有device_id 会执行
+		deviceId_.changeToDeveloperId(store_, newId);
+		//如果返回码 是4xx的 ，同样会将数据删除
+		//
+		}
+	}
+
+### 2.3.1 数据中的device_id 和override_id
+默认在`ConnectionProcessor`中才会将device_id这个字段添加到json中。但是又如下俩种例外情况
+
+- device\_id 
+	会在`Countly.changeDeviceId(deviceId)->connectionQueue_.changeDeviceId(deviceId,duration)`中被改变. 如果在cp 之前已经添加了这个字段，会判断这个值和本地的值是否相同，如果相同则发送的数据无改变，如果不同，会用old\_device\_id取代device\_id 组装一条新的json 并发送.并在发送成功之后改变本地device\_id的值。
+
+- override\_id
+	会在`Countly.changeDeviceId(type,deviceId)->connectionQueue_.endSession(duration,deviceIdOverride) `中被改变。 如果存在该字段，会将override\_id替换成device\_id
+
+### 2.3.2 URLConnection
