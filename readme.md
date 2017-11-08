@@ -7,11 +7,11 @@ code review
 
 ~~学习groovy~~
 
-~~~学习gradle ...~~~
+~~学习gradle ...~~
 
-~~~学习gradle插件的开发~~~
+~~学习gradle插件的开发~~
 
-~~~学习java instrumentation~~~
+~~学习java instrumentation~~
 
 自定义view 加深
 
