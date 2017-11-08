@@ -357,4 +357,36 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 - override\_id
 	会在`Countly.changeDeviceId(type,deviceId)->connectionQueue_.endSession(duration,deviceIdOverride) `中被改变。 如果存在该字段，会将override\_id替换成device\_id
 
-### 2.3.2 URLConnection
+### 2.3.2 URLConnection对象的获取
+在`ConnectionProcessor`中的`urlConnectionForEventData`方法中创建`URLConnection`
+
+1. 为serverURL 添加`/i?`
+2. 判断传入的 数据中是否含有`&crash=`且数据大小小于2048，直接添加 数据到url之后，同时计算数据的 `sha1`值 并添加到url 。 如果不含有`&crash=`或数据大小大于2048，仅添加数据的`sha1`值到url
+
+		 if(!eventData.contains("&crash=") && eventData.length() < 2048) {
+		            urlStr += eventData;
+		            urlStr += "&checksum=" + sha1Hash(eventData + salt);
+		        } else {
+		            urlStr += "checksum=" + sha1Hash(eventData + salt);
+		        }
+3.  创建HttpUrlConnection,根据是否存在`publicKeyPinCertificates`和`certificatePinCertificates`进行判定。大概作用应该是 判断开发者是否传入了这俩块信息，即开发者使用了自定义的证书，那么在android 这里就需要跳过这些证书的验证。//TODO待分析 这一块的作用
+
+        final URL url = new URL(urlStr);
+        final HttpURLConnection conn;
+        if (Countly.publicKeyPinCertificates == null && Countly.certificatePinCertificates == null) {
+            conn = (HttpURLConnection)url.openConnection();
+        } else {
+            HttpsURLConnection c = (HttpsURLConnection)url.openConnection();
+            c.setSSLSocketFactory(sslContext_.getSocketFactory());
+            conn = c;
+        }
+
+4. 解析url获取一个`picturePath`参数
+
+		String picturePath = UserData.getPicturePathFromQuery(url);
+
+5. 判断`picturePath`是否非空，如果非空 则需要使用urlConneciton 去上传文件 。将数据写入请求体。[URLConnection高级用法](https://stackoverflow.com/questions/2793150/using-java-net-urlconnection-to-fire-and-handle-http-requests)
+
+6. 如果`picturePath`为空，则去判断 待上传的数据 **是否包含crash信息**或**数据大小大于2048**或**需要强制使用post**。只要满足一个条件那就使用 post 请求，将数据写入请求体。否则 使用 get 去上传数据(不在`urlConnectionForEventData`方法中)
+
+# 3.单元测试
