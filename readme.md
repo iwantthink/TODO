@@ -21,6 +21,8 @@ code review
 
 学习设计模式
 
+[学习android architecture Components..](https://developer.android.com/topic/libraries/architecture/index.html)
+
 
 **做一个做计划（记忆曲线）的demo apk**
 
