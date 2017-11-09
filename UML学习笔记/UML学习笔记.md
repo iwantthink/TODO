@@ -40,6 +40,11 @@
 
 ### 1.6.1 访问权限控制
 
+	- private 
+	# protected 
+	~ package 
+	+ public 
+
 ![](http://www.plantuml.com/plantuml/png/Iyv9B2vMS2dDpQrKgERILIWeoYnBB4bLICjCpKanv5862kINf2QNfAP0X8ouwXGA4fEp4zDJ5N9JIpBoKmmrDBcq5GfAat8oaw52Ha2XMW00)
 
 ### 1.6.1 类与类之间的关系
