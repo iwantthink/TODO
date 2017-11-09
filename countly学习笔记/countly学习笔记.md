@@ -390,3 +390,4 @@ Android sdk 主要处理**Event,Crash和会话流(Session)**三种数据记录�
 6. 如果`picturePath`为空，则去判断 待上传的数据 **是否包含crash信息**或**数据大小大于2048**或**需要强制使用post**。只要满足一个条件那就使用 post 请求，将数据写入请求体。否则 使用 get 去上传数据(不在`urlConnectionForEventData`方法中)
 
 # 3.单元测试
+gg...需要google play 在机子上
