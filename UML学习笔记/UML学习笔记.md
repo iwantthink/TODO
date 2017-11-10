@@ -3,7 +3,7 @@
 [PlantUML-可以集成在markdown中的UML实现工具](http://www.plantuml.com/plantuml/uml/SyfFKj2rKt3CoKnELR1Io4ZDoSa70000)  
 [markDown中使用UML](http://blog.csdn.net/Zhangxichao100/article/details/77774752)  
 
-* [readme](#readme)
+* [你厉害](#你厉害)
 
 ## 1.1 时序图
 通过描述对象之间发送消息的时间顺序显示多个对象之间的动态协作。
@@ -96,10 +96,7 @@
 
 	![](http://www.plantuml.com/plantuml/png/yoZDJSnJqDBLLN0gIipC0m00)
 
-# 2 类之间的关系-实例
-
-
-#readme
+# 2类之间的关系-实例
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1flbtqe0iblj20ns0bj0t8.jpg)
 
@@ -116,3 +113,5 @@
 - 学生与身份证之间为关联关系，使用带箭头的实线表示；**(图中应该是有错误)**
 
 - 学生上学需要用到自行车，与自行车是一种依赖关系，使用带箭头的虚线表示；
+
+# 你厉害
