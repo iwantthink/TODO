@@ -2,6 +2,9 @@
 [UML入门](http://www.jianshu.com/p/1256e2643923)
 [PlantUML-可以集成在markdown中的UML实现工具](http://www.plantuml.com/plantuml/uml/SyfFKj2rKt3CoKnELR1Io4ZDoSa70000)
 [markDown中使用UML](http://blog.csdn.net/Zhangxichao100/article/details/77774752)
+
+[1.6 类图](#readme)
+
 ## 1.1 时序图
 通过描述对象之间发送消息的时间顺序显示多个对象之间的动态协作。
 时序图包括的建模元素主要有：对象（Actor）、生命线（Lifeline）、控制焦点（Focus of control）、消息（Message）等等。
@@ -35,6 +38,7 @@
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1flbsnqs2rej20ed05hjrf.jpg)
 
+#abc
 ## 1.6 类图
 用来描述类与类之间的关系。
 
@@ -94,6 +98,7 @@
 	![](http://www.plantuml.com/plantuml/png/yoZDJSnJqDBLLN0gIipC0m00)
 
 # 2 类之间的关系-实例
+#readme
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1flbtqe0iblj20ns0bj0t8.jpg)
 
