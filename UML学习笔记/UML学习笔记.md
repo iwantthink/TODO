@@ -3,7 +3,7 @@
 [PlantUML-可以集成在markdown中的UML实现工具](http://www.plantuml.com/plantuml/uml/SyfFKj2rKt3CoKnELR1Io4ZDoSa70000)  
 [markDown中使用UML](http://blog.csdn.net/Zhangxichao100/article/details/77774752)  
 
-* [1.6 类图](#1.6 类图)
+* [1.6 类图](#1.6类图)
 
 * [2.类之间的关系-实例](#2.类之间的关系实例)
 
