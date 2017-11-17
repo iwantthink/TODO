@@ -21,8 +21,9 @@ code review
 
 学习设计模式
 
-[学习android architecture Components..](https://developer.android.com/topic/libraries/architecture/index.html)
+学习python。。。
 
+[学习android architecture Components..](https://developer.android.com/topic/libraries/architecture/index.html)
 
 **做一个做计划（记忆曲线）的demo apk**
 
@@ -31,5 +32,3 @@ code review
 ~~~测试一下 当数据库 不关闭时  CPU 占用会不会 增加。。~~~~
 
 jenkins+jacoco
-
-python.......
