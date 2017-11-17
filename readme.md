@@ -19,7 +19,7 @@ code review
 
 学习hotfix
 
-学习设计模式
+学习设计模式,完成最后TODO的部分
 
 学习python。。。
 
