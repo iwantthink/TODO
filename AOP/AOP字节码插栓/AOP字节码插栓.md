@@ -1,7 +1,7 @@
 # 1.Android AOP 字节码插栓介绍
 
 # 1.1 简介
-**面向切向编程**（Aspect Oriented Programming），相对于**面向对象编程**（ObjectOriented Programming）而言。      
+**面向切向编程**（Aspect Oriented Programming），相对于**面向对象编程**（Object Oriented Programming）而言。      
 
 OOP是将功能模块化或者问题模块化,AOP就是将涉及到众多模块的某一类问题进行统一管理
 
@@ -14,8 +14,10 @@ OOP是将功能模块化或者问题模块化,AOP就是将涉及到众多模块�
 
 
 ### 1.1.2 主流的Anrdoid AOP 框架有：  
+
 1. Dexposed，Xposed等（运行时）
-2. aspactJ（编译时）
+
+2. [aspactJ（编译时）](http://blog.csdn.net/innost/article/details/49387395)
 
 还有一些非框架的但能实现 AOP的工具类库：
 
