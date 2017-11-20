@@ -40,13 +40,13 @@
 - 这一步还是无法正确改造class,如果把改造类的代码单独放到一个类中，然后用ASM生成字节码调用这个类的方法来对command参数进行修改，就会发现抛出了ClassDefNotFoundError错误。这里涉及到了ClassLoader的知识
 
 # 1.4 ClassLoader和InvocationHandler
-- `ProcessBuilder`类是由`Bootstrap ClassLoader`加载的，而自定义的类则是由`AppClassLoader`加载的。
+- `ProcessBuilder`类是由`Bootstrap ClassLoader`加载的，而自定义的类(转换类)则是由`AppClassLoader`加载的。
 
 - `Bootstrap ClassLoader`处于`AppClassLoader`的上层，**上层类加载器所加载的类是无法直接引用下层类加载器所加载的类的**。但**如果下层类加载器加载的类实现或继承了上层类加载器加载的类或接口**，则上层类加载器加载的类获取到下层类加载的类的实例时就可以将其强制转型为父类，并调用父类的方法。
 
 - 这个上层类加载器加载的接口，可以使用`InvocationHandler`。
 
-- 还有一个问题，`ProcessBuilder`怎么才能获取到`InvocationHandler`子类的实例？有一个比较巧妙的做法，在`agent`启动的时候，创建`InvocationHandler`实例，并把它赋值给`Logger`的`treeLock`成员。`treeLock`是一个`Object`对象，并且只是用来加锁的，没有别的用途。但`treeLock`是一个`final`成员，所以记得要修改其修饰，去掉`final`。`Logger`同样也是由`Bootstrap ClassLoader`加载，这样`ProcessBuilder`就能通过反射的方式来获取`InvocationHandler`实例了。
+- 还有一个问题，`ProcessBuilder`怎么才能获取到`InvocationHandler`子类的实例？有一个比较巧妙的做法，在`agent`启动的时候，创建`InvocationHandler`实例，并把它赋值给`Logger`的`treeLock`成员。`treeLock`是一个`Object`对象，并且只是用来加锁的，没有别的用途。但`treeLock`是一个`final`成员，所以记得要修改其修饰，去掉`final`。`Logger`同样也是由`Bootstrap ClassLoader`加载，**这样`ProcessBuilder`就能通过反射的方式来获取`InvocationHandler`实例了,然后通过这个实例去执行转换类**
 
 # 2. 实例编写
 ## 2.1 业务逻辑
