@@ -21,6 +21,8 @@ code review
 
 学习设计模式,完成最后TODO的部分
 
+复习groovy/gradle
+
 学习python。。。
 
 [学习android architecture Components..](https://developer.android.com/topic/libraries/architecture/index.html)
