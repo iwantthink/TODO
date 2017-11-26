@@ -23,6 +23,8 @@ code review
 
 复习groovy/gradle
 
+SDK性能优化
+
 学习python。。。
 
 [学习android architecture Components..](https://developer.android.com/topic/libraries/architecture/index.html)
