@@ -19,6 +19,8 @@ code review
 
 学习hotfix
 
+研究android 广告投放sdk
+
 学习设计模式,完成最后TODO的部分
 
 复习groovy/gradle
