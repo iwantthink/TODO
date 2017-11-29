@@ -5,18 +5,268 @@
 
 - Groovy 除了使用JDK之外，还可以使用[GDK-API](http://www.groovy-lang.org/api.html)
 
+- 参考链接：
 
-# 1.基础知识
+	[Groovy官方文档](http://www.groovy-lang.org/documentation.html)
+
+# 1.与Java的差异
+
+## 1.1 default imports
+默认导入如下包和类：
+
+- java.io.*
+
+- java.lang.*
+
+- java.math.BigDecimal
+
+- java.math.BigInteger
+
+- java.net.*
+
+- java.util.*
+
+- groovy.lang.*
+
+- groovy.util.*
+
+## 1.2 Multi-methods
+在Groovy中，在运行时才决定哪个方法被执行，这被称为Multi-methods 或 runtime dispatch，这意味着方法将在运行时根据参数类型被选择。在Java中，方法在编译时期根据声明的类型进行选择。
+
+**举个栗子**，如下代码可以在java或groovy中执行，但是结果会不同：
+
+	int method(String arg) {
+	    return 1;
+	}
+	int method(Object arg) {
+	    return 2;
+	}
+	Object o = "Object";
+	int result = method(o);
+
+- 在Java环境下`assertEquals(2, result);`,这是因为Java使用静态信息类型，对象o 被声明为Object，实际调用方法的类型是Object.
+
+- 在Groovy环境下 `assertEquals(1, result);`，这是因为Groovy中，当方法被调用时会在运行时期决定，实际调用方法的参数是String类型。
+
+## 1.3 Array initializers
+在Groovy中,`{.....}`被保留用作closures
+
+以下的语法无法用来创建数组：
+
+	int [] arrary = {1,2,3,4}
+
+实际上需要使用如下语法：
+
+	int [] array = [1,2,3,4]
+
+## 1.4 Package scope visibility
+在Java中，字段上省略修饰符会将该字段修饰成包私有字段
+
+	class Person {
+	    String name
+	}
+
+在Groovy中，上述语法行为会创建一个属性，也就是说被声明为一个私有字段，并且会提供关联的getter和setter方法
+
+可以通过`@packageScope`创建包专用字段
+
+	class Person {
+	    @PackageScope String name
+	}
+
+## 1.5 ARM blocks
+Java 中的ARM(Automatic Resource Management)block 在Groovy中并不支持。Groovy中用依赖于closures的方法实现同样的效果.
+
+	Path file = Paths.get("/path/to/file");
+	Charset charset = Charset.forName("UTF-8");
+	try (BufferedReader reader = Files.newBufferedReader(file, charset)) {
+	    String line;
+	    while ((line = reader.readLine()) != null) {
+	        System.out.println(line);
+	    }
+	
+	} catch (IOException e) {
+	    e.printStackTrace();
+	}
+
+Groovy实现方式：
+
+	new File('/path/to/file').eachLine('UTF-8') {
+	   println it
+	}
+
+或者使用更接近Java的形式：
+
+	new File('/path/to/file').withReader('UTF-8') { reader ->
+	   reader.eachLine {
+	       println it
+	   }
+	}
+
+## 1.6 Inner classes
+匿名内部类和嵌套类遵循Java规则，but you should not take out the Java Language Spec and keep shaking the head about things that are different. The implementation done looks much like what we do for groovy.lang.Closure, with some benefits and some differences. Accessing private fields and methods for example can become a problem, but on the other hand local variables don’t have to be final.
+
+### 1.6.1 Static inner classes
+静态内部类的例子：
+
+	class A {
+	    static class B {}
+	}
+	
+	new A.B()
+
+- 静态内部类的使用是最支持的，如果必须要使用内部类，请使用静态内部类。
+
+### 1.6.2 Anonymous Inner Classes
+
+	import java.util.concurrent.CountDownLatch
+	import java.util.concurrent.TimeUnit
+	
+	CountDownLatch called = new CountDownLatch(1)
+	
+	Timer timer = new Timer()
+	timer.schedule(new TimerTask() {
+	    void run() {
+	        called.countDown()
+	    }
+	}, 0)
+	
+	assert called.await(10, TimeUnit.SECONDS)
+
+### 1.6.3 Creating Instances of Non-Static Inner Classes
+Java实现方式：
+
+	public class Y {
+	    public class X {}
+	    public X foo() {
+	        return new X();
+	    }
+	    public static X createX(Y y) {
+	        return y.new X();
+	    }
+	}
+
+Groovy不支持`y.new X()`这种语法，作为替代，必须使用`new X(y)`：
+
+	public class Y {
+	    public class X {}
+	    public X foo() {
+	        return new X()
+	    }
+	    public static X createX(Y y) {
+	        return new X(y)
+	    }
+	}
+
+- Caution though, Groovy supports calling methods with one parameter without giving an argument. The parameter will then have the value null. Basically the same rules apply to calling a constructor. There is a danger that you will write new X() instead of new X(this) for example. Since this might also be the regular way we have not yet found a good way to prevent this problem.
+
+## 1.7 Lambdas
+Java 8 支持 lambdas和方法引用
+
+	Runnable run = () -> System.out.println("Run");
+	list.forEach(System.out::println);
+
+Groovy不支持这种语法，但是提供了closures:
+
+	Runnable run = { println 'run' }
+	list.each { println it } // or list.each(this.&println)
+
+## 1.8 GStrings
+被双引号包括的字符串会被认为是GString类型，如果GString带有$符号，可以会造成编译错误或生成不同的值。
+
+正常情况下，如果一个API声明了参数类型为GString和String，俩者会被自动转换。注意Java API中接收的对象类型。
+
+## 1.9 String and Character literals
+Groovy中被单引号包括的字符用来表示String,被双引号包括的字符可以表示String或GString(具体取决于插值)
+
+	assert 'c'.getClass()==String
+	assert "c".getClass()==String
+	assert "c${1}".getClass() in GString
+
+Groovy中当字段被声明为`char`类型，会自动转换单个字符的String类型字符串为`char`类型。
+
+	char a='a'
+
+当调用一个参数为`char`类型的方法时，需要明确地转换类型 或 确保参数已经提前被转换了类型。
+
+	assert Character.digit(a, 16)==10 : 'But Groovy does boxing'
+	assert Character.digit((char) 'a', 16)==10
+	
+	try {
+	  assert Character.digit('a', 16)==10
+	  assert false: 'Need explicit cast'
+	} catch(MissingMethodException e) {
+	}
+
+Groovy支持俩种转换风格(直接添加`(char)`或添加 `as char`),俩种风格在转换多个字符时会有差异
+
+	// for single char strings, both are the same
+	assert ((char) "c").class==Character
+	assert ("c" as char).class==Character
+	
+	// for multi char strings they are not
+	try {
+	  ((char) 'cx') == 'c'
+	  assert false: 'will fail - not castable'
+	} catch(GroovyCastException e) {
+	}
+	assert ('cx' as char) == 'c'
+	assert 'cx'.asType(char) == 'c'
+
+## 1.10 Primitives and wrappers
+Groovy使用对象处理一切事物，会自动包装原始类型。Because of this, it does not follow Java’s behavior of widening taking priority over boxing. Here’s an example using int
+
+	int i
+	m(i)
+	//1
+	void m(long l) {           
+	  println "in m(long)"
+	}
+	//2
+	void m(Integer i) {        
+	  println "in m(Integer)"
+	}
+
+- m方法1，是java会调用的，since widening has precedence over unboxing.
+
+- m方法2，是Groovy会调用的,因为原始类型引用使用了其包装类
+
+## 1.11 Behaviour of ==
+在Java中`==`意味着对象的引用类型相同，`equals`判断字符串的值是否相同。 在Groovy中`==`翻译为`a.compareTo(b)==0`,相当于`equals`方法
+
+如果要确定对象的引用是否相同，可以使用 `is`。[Groovy==和equals](http://blog.csdn.net/hivon/article/details/2291559)
+
+## 1.12 Conversions
+
+## 1.13 Extra keywords
+
+- as  
+- def  
+- in  
+- trait   
+
+# 2 The Groovy Delelopment Kit
+例如:File,List,Map,
+[GDK使用说明](http://www.groovy-lang.org/groovy-dev-kit.html)
+
+# 3.基础知识
 
 - **建议使用API 之前先去查看文档**
 
 - groovyConsole(open GroovyConsole),ctrl+w(clear output window),ctrl+r(run groovy code)
 
-- Groovy注解标记和Java一样,支持`//` 单行注释,`/*content*/`多行注释 和评论`/**content*/`(评论可以添加@param,@return等)
+- Groovy注解标记和Java一样,支持`//` 单行注释,`/*content*/`多行注释 和GroovyDoc评论`/**content*/`(GroovyDoc评论可以添加@param,@return等)
 
-- Groovy标识符可以以英文，下划线，$开头，但是不能以数字开头
+- shebang line:UNIX系统支持的一种特殊单元注释，用于指明脚本的运行环境，这样就可以直接在终端中使用`xxx.groovy`运行，而不用像`groovy xxx.groovy`
+		
+		#!/usr/bin/env groovy
+		println "Hello from the shebang line"
+
+- Groovy标识符可以以字母，下划线，$符号开头，但是不能以数字开头
 
 - 转义字符:`\` 反斜杠
+
+	- 对于键盘上不存在的符号，可以使用unicode转义序列:`\+u+4个十六进制数字`
 
 - Groovy可以不用分号`;` 结尾
 
@@ -43,8 +293,11 @@
 		}
 
 - Groovy中的函数在调用的时候，可以不添加括号。虽然可以不添加括号，但是Groovy经常会将 属性 和函数调用混淆
+
 		println('test')<==>println 'test'
-	getName()如果不添加括号,Groovy会认为getName是一个变量
+	    
+- getName()如果不添加括号,Groovy会认为getName是一个变量
+
 		def getName(){'ryan'}
 	
 - 根据Groovy的原则，如果一个类中有名为xxyyzz这样的属性（其实就是成员变量），Groovy会自动为它添加getXxyyzz和setXxyyzz两个函数，用于获取和设置xxyyzz属性值。  
@@ -52,6 +305,7 @@
 所以，当你看到Range中有getFrom和getTo这两个函数时候，就得知道潜规则下，Range有from和to这两个属性。当然，由于它们不可以被外界设置，所以没有公开setFrom和setTo函数。
 
 - 指定类型的方式：   
+
 		char c1 = 'A'
 		def c2 = 'A' as char
 		def c3 = (char)'A'
@@ -62,17 +316,45 @@
 
 - 如果抛出异常，会使用脚本被转换之前的 行号 而不是生成的代码的行号
 
+- 引用标识符，Groovy在dotted expression 后面可以使用引号标识符，例如map.a 可以表示为map.'a'或map."a".同时引号中可以包含Java中不支持的空格，减号`-`。
+		
+		def map = [:]
+		
+		map."an identifier with a space and double quotes" = "ALLOWED"
+		map.'with-dash-signs-and-single-quotes' = "ALLOWED"
+		
+		assert map."an identifier with a space and double quotes" == "ALLOWED"
+		assert map.'with-dash-signs-and-single-quotes' == "ALLOWED"
 
-## 1.1 字符串
-### 1.1.1 单引号`'content'`
+	- Groovy支持多种字符串的字面量表达式,GString也是支持的
+
+			map.'single quote'
+			map."double quote"
+			map.'''triple single quote'''
+			map."""triple double quote"""
+			map./slashy string/
+			map.$/dollar slashy string/$
+
+			def name = 'abc'
+			map."${name}"
+
+## 3.1 字符串
+### 3.1.1 单引号`'content'`
 内容严格对应Java中的String，不对`$`符号进行转义
 
 	def name = 'ryan'
 	def str = 'i am $name'
 	assert str == 'i am $name'
 
-### 1.1.2 双引号`"content"`
-- 如果字符串中有`$`或`${}`占位符，会对 $表达式 先求值，当Gstring调用toString()时，占位符表达式的值会被计算出来。
+单引号的字符串可以通过+运算符连接
+
+	assert 'ab' == 'a'+'b'
+
+### 3.1.2 双引号`"content"`
+
+- 双引号字符串如果没有插值表达式，那么其类型是String,否则类型是GString。GString调用toString()方法之后 其类型就是String
+
+- 如果字符串中有`$`或`${}`占位符，会对 $表达式 先求值，当Gstring调用`toString()`时，占位符表达式的值会被计算出来。
 
 		def name = 'ryan'
 		def str = "i am $name"
@@ -92,7 +374,7 @@
 		assert eagerGstring == "value = 123.456"
 		assert lazyGstring == "value = 2"
 
-- Gstring中，使用闭包时，不允许有多个参数
+- Gstring中，使用闭包表达式时，不允许有多个参数
 
 - 期望一个String类型的参数时，传入一个Gstring类型的参数，Groovy会自动调用toString()
 		def number = 1
@@ -100,15 +382,15 @@
 		assert msg instanceof GString
 		assert getString(msg1) instanceof String
 
-- GString 和String的hashCode()不同
+- GString 和String的hashCode()不同，所以尽量避免使用GString作为Map的key
 
 		def param = 'abc'
 		assert "hello $param".hashCode()!="hello abc".hashCode()
 		def msg = "hello $param"
 		assert msg.hashCode()!="hello abc".hashCode()
 
-### 1.1.3 三个引号 ` ```content ```  `
-内容支持随意换行,类似于双引号字符串，区别是支持多行，并且在三重双引号中，**单引号和双引号 不需要转义**
+### 1.1.3 三重引号 ` ```content ```  `
+内容支持随意换行,类似于双引号字符串，不支持插值，区别是支持多行，并且在三重双引号中，**单引号和双引号 不需要转义**
 
 	def multieLine = ``` begin  
 	line1  
