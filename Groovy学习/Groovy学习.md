@@ -9,6 +9,8 @@
 
 	[Groovy官方文档](http://www.groovy-lang.org/documentation.html)
 
+	[GDK API 示例(具体例子)](http://www.groovy-lang.org/groovy-dev-kit.html)
+
 # 1.与Java的差异
 
 ## 1.1 default imports
@@ -247,7 +249,7 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 
 # 2 The Groovy Delelopment Kit
 例如:File,List,Map,
-[GDK使用说明](http://www.groovy-lang.org/groovy-dev-kit.html)
+[GDK API 示例(具体例子)](http://www.groovy-lang.org/groovy-dev-kit.html)
 
 # 3.基础知识
 
@@ -389,7 +391,7 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 		def msg = "hello $param"
 		assert msg.hashCode()!="hello abc".hashCode()
 
-### 1.1.3 三重引号 ` ```content ```  `
+### 3.1.3 三重引号 ` ```content ```  `
 内容支持随意换行,类似于双引号字符串，不支持插值，区别是支持多行，并且在三重双引号中，**单引号和双引号 不需要转义**
 
 	def multieLine = ``` begin  
@@ -397,61 +399,103 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 	line2  
 	end ```
 
-### 1.1.4 斜线字符串
-- 适用于定义正则表达式和patterns,不需要转义反斜线（允许不转义的带上反斜线）
+### 3.1.4 斜线字符串
+- 适用于定义正则表达式和patterns,**不需要转义反斜线（允许不转义的带上反斜线），但是正斜线需要转义**
 
 	def slashy = /\.*hello*./
-	def str = "\\"
+	assert slashy == '\\.*hello*.'
 
 - 斜线字符串支持多行形式
 
-- 斜线字符串支持占位符`$`
+- 斜线字符串支持占位符`$`或`${}`
 
 - 一个内容为空的斜线字符串，Groovy会认为这是一个注解标志
 
-### 1.1.5 `$//$`格式的字符串
+### 3.1.5 `$//$`格式的字符串
 - 在其中的字符串不需要转义 `$`和斜线`/`,支持多行，与GString类似
 
-- 通过 `$`符号进行转义，可以转义 `$`和 斜线`/`
-
-- 正斜杠`/`不需要转义，反斜杠需要转义`\`
+- 通过 `$`符号进行转义，可以转义 `$`和 斜线`/`,但是除了理解成占位符或 opening `$/`和closing`/$` 需要转义 其他情况都不需要。
 
 - `$`符号可以做占位符，和字符串一起使用时需转义
 
+		def name = "Guillaume"
+		def date = "April, 1st"
+		
+		def dollarSlashy = $/
+		    Hello $name,
+		    today we're ${date}.
+		
+		    $ dollar sign
+		    $$ escaped dollar sign
+		    \ backslash
+		    / forward slash
+		    $/ escaped forward slash
+		    $$$/ escaped opening dollar slashy
+		    $/$$ escaped closing dollar slashy
+		/$
+		
+		assert [
+		    'Guillaume',
+		    'April, 1st',
+		    '$ dollar sign',
+		    '$ escaped dollar sign',
+		    '\\ backslash',
+		    '/ forward slash',
+		    '/ escaped forward slash',
+		    '$/ escaped opening dollar slashy',
+		    '/$ escaped closing dollar slashy'
+		].every { dollarSlashy.contains(it) }
 
-	def name = "Guillaume"
-	def date = "April, 1st"
+### 3.1.6 字符串总结表
 
-	def dollarSlashy = $/
-    
-    Hello $name,
-    today we're ${date}.
-    /
-    $ dollar sign
-    $$ escaped dollar sign
-    \ backslash
-    / forward slash
-    $/ escaped forward slash
-    $$$/ escaped opening dollar slashy
-    $/$$ escaped closing dollar slashy
-	/$
-	println dollarSlashy
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fm02ms78yxj20ko0a4wei.jpg)
 
-
-## 1.2 数据类型
+## 3.2 数据类型
 - java中的基本类型
 - Groovy中的容器类
 - 闭包
 
-### 1.2.1 基本数据类型
-- 作为动态语言，Groovy世界中的所有事物都是对象。所以，int，boolean这些Java中的基本数据类型，在Groovy代码中其实对应的是它们的包装数据类型。比如int对应为Integer，boolean对应为Boolean。
+### 3.2.1 Characters
+Groovy并没有明确的字符类型值，但是可以通过如下方式指定类型为字符：
 
-		def int x = 1
-		println x.getClass().getCanonicalName()// java.lang.Integer
+	char c1 = 'A' 
+	assert c1 instanceof Character
+	
+	def c2 = 'B' as char 
+	assert c2 instanceof Character
+	
+	def c3 = (char)'C' 
+	assert c3 instanceof Character
 
-- 原始类型： byte,char,short,int,long 无限精度：java.lang.BigInteger
+### 3.2.2 Numbers
 
-- 使用`def`定义整数，变量的类型会适应这个整数值
+允许在数字中使用下划线`_` 增加数字可阅读性
+
+	long reditCardNumber = 123456_789
+	assert reditCardNumber == 123456789
+
+作为动态语言，Groovy世界中的所有事物都是对象。所以，int，boolean这些Java中的基本数据类型，在Groovy代码中其实对应的是它们的包装数据类型。比如int对应为Integer，boolean对应为Boolean。
+
+	def int x = 1
+	println x.getClass().getCanonicalName()//java.lang.Integer
+
+可以通过添加后缀，指定数字的类型
+
+	// 可以通过添加后缀 指定数字类型
+	// BigInteger G or g
+	// Long L or l
+	//Integer I or i
+	//BigDecimal G or g
+	//Double D or d
+	//Float F or f
+	assert 1i.class == Integer
+	assert 1i.class != Long
+
+#### 3.2.2.1 整数
+
+- 整数类型： byte,char,short,int,long (这五种为原始类型)，java.lang.BigInteger(无限精度)
+
+- 使用`def`定义整数，变量的类型会根据类型的容量去适应这个整数值
 		
 		def a = 1
 		assert a instanceof Integer
@@ -506,46 +550,53 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 		int xInt16 = 0x3a
 		assert xInt16 == 58
 
-- 允许在数字中使用下划线`_` 增加数字可阅读性
-	long reditCardNumber = 123456_789
-	assert reditCardNumber == 123456789
+#### 3.2.2.2 小数
+小数类型有：float,double,Java.lang.BigDecimal
 
-- 可以通过添加后缀，指定数字的类型
-		// 可以通过添加后缀 指定数字类型
-		// BigInteger G or g
-		// Long L or l
-		//Integer I or i
-		//BigDecimal G or g
-		//Double D or d
-		//Float F or f
-		assert 1i.class == Integer
-		assert 1i.class != Long
+小数可以使用exponents(指数)，通过`e`或`E`来表示
 
-- byte char short 和int 进行计算，结果是int类型。byte char short int 和long进行计算，结果是long类型...更多的去查官方文档
+	assert 1e3  ==  1_000.0
+	assert 2E4  == 20_000.0
+	assert 3e+1 ==     30.0
+	assert 4E-2 ==      0.04
+	assert 5e-1 ==      0.5
 
-		byte var1 = 127
-		char var2 = 'A'
-		short var3 = 456
-		int var4 = 1
-		long var5 = 123
+小数无法使用 二进制，八进制或十六进制表示
 
-		assert (var1 + var4).class == Integer
-		assert (var2 + var4).class == Integer
-		assert (var3 + var4).class == Integer
+#### 3.2.2.3 数学运算
+byte, char, short and int 互相进行二元运算，结果都是 int
 
+long 和 (byte, char, short and int) 进行二元运算，结果都是long
 
-- **Groovy不提供专用的整除运算符号**！只能通过`intdiv()`函数
+BigInteger 和任何整数类型进行计算，结果都是 BigInteger
+
+BigDecimal 和 (byte, char, short, int and BigInteger )进行计算，结果是BigDecimal
+
+float, double and BigDecimal互相进行二元运算，结果是double
+
+俩个BigDecimal计算结果还是 BigDecimal
+
+**规则总结如图：**
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fm03wh0vrsj20n80f83yq.jpg)
+
+因为Groovy的运算符重载，所以运算符可以直接作用于BigInteger和BigDecimal
+
+##### 3.2.2.3.1 除法运算
+`/`或`/=` 这俩个运算符，只要算式中存在一个float,double那么结果就是Double类型，否则都是BigDecimal类型
+
+	 assert (4/3).class == BigDecimal
+	 assert (4d/3).class == Double
+	 assert (4f/3).class == Double
+	 assert (4l/3).class == BigDecimal
+
+**Groovy不提供专用的整除运算符号**！只能通过`intdiv()`函数
 		
-		assert 6.intdiv(5)==1
-			
-- 如果 在除法中 存在一个 float 或 double类型的数据，那么结果就是Double类型 。否则结果都是BigDecimal类型
+	assert 6.intdiv(5)==1
 
-		assert (4/3).class == BigDecimal
-		assert (4d/3).class == Double
-		assert (4f/3).class == Double
-		assert (4l/3).class == BigDecimal
+##### 3.2.2.3.2 次方运算			
 
-- 次方运算符号是`**` ，表达式： `基数**指数`
+次方运算符号是`**` ，表达式： `基数**指数`
 
 - **如果指数是小数** ，如果可以返回 integer 那就返回integer  ， 可以返回Long 就返回Long ， 否则的话统一返回Double
 		
@@ -571,17 +622,18 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 			assert 10l ** 10 instanceof Long
 			assert 10l ** 100 instanceof BigInteger
 
+##### 3.2.3 布尔型
+true/false,可以存储到变量中。更复杂的布尔表达式可以通过逻辑运算符表示。
 
-- 布尔值:true 或false
+	def myBooleanVariable = true
+	boolean untypedBooleanVar = false
+	booleanField = true
 
-
-
-
-### 1.2.2 容器类
+### 3.2.4 容器类
 Groovy中容器类有三种:
 
-- List:链表,其底层对应Java中的List接口，一般用ArrayList作为真正的实现类.除非使用as指定了类型
-- Map:键-值表，底层对应java中的LinkedHashMap
+- List:链表,其底层对应Java中的List接口，一般用ArrayList作为真正的实现类.**除非使用as操作符转换类型，或者显示的声明其变量类型**
+- Map:键-值表，**底层对应java中的LinkedHashMap**
 - Range:范围，是List的一种拓展
 - Arrays:数组，必须得指定类型
 
@@ -597,17 +649,20 @@ Groovy中容器类有三种:
 		assert aList.size == 11
 
 	- 可以通过`<<`leftshift 操作符往List末尾添加一个数据
+
 			def aList = [1,2,3]
 			aList<<4
 			assert aList.size() == 4
-	- List还可以包含另外一个List
+
+	- List还可以包含其他List，构建成一个多维列表
+
 			def multi = [[0,1],[2,3]]
 			assert multi[1][1]==3	 
 
 2. Map由`[:]`定义，冒号左边是key，右边是value。key建议是字符串，value可以是任何对象。另外key可以用单引号或双引号包裹，也可以不包裹
   
 		def aMap = ['key1':'value1','key2':'value2']
-		aMap.keyName //取值方式1
+		aMap.keyName //取值方式1 注意这里的keyname 不是真正的key。
 		aMap.['keyName']//取值方式2
 		assert aMap.yellow == null//取不存在的值会返回null
 		aMap.anotherkey = 'i am map'//添加新元素，anotherkey是key的名称
@@ -618,6 +673,7 @@ Groovy中容器类有三种:
 			assert aMap.containsKey('3')
 
 	- 如果使用一个变量的name作为key，那么会把这个name当做key，而不是这个name对应的内容.可以通过添加`()`括号来使用其对应内容当做key。
+
 			def key  = 'hello'
 			def maps = [key:'world']
 			assert maps.containsKey('key')
@@ -639,20 +695,35 @@ Groovy中容器类有三种:
 		aRange.from
 		aRange.to
 
-4. Arrays类型,可以使用多重数组
-		def arrays1 = [1,2,3]
-		Integer [] arrays2 = [1,2,3]
-		assert arrays1 instanceof ArrayList
-		assert arrays2 instanceof Integer[]
+4. Groovy重用了List的表示符用来表示数组，此外为了创建数组还必须声明其类型
 
-		def mult = new Integer[2][3]
+		String[] arrStr = ['Ananas', 'Banana', 'Kiwi']  
+		
+		assert arrStr instanceof String[]    
+		assert !(arrStr instanceof List)
+		
+		def numArr = [1, 2, 3] as int[]      
+		
+		assert numArr instanceof int[]       
+		assert numArr.size() == 3
 
-### 1.2.3 闭包Closure
-- 闭包,是一种数据类型，是一段可执行的代码
+	- 可以创建多维数组
+	
+			def matrix3 = new Integer[3][3]         
+			assert matrix3.size() == 3
+			
+			Integer[][] matrix2                     
+			matrix2 = [[1, 2], [3, 4]]
+			assert matrix2 instanceof Integer[][]
 
-- 语法：`{ [closureParameters->] statements   }`,中括号可选填，但是当有参数时  -> 是必须的
+	- Groovy 不支持Java中的数组初始化符号`String [] arr = new String[]{1,2,3}`,因为这样会被Groovy认为是闭包
 
-- 当Closure作为一个对象时,闭包 是groovy.lang.Closure 类的一个实例，所以可以作为任何其他变量被分配
+### 3.2.5 闭包Closure
+- 闭包,是一种数据类型，是一段匿名的可执行的代码,可以接收参数并返回值给一个变量，同时Closure可以使用外部定义的变量
+
+- 语法：`{ [closureParameters->] statements   }`,中括号可选填，但是当有参数时  `->` 是必须的
+
+- 当Closure作为一个对象时,闭包 是`groovy.lang.Closure `类的一个实例，所以可以作为任何其他变量被分配
 
 		def listener  ={println it}
 		assert listener instanceof Closure
@@ -668,10 +739,11 @@ Groovy中容器类有三种:
 
 - Closure的参数：类型(可选)+名字(必须)+默认值(可选)
 		
-- 当一个Closure没有明确定义 参数时， 会有一个隐含的参数it  
+- 当一个Closure没有明确定义参数且没有添加`->`时， 会有一个隐含的参数it  
 
 		def closure = {"hello $it" }
 		assert closure2('groovy') == 'hello groovy'
+
 - Closure明确不需要参数时,需要以下形式:
 
 		def closure ={->
@@ -681,6 +753,7 @@ Groovy中容器类有三种:
 
 		def vargsFunc1 = {String ... args -> args.join('')}
 		assert vargsFunc1('1','2','3')=='123'
+
 - Closure中参数使用数组的话也可以实现可变参数的功能
 
 		def vargsFunc2 = {String [] args -> args.join('') }
@@ -705,7 +778,7 @@ Groovy中容器类有三种:
 		func 1,{println "param is $it"}
 		func(1){println 'param ...'}
 
-- 在Gstring中使用Closure  
+- **在Gstring中使用Closure  **
 
 	Gstring只会在创建的时候去估值,**${x}不能代表一个Closure**
 
@@ -714,6 +787,7 @@ Groovy中容器类有三种:
 		assert gs == 'x=1'
 		x = 2
 		assert gs != 'x=2'
+
 	如果要在Gstring中使用真正的闭包。例如对变量进行延迟估值，请使用`${->x}`
 
 		def y = 1
@@ -769,44 +843,46 @@ Groovy中容器类有三种:
     		if (n < 2) return accu
     		factorial.trampoline(n - 1, n * accu)
 		}
+		//解决办法
 		factorial = factorial.trampoline()
 
 		assert factorial(1)    == 1
 		assert factorial(3)    == 1 * 2 * 3
 		assert factorial(1000) // == 402387260.. plus another 2560 digits
 
-
-
-
-
 - 闭包的使用跟它的上下文有很大的关系，在使用之前尽量去查询API文档了解上下文语义！
 
 
 
+- Closure的形式
 
-形式如下：  
+	形式1：  
+	
+		def aClosure = {//闭包是一段代码，所以需要使用花括号
+			String param,int param2->//箭头前是参数定义，后是代码
+			println 'something'//这里是代码,最后一句是返回值
+			//也可以使用return 进行返回
+		}
+	
+	形式2：
+	
+		def aClosure = {
+			//无参数，纯code
+			//其实有一个隐含的参数  it
+		}
+	
+	形式3：
+	
+		def aClosure = {
+		-> doSomething...//这种写法表示不能给closure传参数
+		}
 
-	def aClosure = {//闭包是一段代码，所以需要使用花括号
-		String param,int param2->//箭头前是参数定义，后是代码
-		println 'something'//这里是代码,最后一句是返回值
-		//也可以使用return 进行返回
-	}
+- Owner,delegate and this
+	- this:对应于定义Closure的闭合类
+	- owner:对应于定义Closure的闭合对象，这个闭合对象可以是 class也可以是Closure
+	- delegate:对应于第三方对象，在没有定义消息接收者时，方法会通过第三方对象调用
 
-形式2：
-
-	def aClosure = {
-		//无参数，纯code
-		//其实有一个隐含的参数  it
-	}
-
-形式3：
-
-	def aClosure = {
-	-> doSomething...//这种写法表示不能给closure传参数
-	}
-
-
-#### 1.2.3.1 Closure中的this
+#### 3.2.5.1 Closure中的this
 
 - 这些都是仅存在于Closure中的概念
 
@@ -853,8 +929,8 @@ Groovy中容器类有三种:
 		}
 
 
-#### 1.2.3.2 Closure中的owner
-- owner会返回一个 直接闭合 含有owner闭包 的对象，无论它是Closure或Class
+#### 3.2.5.2 Closure中的owner
+- owner会返回一个 直接 含有当前闭包 的对象，无论它是Closure或Class
 
 		class EnclosingOwner{
     		void run(){
@@ -891,7 +967,7 @@ Groovy中容器类有三种:
 		def e3 = new NestedClosure2()
 		e3.run()
 
-#### 1.2.3.3 Closure中的delegate
+#### 3.2.5.3 Closure中的delegate
 - 默认情况下，代理被设置为owner
 
 		class Enclosing3{
@@ -977,14 +1053,14 @@ Groovy中容器类有三种:
 
 - Closure.OWNER_ONLY 仅针对 owner，Closure.DELEGATE_ONLY  仅针对 delegate
 
-## 1.3 Groovy的表现形式
+# 4 Groovy的表现形式
 Groovy支持class形式和script形式
 
 - Groovy可以像java那样填写package 然后写类
 - 可以通过import 添加其他包下的类
 - Groovy默认的类以及变量 默认都是public的
 
-#### 1.3.1.1 什么是脚本？ 
+## 4.1什么是脚本？ 
 - groovy文件只要不是和java一样的去定义class，那就是一个脚本
 
 - 可以通过`grooyc -d classes test.groovy`将groovy文件转换成class文件,`-d path`是设置class文件的存储位置
@@ -997,7 +1073,7 @@ Groovy支持class形式和script形式
 
 - 如果脚本中定义了函数，则函数会被定义在类中。
 
-#### 1.3.1.2 脚本中的变量和作用域
+## 4.2 脚本中的变量和作用域
 例如：  
 
 	def x = "hello groovy xxx"	
@@ -1041,7 +1117,7 @@ Groovy支持class形式和script形式
 	import groovy.transform.Field;   //必须要先import  
 	@Field x = 1
 
-#### 1.3.1.3 表现形式
+## 4.3 script类型的表现形式
 - script 形式1 
 		//Main2.Groovy Script的一种形式 ，无需声明它
 		println "hello groovy "
@@ -1058,7 +1134,7 @@ Groovy支持class形式和script形式
        		}
 		}
 
-### 1.3.2 class形式
+## 4.4 class类型的表现形式
 	class Main{
     	static void main(String... args){
         	println 'hello groovy'
@@ -1066,7 +1142,7 @@ Groovy支持class形式和script形式
 	}
 
 
-## 1.4 文件I/O
+# 5 文件I/O
 - java.io.File: [File API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html)
 - java.io.InputStream: [InputStream API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/InputStream.html)      
 - java.io.OutputStream: [OutputStream API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/OutputStream.html)
@@ -1085,59 +1161,83 @@ Groovy支持class形式和script形式
    		}  
 	}  
 
-## 1.5 XML操作
+# 6 XML操作
 查看文档。。。
 
-## 1.6 groovy中包的使用
+# 7 groovy中包
 
-- groovy需要在类定义之前指定包，否则使用默认包
-		package com.pkg
+## 7.1 包名
+Groovy中包名和Java中一致，用来分离代码避免产生冲突,Groovy需要在类定义之前指定包，否则使用默认包。
 
-- import 手动导入包
-		import groovy.xml.MarkupBuilder
+	package com.pkg
 
-- Groovy会默认导入一些包
-		import java.lang.*
-		import java.util.*
-		import java.io.*
-		import java.net.*
-		import groovy.lang.*
-		import groovy.util.*
-		import java.math.BigInteger
-		import java.math.BigDecimal	
+例如使用某个包中的某个类，需要使用类的全限定名(即包名+类名)
 
-- 通过`*`通配符导入,表示导入包中所有的类
-		import groovy.xml.*
+## 7.2 导包
+import 手动导入包
 
-- Groovy 允许静态导入，相当于把方法当做自己类中的静态方法使用。
-		import static Boolean.FALSE
-		assert !FALSE
+	import groovy.xml.MarkupBuilder
+
+## 7.3 默认导入
+Groovy会默认导入一些包
+
+	import java.lang.*
+	import java.util.*
+	import java.io.*
+	import java.net.*
+	import groovy.lang.*
+	import groovy.util.*
+	import java.math.BigInteger
+	import java.math.BigDecimal	
+
+## 7.4 star import
+通过`*`通配符导入,表示导入包中所有的类
+		
+	import groovy.xml.*
+
+## 7.5 静态导入
+Groovy 允许静态导入，相当于包中的静态方法或字段当做自己类中的静态方法/字段使用。
+
+	import static Boolean.FALSE
+	assert !FALSE
 
 
-- Groovy 的静态导入与java相似 ，但是更加的动态，Groovy允许你的类中定义和 静态导入的方法拥有同样的名字，只需要俩者有不同的参数要求。这在java中是不被允许的 ，但是 groovy是允许的
+Groovy 的静态导入与java相似 ，但是更加的动态，Groovy允许你的类中定义和 静态导入的方法拥有同样的名字，只需要俩者有不同的参数要求。这在java中是不被允许的 ，但是 groovy是允许的
 
-		import static java.lang.String.format
+	import static java.lang.String.format
 
-		class SomeClass{
-    		String format(Integer i){
-        		i.toString
-    		}
-    	static void main(String[] args){
-        	assert format('String')=='String'
-        	assert new SomeClass().format(new Integer(1))=='1'
-    		}
-		}
+	class SomeClass{
+    	String format(Integer i){
+        	i.toString
+    	}
+    static void main(String[] args){
+        assert format('String')=='String'
+       	assert new SomeClass().format(new Integer(1))=='1'
+    	}
+	}
 
-- 可以使用as对包名设置别名
+## 7.6 static star import
+static star import 类似于常规star import 将从给定的类中导入所有的静态方法
+
+	import static java.lang.Math.*
+	
+	assert sin(0) == 0.0
+	assert cos(0) == 1.0
+
+## 7.7 导入别名
+
+静态导入和普通导入都可以使用as对包名设置别名
+
 		import static Calendar.getInstance as now
 		assert now().class == Calendar.getInstance().class
 
 		import java.util.Date as jud
 		assert new jud() instanceof java.util.Date
 
-# 2 Groovy的功能
+# 8 Groovy的功能
+[Groovyapi示例](http://www.groovy-lang.org/groovy-dev-kit.html)
+## 8.1 遍历文件夹
 
-## 2.1 遍历文件夹
 `file.traverse{}`, 在GDK 文档中File 下的方法
 
 >**public void traverse(Map options, Closure closure)
