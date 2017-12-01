@@ -1,3 +1,5 @@
+description 'script xxxxxxx'
+
 //Gradle 主要有俩个基本概念  project 和 task
 //每个gradle由单个或多个project组成 
 //每个project又是由单个或多个task组成
