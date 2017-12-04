@@ -370,6 +370,287 @@ Wrapper是需要添加到版本控制中的。通过使用Wrapper，任何人都
 [Gradle Daemon Process DOC](https://docs.gradle.org/current/userguide/gradle_daemon.html)
 
 # 5 依赖管理
-
+[Gradle Dependency Management](https://docs.gradle.org/current/userguide/artifact_dependencies_tutorial.html)
 ## 5.1 什么是依赖管理？
-依赖管理可以简单的划分成：dependencies 和publications 。
+依赖管理可以简单的划分成：dependencies(被添加进项目的文件)和publications(项目输出的文件)。
+
+## 5.2 声明依赖
+
+	apply plugin: 'java'
+	
+	repositories {
+	    mavenCentral()
+	}
+	
+	dependencies {
+	    compile group: 'org.hibernate', name: 'hibernate-core', version: '3.6.7.Final'
+	    testCompile group: 'junit', name: 'junit', version: '4.+'
+	}
+
+这里声明了以下几点内容：
+1. Gradle 需要从Maven central repository寻找依赖
+2. hibernate-core被项目依赖（在运行时被需要）
+3. 项目的测试时需要使用junit,junit大于4.0且最新的版本会被添加
+
+
+## 5.3 依赖配置
+配置是一组已命名的依赖和artifacts
+
+以下是配置的三个目的：
+
+1. **Declaring Dependencies**
+
+	The plugin uses configurations to make it easy for build authors to declare what other subprojects or external artifacts are needed for various purposes during the execution of tasks defined by the plugin.
+
+2. **Resolving Dependencies**
+
+	The plugin uses configurations to find (and possibly download) inputs to the tasks it defines.
+
+3. **Exposing Artifacts for Consumption**
+
+	The plugin uses configurations to define what artifacts it generates for other projects to consume.
+
+
+## 5.4 外部依赖
+依赖声明有很多种，其中一种就是**外部依赖**。就是当前构建对构建之外的某些文件有依赖关系，并且这种文件存储在某种存储库中，例如Maven...
+
+**外部依赖的定义方式：**
+
+	dependencies {
+		//完整写法
+	    compile group: 'org.hibernate', name: 'hibernate-core', version: '3.6.7.Final'
+		//缩写方式
+    	compile 'org.hibernate:hibernate-core:3.6.7.Final'
+
+	}
+
+- 外部依赖通过`group,name,version`属性定义。**不同的仓库中，group/version 这俩个属性可能是可选的**，`group:name:version`
+
+## 5.5 库
+Gradle通过 repository 找到外部依赖文件 。 repository实际上就是一些文件，根据group,name,version进行组织。
+
+repository有很多种格式，例如Maven 或ivy,以及多种访问方式，例如使用本地文件系统或 Http
+
+默认情况下，Gradle不定义任何repository.所以在使用依赖关系之前，至少得先定义一个repository.
+
+1. 使用Maven central repository
+
+		repositories {
+		    mavenCentral()
+		}
+
+2. 使用Jcenter 
+
+		repositories {
+		    jcenter()
+		}
+
+3. 使用远程Maven库
+
+		repositories {
+		    maven {
+		        url "http://repo.mycompany.com/maven2"
+		    }
+		}
+
+4. 远程ivy目录
+
+		repositories {
+		    ivy {
+		        url "http://repo.mycompany.com/repo"
+		    }
+		}
+
+5. Maven和ivy 库 都可以使用本地文件系统
+
+		repositories {
+		    ivy {
+		        // URL can refer to a local directory
+		        url "../local-repo"
+		    }
+		}
+
+
+**一个项目可以有多个repository,Gradle将按照指定顺序在每个repository中查找依赖项，并在包含依赖项的第一个repository中停止**
+
+## 5.6 Publishing artifacts
+
+依赖配置也可以用来发布文件，通常称这些文件为publication artifacts或 artifacts
+
+插件在定义项目的artifacts方面做得很好，因此通常不需要做一些特殊的处理去告诉Gradle什么需要被发布，只用告诉Gradle artifacts需要被发布到哪里。
+
+发布的实现需要通过`uploadArchives`任务。如下是一个发布到ivy库的例子
+
+	uploadArchives {
+	    repositories {
+	        ivy {
+	            credentials {
+	                username "username"
+	                password "pw"
+	            }
+	            url "http://repo.mycompany.com"
+	        }
+	    }
+	}
+
+- 当运行`gradle uploadArchives`命令时，Gradle会构建和上传项目Jar包，同时Gradle还会生成和上传一个`ivy.xml`文件
+
+- 发布到Maven库也是可以的，语法和发布到ivy有微小的区别。
+
+		apply plugin: 'maven'
+		
+		uploadArchives {
+		    repositories {
+		        mavenDeployer {
+		            repository(url: "file://localhost/tmp/myRepo/")
+		        }
+		    }
+		}
+
+	1. 发布到Maven库需要添加Maven插件
+
+	2. 与ivy的`ivy.xml`文件类似，上传到Maven库 会生成和上传一个`pom.xml`
+
+# 6 多项目构建
+相互依赖的模块更容易被理解和消化，Gradle通过`multi-project`构建支持这种方案
+
+## 6.1 multi-project构建的结构
+这种构建通常都有各自不同的大小和形状，但也有一些共同的特点
+
+1. 一个settings.gradle文件在项目的根目录或主目录下
+
+2. 一个build.gradle文件在根目录或主目录
+
+3. 子文件夹拥有自己的`*.gradle`构建文件（一些多项目构建可能会省略子项目构建脚本）
+
+Gradle通过`settings.gradle`文件知道项目和子项目的结构。通常不需要通过查看这个文件去了解项目结构，而是通过运行命令`gradle projects`
+
+如下是一个Java 多项目构建的输出例子：
+
+	> gradle -q projects
+	
+	------------------------------------------------------------
+	Root project
+	------------------------------------------------------------
+	
+	Root project 'multiproject'
+	+--- Project ':api'
+	+--- Project ':services'
+	|    +--- Project ':services:shared'
+	|    \--- Project ':services:webservice'
+	\--- Project ':shared'
+	
+	To see a list of the tasks of a project, run gradle <project-path>:tasks
+	For example, try running gradle :api:tasks
+
+## 6.2 执行multi-project构建
+从用户的角度看，多项目构建 仍然是一个可运行的任务集合，区别就是可能会需要执行不同的项目的任务，有俩种实现方式：
+
+1. 切换到指定项目目录下，按`gradle <task>`方式正常执行
+2. 可以从任何目录下执行，按`gradle:services:webservice:build`
+
+# 7 连续构建
+孵化功能。。
+[Continuous Build](https://docs.gradle.org/current/userguide/continuous_build.html)
+
+# 8 复合构建
+孵化功能。。。
+[Composite Build](https://docs.gradle.org/current/userguide/composite_builds.html)
+
+# 9 构建环境
+
+## 9.1 通过gradle.properties配置构建环境
+Gradle可以在本地环境中通过GRADLE_OPTS或JAVA_OPTS配置，也可以通过项目中的`gradle.properties`文件进行配置。
+
+**配置按如下顺序去获取(如果多个地方进行了设置，以最后一个为准)**
+
+1. 来自项目构建目录中的`gradle.properties`
+2. 来自gradle user home 中的`gradle.properties`
+3. 当命令行设置了`-Dsome.property`时，会从system properties中获取
+
+当设置如下属性时，需要注意JDK或JRE版本要高于7:
+
+1. org.gradle.daemon
+	
+	设置为true则Gradle守护进程时用于运行构建，从Gradle 3.0开始，守护进程默认是启用的，并且建议运行Gradle时使用守护进程。
+
+2. org.gradle.java.home
+
+	指定Gradle构建进程的Java目录。该值可以为一个 jdk或者jre的位置(取决于构建)，如果该值未指定，则使用合理的默认值。
+
+3. org.gradle.jvmargs
+
+	指定用于守护进程的`jvmargs`。该设置对调整内存设置特别有用。目前，默认设置在内存方面相当慷慨。
+
+4. org.gradle.configureondemand
+
+	Enables new incubating mode that makes Gradle selective when configuring projects. Only relevant projects are configured which results in faster builds for large multi-projects
+
+5. org.gradle.parallel
+
+	配置后，Gradle将以孵化并行模式运行。
+
+6. org.gradle.workers.max
+
+	配置后，Gradle将使用给定数量的工作人员的最大数量。
+
+7. org.gradle.logging.level
+
+	设置为quiet, warn, lifecycle, info, or debug，Gradle将使用此日志级别。值不区分大小写。
+
+8. org.gradle.debug
+
+	When set to true, Gradle will run the build with remote debugging enabled, listening on port 5005. Note that this is the equivalent of adding -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005 to the JVM command line and will suspend the virtual machine until a debugger is attached.
+
+9. org.gradle.daemon.performance.enable-monitoring
+
+	当设置为false时，Gradle将不会监视正在运行的守护进程的内存使用情况。
+
+10. org.gradle.caching
+
+	设置为true时，Gradle将尝试重新使用以前版本的输出。
+
+11. org.gradle.console
+
+	当设置为plain，auto或rich时，Gradle将使用不同类型的控制台。
+
+## 9.2 Gradle属性和系统属性
+通过添加`-D`命令行选项，可以传递系统属性到运行Gradle的JVM。实际上，Gradle的`-D`命令行选项和Java上的一样
+
+通过使用属性文件`gradle.properties`可以添加属性到`project`对象。`gradle.properties`文件可以放在Gradle用户目录文件夹下(gradle user home由环境变量`GRADLE_USER_HOME`定义， 默认是`USER_HOME/.gradle`)。也可以放在项目文件夹下。对于多项目构建的项目可以将`gradle.properties`放到任何一个子项目文件夹中。
+
+- `gradle.properties`文件中的属性可以被`project`对象 访问到。
+
+- Gradle用户目录中的属性文件优先级别比项目目录中的高
+
+- 可以在`gradle.properties`中设置系统属性，需要给属性名称添加前缀`systemProp.`。例如`systemProp.propName`
+
+- 在多项目构建中`systemProp.`只有在根目录与下的属性文件中设置才有用
+
+- 例子：
+
+		//gradle.properties
+		gradlePropertiesProp=gradlePropertiesValue
+		sysProp=shouldBeOverWrittenBySysProp
+		envProjectProp=shouldBeOverWrittenByEnvProp
+		systemProp.system=systemValue
+		//build.gradle
+		task printProps {
+		    doLast {
+		        println commandLineProjectProp
+		        println gradlePropertiesProp
+		        println systemProjectProp
+		        println envProjectProp
+		        println System.properties['system']
+		    }
+		}
+
+		> gradle -q -PcommandLineProjectProp=commandLineProjectPropValue -Dorg.gradle.project.systemProjectProp=systemPropertyValue printProps
+		commandLineProjectPropValue
+		gradlePropertiesValue
+		systemPropertyValue
+		envPropertyValue
+		systemValue
+
+
+可以通过`-P`命令行选项将属性直接添加到`project`对象
