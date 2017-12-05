@@ -615,9 +615,9 @@ Gradle可以在本地环境中通过GRADLE_OPTS或JAVA_OPTS配置，也可以通
 	当设置为plain，auto或rich时，Gradle将使用不同类型的控制台。
 
 ## 9.2 Gradle属性和系统属性
-通过添加`-D`命令行选项，可以传递系统属性到运行Gradle的JVM。实际上，Gradle的`-D`命令行选项和Java上的一样
+通过添加`-D`命令行选项，可以**传递系统属性**到运行Gradle的JVM。实际上，Gradle的`-D`命令行选项和Java上的一样
 
-通过使用属性文件`gradle.properties`可以添加属性到`project`对象。`gradle.properties`文件可以放在Gradle用户目录文件夹下(gradle user home由环境变量`GRADLE_USER_HOME`定义， 默认是`USER_HOME/.gradle`)。也可以放在项目文件夹下。对于多项目构建的项目可以将`gradle.properties`放到任何一个子项目文件夹中。
+通过使用属性文件`gradle.properties`可以添加**属性到`project`对象**。`gradle.properties`文件可以放在Gradle用户目录文件夹下(gradle user home由环境变量`GRADLE_USER_HOME`定义， 默认是`USER_HOME/.gradle`)。也可以放在项目文件夹下。对于多项目构建的项目可以将`gradle.properties`放到任何一个子项目文件夹中。
 
 - `gradle.properties`文件中的属性可以被`project`对象 访问到。
 
@@ -653,4 +653,59 @@ Gradle可以在本地环境中通过GRADLE_OPTS或JAVA_OPTS配置，也可以通
 		systemValue
 
 
-可以通过`-P`命令行选项将属性直接添加到`project`对象
+可以通过`-P`命令行选项将**属性直接添加到`project`对象**
+
+## 9.2.1 检查项目属性
+构建脚本中的项目属性可以通过其名称直接访问吗，跟使用变量一样.如果这个属性不存在，就会抛出一个异常，同时构建失败。
+
+如果构建脚本中存在逻辑依赖于用户可选的属性(例如存在于gradle.properties文件中)，需要在访问之前检查是否存在，`hasProperty('propertyName')`方法可以实现，返回true/false
+
+## 9.3 通过代理访问网络
+
+# 10 使用Tooling Api 嵌入Gradle
+
+## 10.1 Tooling Api介绍
+Gradle提供了名为Tooling Api的编程Api，用来将Gradle嵌入软件中。这个Api允许执行和监视构建，并查询Gradle有关构建的细节
+
+## 10.2 Tooling Api的功能
+
+Tooling Api提供的一些功能：
+
+- 查询构建的详细信息，包括项目层次结构和项目依赖关系，每个项目的外部依赖关系（包括源和Javadoc jars），源目录和任务。
+
+- 执行构建并侦听stdout和stderr日志记录和进度消息（例如，在命令行上运行时显示在“状态栏”中的消息）。
+
+- 执行特定的测试类或测试方法。
+
+- 在构建执行时接收有趣的事件，例如项目配置，任务执行或测试执行。
+
+- 取消正在运行的构建。
+
+- 将多个独立的Gradle构建合并为一个复合构建。
+
+- 工具API可以下载并安装适当的Gradle版本，类似于包装。
+
+- 该实现是轻量级的，只有少量的依赖关系。它也是一个行为良好的库，并且不会对您的类加载器结构或日志记录配置做任何假设。这使得API很容易嵌入到你的应用程序中。
+
+## 10.3 Tooling Api 和 Gradld 构建守护进程
+Tooling Api总是使用 Gradle构建守护进程
+
+## 10.4 快速开始
+Tooling APi是面向开发者的接口,javadoc 是其主要文档。Gradle在`sample/toolingApi`目录下提供了几个例子
+
+使用Tooling Api 需要添加如下 库 和 依赖：
+
+	//build.gradle
+	repositories {
+	    maven { url 'https://repo.gradle.org/gradle/libs-releases' }
+	}
+	
+	dependencies {
+	    compile "org.gradle:gradle-tooling-api:${toolingApiVersion}"
+	    // The tooling API need an SLF4J implementation available at runtime, replace this with any other implementation
+	    runtime 'org.slf4j:slf4j-simple:1.7.10'
+	}
+
+# 11 构建缓存
+
+[Gradle build cache(与Android的构建缓存不同)](https://docs.gradle.org/current/userguide/build_cache.html)
