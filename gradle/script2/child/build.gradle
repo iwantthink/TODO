@@ -1,0 +1,7 @@
+// defaultTasks 'defualtTask2'
+
+task defualtTask2{
+	doLast{
+		println 'i am child defaultTask'
+	}
+}

@@ -31,9 +31,18 @@ dependencies {
 */
 //所有的任务只会被 执行一次 。 无论你是执行了多少个
 // 打个比方  gradle test test  和 gradle test 是得到一样的结果
+
+// defaultTasks 'defualtTask'
+
+// task defualtTask{
+// 	doLast{
+// 		println 'i am father defaultTask'
+// 	}
+// }
+
 task compile{
 	doLast{
-		println 'compile'
+		println 'compile-0-'
 	}
 }
 

@@ -1,3 +1,11 @@
+defaultTasks 'defualtTask2'
+
+task defualtTask2{
+	doLast{
+		println 'i am child defualtTask'
+	}
+}
+
 description 'script xxxxxxx'
 
 //Gradle 主要有俩个基本概念  project 和 task

@@ -17,6 +17,6 @@ include 'services:webservice'
 println "this is executed during the initialization phase"
 rootProject.name = 'gradle'
 //可以通过 :xxx:xxx  设置子项目
-include ':script',':script2','project1','project2',':project3:child'
+include ':script',':script2:child','project1','project2',':project3:child'
 //includeFlat 将目录作为参数  使用于 水平布局 
 // includeFlat 'ppp'
