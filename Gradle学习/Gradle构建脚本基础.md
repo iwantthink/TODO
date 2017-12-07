@@ -579,3 +579,452 @@ Gradle支持 enhanced tasks(增强型任务)，即这些任务拥有自己的属
 ## 2.6 Ordering tasks
 在某些情况下，需要控制2个任务的执行顺序，但是又不能明确的添加依赖关系。**任务排序和任务依赖的主要区别在于，排序规则不影响将执行哪些任务，而仅影响执行顺序**
 
+**任务排序使用于如下功能:**
+
+- 强制指定执行任务的顺序：例如`build`任务永远在`clean`任务之后执行
+
+- 在构建的早起进行构建验证：例如在开始release构建之前，先验证是否有正确的凭据
+
+- 在一个耗时长的验证任务之前运行一个耗时短的验证任务，以获得更快的反馈：例如单元测试在继承测试之前
+
+- 一个任务用来汇总特定类型的所有任务的结果：例如测试报告任务组合所有执行的测试任务的结果
+
+
+排序规则有俩个可用：`must run after` and `should run after`
+
+- 当使用`must run after`去指定taskB必须在taskA之后运行，那么taskA运行时 taskB也一定会运行，这个表达式`taskB.mustRunAfter(taskA)`。
+
+- `should run After`与`must run after`相似，但是有俩种情况会被忽略。**建议`should run after`用在不是特别严格要求的但是有帮助的地方**
+
+	- 第一种，如果使用任务排序 引入了一个排序循环(或者说依赖循环？)
+
+			task taskX {
+			    doLast {
+			        println 'taskX'
+			    }
+			}
+			task taskY {
+			    doLast {
+			        println 'taskY'
+			    }
+			}
+			task taskZ {
+			    doLast {
+			        println 'taskZ'
+			    }
+			}
+			taskX.dependsOn taskY
+			taskY.dependsOn taskZ
+			taskZ.shouldRunAfter taskX
+
+			> gradle -q taskX
+			taskZ
+			taskY
+			taskX
+
+	- 第二种，当使用并行执行且除了`should run after`之前任务的所有依赖都已经确定，那么任务就会忽略`should run after`的那个任务是否执行过。
+
+
+- 在这些规则之下，仍然有可能执行了taskA而没执行taskB
+
+示例1:添加`must run after`任务顺序
+
+	task taskX {
+	    doLast {
+	        println 'taskX'
+	    }
+	}
+	task taskY {
+	    doLast {
+	        println 'taskY'
+	    }
+	}
+	taskY.mustRunAfter taskX
+
+	> gradle -q taskY taskX
+	taskX
+	taskY
+
+示例2：添加`should run after`任务顺序
+
+	task taskX {
+	    doLast {
+	        println 'taskX'
+	    }
+	}
+	task taskY {
+	    doLast {
+	        println 'taskY'
+	    }
+	}
+	taskY.shouldRunAfter taskX
+	
+	> gradle -q taskY taskX
+	taskX
+	taskY
+
+在上面的示例中，仍然有可能执行了taskY而没有执行taskX,**因为任务排序并不意味着任务执行**，例如:
+
+	> gradle -q taskY
+	taskY
+
+要指定俩个任务之间的`should run after`和`must run after`,通过`Task.mustRunAfter(java.lang.Object[])`和`Task.shouldRunAfter(java.lang.Object[])`方法指定。这俩个方法可以接收 任务实例，任务名称或者任何其他`Task.dependsOn[java.lang.Object[]]`接收的参数。
+
+需要注意`B.mustRunAfter(A)`或`B.shouldRunAfter(A)`并不表示任务之间的任何执行依赖
+
+- 可以单独的执行任务A 或 任务B，排序规则仅在俩个任务同时执行时才起作用
+
+- 当使用命令行指令`--continue`时，是有可能在任务A执行失败之后继续执行任务B
+
+## 2.7 添加任务描述
+可以添加任务描述到任务，当执行`gradle tasks`时会显示此描述
+
+	task copy(type: Copy) {
+	   description 'Copies the resource directory to the target directory.'
+	   from 'resources'
+	   into 'target'
+	   include('**/*.txt', '**/*.xml', '**/*.properties')
+	}
+
+## 2.8 替换任务
+任务可以被替换。例如，想要用一个不同类型的任务替换一个Java　plugin中的任务
+
+示例1：
+
+	task copy(type: Copy)
+	
+	task copy(overwrite: true) {
+	    doLast {
+	        println('I am the new one.')
+	    }
+	}
+
+	> gradle -q copy
+	I am the new one.
+
+- 示例1表示用自定义的任务去替换了一个`Copy`类型的任务，因为它们使用相同的名称。另外必须将新任务的`override`属性设置为true，否则Gradle会抛出一个异常提示任务名称已经存在。
+
+## 2.9 跳过任务
+Gradle提供了多种方式来跳过任务执行
+
+### 2.9.1 Using a predicate
+可以通过`onlyIf()`方法给任务添加一个predicate,那么任务仅在predicate为true时才执行。
+
+可以将predicate作为一个closure实现。这个closure将被作为一个参数传递给任务，如果任务需要执行则返回true，不需要则返回false。
+
+predicate将在任务执行之前被计算。
+
+**示例1**：通过predicate跳过任务
+
+	task hello {
+	    doLast {
+	        println 'hello world'
+	    }
+	}
+	
+	hello.onlyIf { !project.hasProperty('skipHello') }
+
+	> gradle hello -PskipHello
+	:hello SKIPPED
+	
+	BUILD SUCCESSFUL in 0s
+
+### 2.9.2 使用StopExecutionException
+如果跳过任务的逻辑无法用predicate表示，那么可以使用一个`StopExecutionException`.如果这个异常是由一个action抛出，那么这个action进一步的执行以及这个任务的下一个action都会被跳过，但是构建会继续执行下一个任务
+
+**示例1：**通过StopExecutionException跳过任务
+
+	task compile {
+	    doLast {
+	        println 'We are doing the compile.'
+	    }
+	}
+	
+	compile.doFirst {
+	    // Here you would put arbitrary conditions in real life.
+	    // But this is used in an integration test so we want defined behavior.
+	    if (true) { throw new StopExecutionException() }
+	}
+	task myTask(dependsOn: 'compile') {
+	    doLast {
+	        println 'I am not affected'
+	    }
+	}
+	
+	> gradle -q myTask
+	I am not affected
+
+- 这个功能对Gradle内置的任务非常有用，它允许开发者添加带条件的build-in action
+
+
+### 2.9.3 启用或禁用任务
+每个任务都有一个`enabled`的标志，默认值是true。将其值设置为false会阻止执行任何该任务的action.
+
+一个被禁用的任务会被`SKIPPED`标签标记
+
+**示例1：**启用和禁用任务
+
+	task disableMe {
+	    doLast {
+	        println 'This should not be printed if the task is disabled.'
+	    }
+	}
+	disableMe.enabled = false
+	
+	> gradle disableMe
+	:disableMe SKIPPED
+	
+	BUILD SUCCESSFUL in 0s
+
+
+## 2.10 Up-to-date checks(AKA Incremental Build)
+任何构建工具的一个重要组成部分是能够避免执行已完成的工作。考虑一下编译的过程，一旦源文件编译完成，那么除非一些改动影响了输出 否则是不需要重新编译源文件的。例如源文件被修改了，输出文件被移除了。编译可能会消耗大量时间，所以在不需要时跳过这一步可以节省很多时间。
+
+Gradle通过一个**Increamental Build 增量构建**的功能来支持这种行为。输出内容中任务名称旁的`UP-TO-DATE`标签就是这种增量构建的表现 ，可以查看2.1小节。
+
+接下来介绍增量构建如何工作，如何在自己的任务中去使用
+### 2.10.1 任务的输入和输出
+在大多数的情况下，一个任务需要一些输入并产生一些输出。比如前面举的一个编译示例，可以看到输入是源文件，并且在Java情况下，输出是一些类文件，其他的一些输入信息包含是否包含调试信息。
+
+![](https://docs.gradle.org/current/userguide/img/taskInputsOutputs.png)
+
+输入的一个重要特征是它会影响一个或多个输出，正如图中所示。根据不同的源文件内容和运行代码的Java runtime 最低版本，会生成不同的字节码。
+
+作为增量构建的一部分，Gradle会测试输入或输出从上次构建以来是否有变化，如果没有变化，则Gradle认为这个任务是最新的，因此跳过该任务的action。**注意增量构建只对那些起码有一个输出的任务起作用，通常任务起码会有一个输出**
+
+以上所说对构建作者的意义是：需要告诉Gradle哪些任务属性是输入，哪些任务属性是输出。如果任务属性影响了输出，请确保将这个任务属性设置为输入，否则任务将被认为已经是最新（实际上不是）。相反的，不要将那些不影响输出的 任务属性设置为输入，否则任务会在不需要执行时执行。还要小心那些不确定的任务，这些任务可能以相同的输入产生不同的输出，这种任务不应该被配置为增量构建.
+
+**关于如何将任务属性设置为 输入和输出：**
+
+- 自定义任务类型
+
+	如果将一个自定义任务作为一个类来实现，那么只用俩步就可以实现增量更新：
+
+	1. 为每个任务的输入和输出创建类型化属性(通过getter方法)
+
+	2. 为这些属性添加适当的`annotation`(注解),注解必须放在getter或Groovy的属性上。放在setter或没有对应的getter的java 字段上会被忽略
+	
+	- Gradle 支持三种输入输出的主要类型：
+	
+		1. Simple values
+
+			比如String,numbers等。通常来说，simple values 可以是任何实现了`Serializable`接口的类型
+
+		2. Filesystem types
+
+			标准的文件类，Gradle的`FileCollection`的派生类，以及任何可以作为方法`Project.file(java.lang.Object)`和`Project.files(Java.lang.Object[])`参数的对象
+
+		3. Nested values
+			
+			与另外俩个类型不同的自定义类型，有自己的输入和输出属性。实际上，任务的输入和输出被嵌套在这些自定义类型中
+
+	举个栗子：一个任务需要处理不同类型的模板(Free Marker,Velocity,Moustache等)。这个任务需要将模块源文件与模型数据相结合以生成模板文件的填充版本
+	
+	这个任务有三个输入和一个输出：模块源文件，模型数据，模板引擎 以及作为输出的 输出文件输出地址
+
+	当自定义任务时可以很方便的通过**注解**设置属性为输入和输出。如下是一个有输入和输出的任务结构
+
+			//buildSrc/src/main/java/org/example/ProcessTemplates.java
+			
+			package org.example;
+			
+			import java.io.File;
+			import java.util.HashMap;
+			import org.gradle.api.*;
+			import org.gradle.api.file.*;
+			import org.gradle.api.tasks.*;
+			
+			public class ProcessTemplates extends DefaultTask {
+			    private TemplateEngineType templateEngine;
+			    private FileCollection sourceFiles;
+			    private TemplateData templateData;
+			    private File outputDir;
+			
+			    @Input
+			    public TemplateEngineType getTemplateEngine() {
+			        return this.templateEngine;
+			    }
+			
+			    @InputFiles
+			    public FileCollection getSourceFiles() {
+			        return this.sourceFiles;
+			    }
+			
+			    @Nested
+			    public TemplateData getTemplateData() {
+			        return this.templateData;
+			    }
+			
+			    @OutputDirectory
+			    public File getOutputDir() { return this.outputDir; }
+			
+			    // + setter methods for the above - assume we’ve defined them
+			
+			    @TaskAction
+			    public void processTemplates() {
+			        // ...
+			    }
+			}	
+
+			package org.example;
+			
+			import java.util.HashMap;
+			import java.util.Map;
+			import org.gradle.api.tasks.Input;
+			
+			public class TemplateData {
+			    private String name;
+			    private Map<String, String> variables;
+			
+			    public TemplateData(String name, Map<String, String> variables) {
+			        this.name = name;
+			        this.variables = new HashMap<>(variables);
+			    }
+			
+			    @Input
+			    public String getName() { return this.name; }
+			
+			    @Input
+			    public Map<String, String> getVariables() {
+			        return this.variables;
+			    }
+			}
+			//*************输出结果***********************
+			> gradle processTemplates
+			:processTemplates
+			
+			BUILD SUCCESSFUL in 0s
+			1 actionable task: 1 executed
+			
+			> gradle processTemplates
+			:processTemplates UP-TO-DATE
+			
+			BUILD SUCCESSFUL in 0s
+			1 actionable task: 1 up-to-date
+
+	- templateEngine: 代表处理源模板使用哪个引擎(例如,FreeMarker,Velocity)。可以将其实现为字符串，在当前例子中，使用自定义枚举来实现了。由于枚举类型自动实现了Serializable,所以可以将其视为一个Simple value 并使用`@input`注解
+	- sourceFiles:任务将要处理的源模板。单个文件或文件集合需要各自不同的注解。在当前例子中处理的是文件集合，所以使用`@InputFiles`注解
+	- templateData:表示模型数据.在当前例子中，使用了一个自定义类来表示模型数据，但是其并没有实现`Serializable`所以不能使用`@Input`.使用了`@Nested`来让Gradle知道这是一个嵌套输入属性的值
+	- outputDir:生成文件所在的目录.和输入文件一样，有几个不同的注解用来表示输出文件或目录。单个目录就使用`@OutputDirectory`
+
+	这些注解的意思是，如果Gradle执行任务时，如果发现这些被注解修饰没有发生变化，Gradle将跳过该任务。
+
+	**更多内容去查看[More about Tasks 19.10.1](https://docs.gradle.org/current/userguide/more_about_tasks.html)**
+
+- Runtime Api
+
+	自定义任务类是使用增量构建的一个简单方式，但如果不能使用自定义任务类这种方式，Gradle还提供了可用于任何任务的可替代的Api
+
+	**更多内容去查看[More about Tasks 19.10.1](https://docs.gradle.org/current/userguide/more_about_tasks.html)**
+
+### 2.10.2 增量构建如何工作？
+
+### 2.10.3 Advanced techniques
+
+### 2.10.4 Stale task outputs
+
+## 2.11 Task rules
+有时需要一个任务的行为依赖于一个用哦与极大或无穷的数值范围的参数。一个很好的方式就是使用task rules
+
+**示例1**：Task rule
+
+	tasks.addRule("Pattern: ping<ID>") { String taskName ->
+	    if (taskName.startsWith("ping")) {
+	        task(taskName) {
+	            doLast {
+	                println "Pinging: " + (taskName - 'ping')
+	            }
+	        }
+	    }
+	}
+	
+	> gradle -q pingServer1
+	Pinging: Server1
+
+- `addRule`传入的String 参数作用是规则的描述，会在`gradle tasks`时显示
+
+**规则不仅能用在命令行调用任务时，还能创建任务依赖关系的规则**
+
+**示例2：** Dependency on rule based tasks
+
+	tasks.addRule("Pattern: ping<ID>") { String taskName ->
+	    if (taskName.startsWith("ping")) {
+	        task(taskName) {
+	            doLast {
+	                println "Pinging: " + (taskName - 'ping')
+	            }
+	        }
+	    }
+	}
+	
+	task groupPing {
+	    dependsOn pingServer1, pingServer2
+	}
+	
+	> gradle -q groupPing
+	Pinging: Server1
+	Pinging: Server2
+
+
+## 2.12 Finalizer tasks
+在最终任务执行之后，Finalizer task会被添加到task graph中.
+
+**要指定一个Finalizer task 可以使用`Task.finalizedBy(Java.lang.Object[])`**方法。这个方法可以接收 任务实例，任务名称，或者`Task.dependsOn(Obj)`方法可以接收的参数
+
+**示例1：** Finalizer tasks
+
+	task taskX {
+	    doLast {
+	        println 'taskX'
+	    }
+	}
+	task taskY {
+	    doLast {
+	        println 'taskY'
+	    }
+	}
+	
+	taskX.finalizedBy taskY
+
+	> gradle -q taskX
+	taskX
+	taskY
+
+- 即使最终任务失败，Finalizer tasks也会被执行
+
+**示例2：**
+
+	task taskX {
+	    doLast {
+	        println 'taskX'
+	        throw new RuntimeException()
+	    }
+	}
+	task taskY {
+	    doLast {
+	        println 'taskY'
+	    }
+	}
+	
+	taskX.finalizedBy taskY
+	
+	> gradle -q taskX
+	taskX
+	taskY
+
+- Finalizer task 在最终的任务没有做任何事时不会执行，举个栗子，如果最终任务被认为是up to date 或者 依赖的任务失败
+
+- Finalizer task 在无论构建成功或失败都必须清理资源的情况下特别适合
+
+## 2.13 生命周期任务
+生命周期任务自身是不做什么事情的。通常没有任何任务action。生命周期任务可以表示几个概念：
+
+- 一个工作流程步骤()
+
+- 一个可构建的东西
+
+- 一个可以执行许多相同逻辑任务的任务
+
+许多Gradle插件定义了自己的生命周期任务，以便于做特定的事情。当开发自己的插件时，应该考虑提供自己的生命周期任务 或者 使用Gradle已经提供的一些生命周期任务。[可以参考 Java Plugin](https://docs.gradle.org/current/userguide/java_plugin.html#sec:java_tasks)
+
+除非生命周期任务有自己的action，否则结果由其依赖项决定，如果有任何任务的依赖项被执行，生命周期任务将被认为执行过了。如果所有的任务依赖项是up-to-date,skipped,or from cache 生命周期任务将被认为已经是up-to-date
