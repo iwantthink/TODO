@@ -40,6 +40,22 @@ dependencies {
 // 	}
 // }
 
+task ryana{
+	doLast{
+		println 'ryan AAAA'
+	}
+}
+
+task ryanb{
+	doLast{
+		println 'ryan BBBB'
+	}
+}
+
+ryana.shouldRunAfter(ryanb)
+ryanb.mustRunAfter(ryana)
+
+
 task compile{
 	doLast{
 		println 'compile-0-'
