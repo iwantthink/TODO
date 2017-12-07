@@ -29,4 +29,4 @@
 # 2 文件集合
 一个文件集合就是一组文件。由`FileCollection`接口表示。Gradle API 中的许多对象都实现了这个接口。例如，[dependency configurations](https://docs.gradle.org/current/userguide/dependency_management.html#sub:configurations) 实现了`FileCollection`
 
-获取`FileCollection`对象的一个方式是使用`Project.files(java.lang.Object[])`方法。可以给这个方法传递任意书连接杆的
+获取`FileCollection`对象的一个方式是使用`Project.files(java.lang.Object[])`方法。可以给这个方法传递任意数量的参数，都会被转换成一组File对象。`files()`方法接收任何类型的对象作为参数。
