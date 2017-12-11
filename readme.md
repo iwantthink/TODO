@@ -38,3 +38,9 @@ SDK性能优化
 ~~~测试一下 当数据库 不关闭时  CPU 占用会不会 增加。。~~~~
 
 jenkins+jacoco
+
+
+- ad adk
+	- 自定义view
+	- web交互
+	- 接口数据
