@@ -9,20 +9,19 @@ Canvas 图形或者文字绘制 -paint 参数
   
 **Paint**设置颜色有俩种方式：一种是直接用Paint.setColor/ARGB(),另一种是使用Shader来指定着色方案
 #### 1.1.1 直接设置颜色
-`Paint paint = new Paint();`     
-`paint.setColor(Color.parseColor("#009966"))`
-`paint.setARGB(0,100,100,100)`
+	Paint paint = new Paint();
+	paint.setColor(Color.parseColor("#009966"))
+	paint.setARGB(0,100,100,100)
 #### 1.1.2 setShader(Shader shader)
 shader又被称为着色器，是图形领域一个通用的概念，与直接设置颜色的区别是：着色器设置的是一个颜色方案，或者说是一套着色规则。当设置了shader之后，paint在绘制图形和文字时就不使用setColor/ARGB了。 
    
 另外Shader这个类，我们通常不会直接使用，而是使用其子类BitmapShader,ComposeShader,LinearGradient,RadialGradient,SweepGradient
 ##### 1.1.2.1 LinearGradient 线性渐变  
 设置俩个点和俩种颜色，以这俩个点为端点，渐变出的颜色用来绘制。
-<pre>
+
 	Shader shader = new LinearGradient(0,0,100,100,Color.RED,Color.GREEN,Shader.TileMode.CLAMP);
 	paint.setShader(shader)
 	
-</pre>
 需要注意的是 模式：CLAMP 会在端点之外 延续端点处颜色，MIRROR 镜像模式，REPEAT 重复模式
 
 ##### 1.1.2.2 RadicalGradient 辐射渐变
@@ -40,7 +39,7 @@ shader又被称为着色器，是图形领域一个通用的概念，与直接�
 
 ##### 1.1.2.5 ComposeShader 混合着色器
 就是把俩个着色器一起使用  
-注意：ComposeShader()需关闭硬件加速  
+**注意：ComposeShader()需关闭硬件加速  **
 这里注意一个参数 ProterDuff.Mode，是用来指定俩个图案共同绘制时的颜色策略。它是一个enum，**[颜色策略」的意思**，就是说把源图像绘制到目标图像处时应该怎样确定二者结合后的颜色，而对于 ComposeShader(shaderA, shaderB, mode) 这个具体的方法，就是指应该怎样把 shaderB 绘制在 shaderA 上来得到一个结合后的 Shader。  
   
 具体来说，PorterDuff.Mode有17个，分为俩大类：  
@@ -80,6 +79,7 @@ B' = B * 0xff / 0xff + 0x0 = B
 - Mode.ADD(饱和度相加)，Mode.DARKEN（变暗），Mode.LIGHTEN（变亮），Mode.MULTIPLY（正片叠底），Mode.OVERLAY（叠加），Mode.SCREEN（滤色） 
 
 例如可以利用  PorterDuff.Mode.SRC(Mode.SRC、Mode.SRC_IN、Mode.SRC_ATOP)来实现 v4包中的DrawableCompat.setTint()
+
 #### 1.2.3 ColorMatrixColorFilter  
 使用一个ColorMatrix来对颜色进行处理  
 其内部是一个4*5的矩阵：  
@@ -97,8 +97,8 @@ A’ = p*R + q*G + r*B + s*A + t;
 参考：https://github.com/chengdazhi/StyleImageView
 
 ### 1.3 setXfermode(Xfermode xfermode)  
-处理的是颜色遇上view的问题，其实就是transfer mode ,用X 替代trans 是一种美国人喜欢的简写。。。。。  
-Xfermode 严谨地讲， Xfermode 指的是你要绘制的内容和 Canvas 的目标位置的内容应该怎样结合计算出最终的颜色。但通俗地说，其实就是要你以绘制的内容作为源图像，以 View 中已有的内容作为目标图像，选取一个 PorterDuff.Mode 作为绘制内容的颜色处理方案  
+处理的是颜色遇上view的问题，其实就是`transfer mode` ,用X 替代trans 是一种美国人喜欢的简写。。。。。  
+Xfermode 严谨地讲， Xfermode 指的是你要绘制的内容和 Canvas 的目标位置的内容应该怎样结合计算出最终的颜色。但通俗地说，**其实就是要你以绘制的内容作为源图像，以 View 中已有的内容作为目标图像，选取一个 PorterDuff.Mode 作为绘制内容的颜色处理方案 ** 
 
 PorterDuff.Mode 在Paint中一共有三处被用到，其工作原理都一样，只是用途不同：  ComposeShader,PorterDuffColorFilter,Xfermode. 用途分别是：混合俩个Shader，增加一个单色的ColorFilter,设置绘制内容和View中已有内容的混合计算方式。  
 
@@ -126,11 +126,14 @@ PorterDuff.Mode 在Paint中一共有三处被用到，其工作原理都一样�
   
      使用离屏缓存有俩种方式：  
      1.canvas.saveLayer()  
-     使用办法就是在 绘制代码前保存，绘制之后恢复  
+
+     	使用办法就是在 绘制代码前保存，绘制之后恢复  
+
      2.View.setLayerType
-	 View.setLayerType()是把整个view都绘制在离屏缓存中  
-	 View.setLayerType(LAYER_TYPE_HARDWARE)是使用GPU缓冲  
-	 View.setLayerType(LAYER_TYPE_SOFTWARE)是直接使用一个bitmap来缓冲    
+
+		 View.setLayerType()是把整个view都绘制在离屏缓存中  
+		 View.setLayerType(LAYER_TYPE_HARDWARE)是使用GPU缓冲  
+		 View.setLayerType(LAYER_TYPE_SOFTWARE)是直接使用一个bitmap来缓冲    
  
 	2. 控制好透明区域  
      使用Xfermode来绘制内容，需要注意控制它的透明区域不要太小，要让它足够**覆盖和它结合绘制的内容**！！
@@ -177,7 +180,7 @@ PorterDuff.Mode 在Paint中一共有三处被用到，其工作原理都一样�
 ### 2.1 setAntiAlias(Boolean aa)设置抗锯齿  
 Paint 构造方法里也可以打开。。  
 ### 2.2 setStyle(Paint.Style style)  
-设置线条风格，  FILL/STROKE/FILL_AND_STOKE  
+设置线条风格，  `FILL/STROKE/FILL_AND_STOKE  `
 ### 2.3 线条形状  
 设置线条形状有四个方法:  
 setStrokeWidth(float width)  
