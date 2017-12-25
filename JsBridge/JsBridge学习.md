@@ -218,16 +218,19 @@ JSBridge是一座用JavaScript搭建起来的桥，一端是web，一端是nativ
 1. 设计出一个Native与JS交互的全局桥对象
 	
 	规定JS和Native之间的通信必须通过一个H5全局对象JSBridge来实现
+
 	- 这个对象有如下特点：
+
 		- 名称为`JSBridge`,是H5页面中全局对象window的一个属性
  		`var JSBridge = window.JsBridge||(window.JSBridge={})`
 
 	- 该对象有如下方法
-		- `registerHandler( String,Function )`H5调用, 注册本地JS方法,注册后Native可通过JSBridge调用。调用后会将方法注册到本地变量messageHandlers 中
 
-		- `callHandler( String,JSON,Function )`H5调用, 调用原生开放的api,调用后实际上还是本地通过url scheme触发。调用时会将回调id存放到本地变量responseCallbacks中
+		- `registerHandler( String,Function )`H5调用,** 注册本地JS方法**,注册后Native可通过JSBridge调用。调用后会将方法注册到本地变量messageHandlers 中
 
-		- `_handleMessageFromNative( JSON )`Native调用, 原生调用H5页面注册的方法,或者通知H5页面执行回调方法
+		- `callHandler( String,JSON,Function )`H5调用, **调用原生开放的api**,调用后实际上还是本地通过url scheme触发。调用时会将回调id存放到本地变量responseCallbacks中
+
+		- `_handleMessageFromNative( JSON )`Native调用, **原生调用H5页面注册的方法**,**或者通知H5页面执行回调方法**
 
 2. JS如何调用Native
 
@@ -237,7 +240,7 @@ JSBridge是一座用JavaScript搭建起来的桥，一端是web，一端是nativ
 
 	2. 通过特定的参数转换方法,将传入的数据,方法名一起,拼接成一个url scheme
 
-			//url scheme的格式如
+			//url scheme的格式如2.2
 			//基本有用信息就是后面的callbackId,handlerName与data
 			//原生捕获到这个scheme后会进行分析
 			var uri = CUSTOM_PROTOCOL_SCHEME://API_Name:callbackId/handlerName?data
@@ -271,7 +274,7 @@ JSBridge是一座用JavaScript搭建起来的桥，一端是web，一端是nativ
 
 4. 分析url-参数和回调的格式
 
-	第三步中，Native已经知道了H5传到Native的url scheme,现在需要分析这个scheme 去了解 H5到底要调用Native的什么方法：
+	第三步中，Native已经知道了H5传到Native的url scheme,现在需要分析这个url 去了解 H5到底要调用Native的什么方法：
 
 	1. 根据api名,在本地找寻对应的api方法,并且记录该方法执行完后的回调函数id
 
