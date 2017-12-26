@@ -333,4 +333,4 @@ JSBridge是一座用JavaScript搭建起来的桥，一端是web，一端是nativ
 
 	如上代码,注册的api参数是`(data,callback)`
 
-	其中第一个data即原生传过来的数据,第二个callback是内部封装过一次的,执行callback后会触发url scheme,通知原生获取回调信息
+	其中第一个data即原生传过来的数据,第二个callback是内部封装过一次的,执行callback后会触发url scheme,通知原生获取回调信息 
