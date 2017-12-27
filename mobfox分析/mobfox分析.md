@@ -1,7 +1,37 @@
+# 参考链接
+
+
+# 简介
+
 
 # 1.Banner
-继承自RelativeLayout..
+**继承自RelativeLayout**
 
+**初始化**
+
+拥有四个构造函数，其中三个是在布局中使用，一个用于代码中创建使用。
+
+- 布局中使用：
+
+        this.context = context;//赋值context
+        this.self = this;//赋值self
+        this.handler = new Handler(context.getMainLooper());//创建一个主线程的Handeler
+        this.getAttrs(attrs);//获取一些参数。。
+        this.setUp();//1.7
+        this.init();//1.8
+
+- 代码中使用：
+
+        this.context = context;
+        this.adspace_width = width;
+        this.adspace_height = height;
+        this.setLayoutParams(new LayoutParams(LayoutUtils.convertDpToPixel((float)width, context), LayoutUtils.convertDpToPixel((float)height, context)));// 告诉父类，当前Banner控件需要多大
+        this.self = this;
+        this.handler = new Handler(context.getMainLooper());
+        this.setUp();
+        this.init();
+
+---
 使用步骤：
 
 1. `setInventoryHash()`，调用此方法设置广告ID(Hash值),封装了一个MobFoxRequest请求(`https://sdk.starbolt.io/waterfalls.json`)
@@ -284,6 +314,134 @@
 	    "debug": true
 	}
 
+## 1.7 setUp()
+		//创建ExceptionHandler 详见6.1
+        MobFoxReport.register(this.context);
+		//创建一个WebView 加载的回调
+        this.loadAdListener = new MobFoxWebViewLoadAdListener() {
+
+			//加载错误！
+            public void onError(MobFoxWebView wv, Exception e) {
+				//打印异常信息
+                if(e.getMessage() != null) {
+                    Log.d("MobFoxBanner", "weblistener error: " + e.getMessage());
+                }
+				//打印 开始加载到加载出错 花费的时间
+                Banner.logTime(Banner.LOAD_START, Banner.this.loadStart);
+				//取消Timeout执行 3.1.1
+                Banner.this.timeout.cancel();
+				//发送异常信息
+                MobFoxReport.postException(Banner.this.context, e, (AsyncCallback)null);
+				//回调listener，告诉SDK 使用者 加载出错
+                if(Banner.this.listener != null) {
+                    Banner.this.listener.onBannerError(Banner.this.self, e);
+                }
+            }
+			//加载成功
+            public void onAdResponse(MobFoxWebView wv, final JSONObject adResp) {
+                //
+                Banner.logTime("ad response", Banner.this.loadStart);
+				//通过Timeout  去判断加载广告是否超时了
+                if(!Banner.this.timeout.isTimeout()) {
+					//创建一个HashMap<String,Object>用来存放 参数
+					//width , height,demo_age(>0时传入),demo_gender(.length>0时传入),demo_keywords(.length>0时传入)
+					//创建一个EventIterator 去遍历 返回的 adResp Json 中的customEvents 部分内容!!
+                    Banner.this.iterator = new EventIterator(Banner.this.context, wv, adResp, params);
+                    if(Banner.this.iterator.hasNext()) {
+                        Banner.this.iterator.callNextEvent(new CustomEventBannerListener() {
+                            public void onBannerError(View banner, Exception e) {
+								//判断是否超时
+								//取消超时控制器
+								//如果异常信息为`onAutoRedirect`，调用MobFoxReport.post()，组装一条MobFoxRequest并发送
+								//如果异常信息为`onNoAd`,回调BannerListener的onNoFill
+								//其余情况下发送异常信息，然后判断EventIterator继续循环是否还可以继续，如果不可以就回调BannerListener的onBannerError()
+                            }
+
+                            public void onBannerLoaded(View banner) {
+                                Banner.logTime("ad rendered", Banner.this.loadStart);
+								//判断是否超时
+								//如果没有超时， 取消超时控制器					                                    
+								Banner.this.show(banner);//移除容器中的其他View，将当前的Banner 放到容器中
+								//回调BannerListener的onBannerLoaded
+
+                            }
+
+                            public void onBannerClosed(View banner) {
+                                Log.d("MobFoxBanner", "banner closed");
+                                //移除容器内容，并且回调
+                            }
+
+                            public void onBannerFinished() {
+                                Log.d("MobFoxBanner", "banner finished");
+                                if(Banner.this.listener != null) {
+                                    Banner.this.listener.onBannerFinished();
+                                }
+                            }
+
+                            public void onBannerClicked(View banner) {
+                                Log.d("MobFoxBanner", "banner clicked");
+                                if(Banner.this.listener != null) {
+                                    Banner.this.listener.onBannerClicked(banner);
+                                }
+                            }
+                        });
+                    }
+
+                }
+            }
+			//无广告返回
+            public void onNoAd(MobFoxWebView wv) {
+                Log.d("MobFoxBanner", "on no ad");
+				//打印 从开始加载到加载到空广告的耗费时间
+                Banner.logTime(Banner.LOAD_START, Banner.this.loadStart);
+                Banner.this.timeout.cancel();
+                if(Banner.this.listener != null) {
+                    Banner.this.listener.onNoFill(Banner.this.self);
+                }
+            }
+        };
+
+## 1.8 init()
+
+    protected void init() {
+        warmUp(this.context);
+        this.getAdvId();
+        this.loadJs();
+        this.getLayout();
+        this.getLocation();
+        this.sub_bundle_id = Utils.getBundleId(this.context);
+        Utils.postDMP(this.context, this.mobFoxWebView);
+        Utils.startMobFoxService(this.context);
+    }
+
+## 1.9 warmUp(Context ctx)
+
+   public static void warmUp(Context context) {
+        Boolean var1 = warmedUp;
+        synchronized(warmedUp) {
+            try {
+                if(HttpResponseCache.getInstalled() == null) {
+                    File httpCacheDir = new File(context.getCacheDir(), "mobfox-http");
+                    long httpCacheSize = 10485760L;
+                    HttpResponseCache.install(httpCacheDir, httpCacheSize);
+                }
+
+                if(warmedUp.booleanValue()) {
+                    return;
+                }
+
+                (new MobFoxRequest(MobFoxWebView.getMobfoxUrl())).get((AsyncCallback)null);
+                (new MobFoxRequest(MobFoxWebView.getMobfoxUrlVideo())).get((AsyncCallback)null);
+                (new MobFoxRequest(MobFoxWebView.getMobfoxUrlBridge())).get((AsyncCallback)null);
+                warmedUp = Boolean.valueOf(true);
+            } catch (Throwable var6) {
+                Log.d("MobFoxBanner", "error init cache", var6);
+            }
+
+        }
+    }
+
+- HtppResponseCache: TODO
 
 # 2.MobFoxRequest
 
@@ -487,7 +645,7 @@
 Timeout 继承自 MobFoxRunnable 继承自 Runnable
 
 ## 3.1 MobFoxRunnable
-继承自Runnable，提供了一个condition()方法，一个mobFoxRun()方法。
+继承自Runnable，提供了一个condition()方法，一个mobFoxRun()方法。俩个方法都是在Runnable的run()方法中被使用。
 
 - mobFoxRun()方法：具体执行逻辑的地方。被try catch包围，会catch住异常，除了一个指定的异常情况下，会将其余异常发送到服务器。
 
@@ -502,7 +660,7 @@ Timeout 继承自 MobFoxRunnable 继承自 Runnable
 
 提供了`reset()/cancel()`对timeout,cancelled字段进行操作。
 
-重写了`condition()`方法，通过cancelled字段进行控制,true执行，false不执行
+重写了`condition()`方法，**通过cancelled字段进行控制**,true执行，false不执行
 
 # 4.Repeater
 **猜测是一个 重试机制！**
@@ -571,7 +729,8 @@ setAction()方法：设置Callable
 				//移除所有的视图
                 MobFoxWebView.this.removeAllViews();
             }
-        });
+        });		
+		//调用`setWaterfallsJson`方法
         this.callHandler("setWaterfallsJson", this.waterfalls, new CallBackFunction() {
             public void onCallBack(String data) {
                 MobFoxWebView.this.callHandler("loadAd", MobFoxWebView.this.options, (CallBackFunction)null);
@@ -581,38 +740,308 @@ setAction()方法：设置Callable
 
 - userInteraction:TODO说明
 
-## 5.4 callHandler(...)
 
-    public void callHandler(String handlerName, String data, CallBackFunction callBack) {
-        this.doSend(handlerName, data, callBack);
-    }
+## 5.4 renderAd(JSONObject adResp)
 
-## 5.5 doSend(...)
-TODO:待分析。。调用的JSBridge中的内容
+    public void renderAd(final JSONObject adResp) {
+		//默认是ready 值为false
+		//判断是否 ready ，如果false，则延迟50ms 继续尝试
+        if(!this.ready) {
+            this.mainHandler.postDelayed(new WebViewRunnable(this.context, this, "renderAdListener") {
+                public void mobFoxRun() {
+                    MobFoxWebView.this.renderAd(adResp);
+                }
+            }, 50L);
+        } else {
+			//ready为true
+            this.userInteraction = false;
+			//调用JS 中已经注册好了的 `renderAd`函数
+            this.callHandler("renderAd", adResp.toString(), new CallBackFunction() {
+                public void onCallBack(String data) {
+                    try {
+                        if(data == null) {
+                            data = "";
+                        }
 
-    private void doSend(String handlerName, String data, CallBackFunction responseCallback) {
-        try {
-            Message m = new Message();
-            if(!TextUtils.isEmpty(data)) {
-                m.setData(data);
-            }
+                        if(data == "null") {
+                            data = "";
+                        }
 
-            if(responseCallback != null) {
-                String callbackStr = String.format("JAVA_CB_%s", new Object[]{++this.uniqueId + "_" + SystemClock.currentThreadTimeMillis()});
-                this.responseCallbacks.put(callbackStr, responseCallback);
-                m.setCallbackId(callbackStr);
-            }
+                        if(MobFoxWebView.this.renderAdListener == null) {
+                            return;
+                        }
 
-            if(!TextUtils.isEmpty(handlerName)) {
-                m.setHandlerName(handlerName);
-            }
+                        MobFoxWebView.this.renderAdListener.onRendered(MobFoxWebView.this, data);
+                    } catch (Throwable var3) {
+                        ;
+                    }
 
-            this.queueMessage(m);
-        } catch (Throwable var6) {
-            Log.d("MobFoxWebView", "error on bridge send message", var6);
+                }
+            });
         }
-
     }
 
 # 6.MobFoxReport
 继承自UncaughtExceptionHandler
+
+## 6.1 register(Context ctx)
+
+    public static synchronized void register(Context c) {
+		//默认false，判断是否重复调用
+        if(!isRegistered) {
+			//创建对象
+            MobFoxReport crashCatcher = new MobFoxReport(c);
+            UncaughtExceptionHandler defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
+            if(defaultHandler != null) {
+                crashCatcher.setDefaultHandler(defaultHandler);
+            }
+			//将默认的异常捕获Handler 设置为MobFoxReport
+            Thread.setDefaultUncaughtExceptionHandler(crashCatcher);
+            isRegistered = true;
+        }
+    }
+
+## 6.2 postException()
+组装一条Json，添加参数。然后创建一个MobFoxRequest 去发送
+
+# 7.EventIterator
+
+## 7.1 构造函数
+	//respObj 即 加载ad之后返回的Json
+	//params 即在setUp()方法中拼凑的参数
+    public EventIterator(Context context, MobFoxWebView mobFoxWebView, JSONObject respObj, Map<String, Object> params) {
+        this.context = context;
+        this.mainHandler = new Handler(context.getMainLooper());//创建一个主线程的Handler
+        this.params = params;//赋值
+        this.mobFoxWebView = mobFoxWebView;//赋值
+        this.respObj = respObj;//赋值
+        JSONArray customEvents = null;
+
+        try {
+			//获取一个customEvents 的数组
+            customEvents = respObj.getJSONArray("customEvents");
+        } catch (JSONException var12) {
+            Log.d("MobFoxBanner", "iterator json exception");
+            return;
+        }
+
+        this.customDataList = new ArrayList();
+        if(customEvents != null && customEvents.length() > 0) {
+            for(int i = 0; i < customEvents.length(); ++i) {
+                try {
+					//解析 Json 放到customDataList中
+                    JSONObject customEvent = (JSONObject)customEvents.get(i);
+                    CustomEventData customData = CustomEventData.parseJSON(customEvent);
+					//用来判断进行迭代的类 是否存在
+                    Class.forName("com.mobfox.sdk.customevents." + customData.className);
+                    this.customDataList.add(customData);
+                } catch (JSONException var9) {
+                    Log.d("MobFoxBanner", "iterator json exception");
+                } catch (ClassNotFoundException var10) {
+                    Log.d("MobFoxBanner", "iterator class not found exception");
+                } catch (Throwable var11) {
+                    Log.d("MobFoxBanner", "class not found throwable");
+                }
+            }
+        }
+
+    }
+## 7.2 hasNext()
+
+    public boolean hasNext() {
+        return this.customDataList.size() != 0 || this.respObj.has("ad") || this.respObj.has("vasts");
+    }
+
+## 7.3 callNextEvent(CustomEventBannerListener listener)
+	
+	public void callNextEvent(final CustomEventBannerListener listener) {
+			//创建一个单个广告加载的回调
+	        CustomEventBannerListener customListener = new CustomEventBannerListener() {
+	            public void onBannerLoaded(final View banner) {
+	                EventIterator.this.mainHandler.post(new Runnable() {
+	                    public void run() {
+	                        listener.onBannerLoaded(banner);
+	                    }
+	                });
+					//如果pixel 字段不为空，则创建一个MobFoxRequest 请求并get
+	                if(EventIterator.this.pixel != null) {
+	                    MobFoxRequest firePixel = new MobFoxRequest(EventIterator.this.pixel);
+	                    firePixel.get((AsyncCallback)null);
+	                }
+	            }
+	
+	            public void onBannerClosed(final View banner) {
+	                EventIterator.this.mainHandler.post(new Runnable() {
+	                    public void run() {
+	                        listener.onBannerClosed(banner);
+	                    }
+	                });
+	            }
+	
+	            public void onBannerFinished() {
+	                EventIterator.this.mainHandler.post(new Runnable() {
+	                    public void run() {
+	                        listener.onBannerFinished();
+	                    }
+	                });
+	            }
+	
+	            public void onBannerClicked(final View banner) {
+	                EventIterator.this.mainHandler.post(new Runnable() {
+	                    public void run() {
+	                        listener.onBannerClicked(banner);
+	                    }
+	                });
+	            }
+	
+	            public void onBannerError(final View banner, final Exception e) {
+	                EventIterator.this.mainHandler.post(new Runnable() {
+	                    public void run() {
+	                        listener.onBannerError(banner, e);
+	                    }
+	                });
+	            }
+	        };
+	        if(this.customDataList.size() > 0) {
+	            CustomEventData customData = (CustomEventData)this.customDataList.get(0);
+	            this.customDataList.remove(0);
+	
+	            try {
+					//获取指定类 并创建
+	                Class clazz = Class.forName("com.mobfox.sdk.customevents." + customData.className);
+	                Constructor co = clazz.getConstructor(new Class[0]);
+	                CustomEventBanner customBanner = (CustomEventBanner)co.newInstance(new Object[0]);
+	                this.pixel = customData.pixel;
+					//执行loadAd方法
+	                customBanner.loadAd(this.context, customListener, customData.networkId, this.params);
+	            } catch (ClassNotFoundException var7) {
+	                Log.d("MobFoxBanner", "ce ClassNotFoundException");
+	            } catch (InvocationTargetException var8) {
+	                Log.d("MobFoxBanner", "ce InvocationTargetException");
+	            } catch (NoSuchMethodException var9) {
+	                Log.d("MobFoxBanner", "ce NoSuchMethodException");
+	            } catch (InstantiationException var10) {
+	                Log.d("MobFoxBanner", "ce InstantiationException");
+	            } catch (IllegalAccessException var11) {
+	                Log.d("MobFoxBanner", "ce IllegalAccessException");
+	            } catch (Throwable var12) {
+	                Log.d("MobFoxBanner", "banner iterator error");
+	            }
+	
+	        } else {
+	            this.pixel = null;
+	            this.bannerEvent = new BannerEvent(this.mobFoxWebView, this.respObj);
+	            this.bannerEvent.loadAd(this.context, customListener, (String)null, (Map)null);
+	            if(this.respObj.has("ad")) {
+	                this.respObj.remove("ad");
+	            } else {
+	                if(this.respObj.has("vasts")) {
+	                    this.respObj.remove("vasts");
+	                }
+	
+	            }
+	        }
+	    }
+
+# 8. CustomEventBanner
+
+# 8.1 BannerEvent.loadAd
+
+    public void loadAd(final Context context, @NonNull final CustomEventBannerListener listener, String networkID, Map<String, Object> params) {
+		//创建一个MobFoxWebViewRenderAdListener
+        this.webView.setRenderAdListener(new MobFoxWebViewRenderAdListener() {
+            public void onError(MobFoxWebView wv, Exception e) {
+                listener.onBannerError(wv, e);
+            }
+
+            public void onAdClick(MobFoxWebView wv, String clickURL) {
+				//跳转到指定的 网页
+                try {
+                    Intent launchBrowser = new Intent("android.intent.action.VIEW");
+                    launchBrowser.setData(Uri.parse(clickURL));
+                    launchBrowser.setFlags(268435456);
+                    context.startActivity(launchBrowser);
+                } catch (Exception var4) {
+                    Log.d("MobFoxBanner", "launch browser exception");
+                    listener.onBannerError(wv, var4);
+                    return;
+                } catch (Throwable var5) {
+                    Log.d("MobFoxBanner", "launch browser exception");
+                    listener.onBannerError(wv, new Exception(var5.getMessage()));
+                    return;
+                }
+
+                listener.onBannerClicked(wv);
+            }
+
+            public void onVideoAdFinished(MobFoxWebView wv) {
+                listener.onBannerFinished();
+            }
+
+            public void onAdClosed(MobFoxWebView wv) {
+                listener.onBannerClosed(wv);
+            }
+
+            public void onAutoRedirect(MobFoxWebView wv, String url) {
+                listener.onBannerError(wv, new Exception("onAutoRedirect"));
+            }
+
+            public void onRendered(MobFoxWebView wv, String data) {
+                if(data.isEmpty()) {
+                    Banner.logTime("rendered!", wv.loadBannerStarted);
+                    listener.onBannerLoaded(BannerEvent.this.banner);
+                } else {
+                    listener.onBannerError(wv, new Exception(data));
+                }
+            }
+        });
+        this.banner = this.webView;
+        this.webView.renderAd(this.respObj);
+		//加载完毕
+        listener.onBannerLoaded(this.webView);
+    }
+
+# 9.1 CustomEventBannerListener
+提供给EventIterator使用，在EventIterator 进行循环遍历时，对其遍历过程中 每一个具体的点进行回调.
+
+主要是对 请求返回的 Json中的 `customEvents` 对象 进行处理
+
+	public interface CustomEventBannerListener {
+	    void onBannerError(View var1, Exception var2);
+	
+	    void onBannerLoaded(View var1);
+	
+	    void onBannerClosed(View var1);
+	
+	    void onBannerFinished();
+	
+	    void onBannerClicked(View var1);
+	}
+
+# 9.2 BannerListener
+由开发者在使用SDK时 创建并传入 SDK，主要作用是将 Banner的一些关键点 告知开发者
+
+public interface BannerListener {
+    void onBannerError(View var1, Exception var2);
+
+    void onBannerLoaded(View var1);
+
+    void onBannerClosed(View var1);
+
+    void onBannerFinished();
+
+    void onBannerClicked(View var1);
+
+    void onNoFill(View var1);
+}
+
+# 9.3 MobFoxWebViewLoadAdListener
+在Banner中setUp()方法中进行初始化，提供给MobFoxWebView使用
+
+	public interface MobFoxWebViewLoadAdListener {
+	    void onError(MobFoxWebView var1, Exception var2);
+	
+	    void onAdResponse(MobFoxWebView var1, JSONObject var2);
+	
+	    void onNoAd(MobFoxWebView var1);
+	}
