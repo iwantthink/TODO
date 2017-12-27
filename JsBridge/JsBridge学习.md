@@ -334,3 +334,26 @@ JSBridge是一座用JavaScript搭建起来的桥，一端是web，一端是nativ
 	如上代码,注册的api参数是`(data,callback)`
 
 	其中第一个data即原生传过来的数据,第二个callback是内部封装过一次的,执行callback后会触发url scheme,通知原生获取回调信息 
+
+
+# 3.实例分析
+
+[JsBridge使用和原理](https://www.jianshu.com/p/910e058a1d63)
+
+- `WebViewJavascriptBridge.js`　　　　　被注入到各个页面的js文件；提供初始化，注册Handler，调用Handler等方法。
+
+- `WebViewJavascriptBridge.java`　　　　bridge接口文件,定义了发送信息的方法，由BridgeWebView来实现。
+
+- `BridgeWebView.java`　　　　　　　　WebView的子类，提供了注册Handler，调用Handler等方法。
+
+- `BridgeWebViewClient.java`　　　　 　　WebViewClient的子类，重写了ShouldOverrideUrlLoading，onPageFinish，onPageStart等方法。
+
+- `BridgeHandler.java`　　　　 　　　　　作为Java与Js交互的载体。Java&Js通过Handler的名称来找到响应的Handler来操作。
+
+- `DefaultBridgeHandler.java`　　　　　　BridgeHandler的子类，不做任何操作。仅为Java提供默认的接收数据的Handler。
+
+- `CallBackFunction.java`　　　　　　　　回调函数，Handler处理完成后，用来给Js发送消息。
+
+- `Message.java　`　　　　　　　　　　　 消息对象，用来封装与js交互时的json数据，callid，responseid等。
+
+- `BridgeUtil.java`　　　　　　　　　　　　工具类，提供从Url中提取数据，获取回调方法，注入js等方法。
