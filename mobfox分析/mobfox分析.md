@@ -57,6 +57,7 @@
 	        }
 	
 	        this.timeout.cancel();
+			//本质是一个Runnable 通过一些变量进行控制
 	        this.timeout = new Timeout(this.context, new Callable() {
 	            public Object call() throws Exception {
 	                if(Banner.this.listener == null) {
@@ -67,12 +68,13 @@
 	                }
 	            }
 	        });
+			// 5s之后运行这个timeout ，表示已经超时！ 会回调开发者传入的接口
 	        this.handler.postDelayed(this.timeout, 5000L);
 			//停止之前一个Repeater
 	        if(this.repeater != null) {
 	            this.repeater.stop();
 	        }
-			//判断延迟,>0则执行以下逻辑
+			//判断延迟,>0则执行以下逻辑  刷新广告的逻辑
 	        if(this.refresh > 0) {
 	            this.repeater = new Repeater(this.context, this.handler, (long)this.refresh, new Callable() {
 	                public Object call() throws Exception {
@@ -89,7 +91,7 @@
 
 	- refresh 字段：延迟时间，多长时间之后重试  单位：毫秒
 
-## 1.1 load()
+## 1.1 load(String)
 
     protected void load(String invh) {
 		//hasLayout 通过getLayout()方法赋值
@@ -225,7 +227,7 @@
         }
     }
 
-## 1.4 loadBanner(JsonObj)
+## 1.4 loadBanner(JsonObject)
 
     protected void loadBanner(JSONObject params) {
         try {
