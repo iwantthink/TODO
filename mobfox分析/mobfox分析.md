@@ -139,7 +139,7 @@
     }
 
 ## 1.2 getLayout()
-首先判断控制是否有传入长宽，如果有且>0则将hasLayout置为true，并获取banner_pos。如果没有传入，则直接使用`getWidth()/getHeight()`方法获取，如果出异常，则通过ViewTreeObserver方式获取.
+首先判断控制是否有传入长宽，**如果有且>0则将hasLayout置为true，并获取banner_pos**。如果没有传入，则直接使用`getWidth()/getHeight()`方法获取，如果出异常，则通过ViewTreeObserver方式获取.
 
     protected void getLayout() {
 		//adspace_width/adspace_height 即控件长宽俩者皆>0则hasLayout置为true
@@ -404,13 +404,15 @@
 ## 1.8 init()
 
     protected void init() {
-        warmUp(this.context);
-        this.getAdvId();
-        this.loadJs();
-        this.getLayout();
-        this.getLocation();
+        warmUp(this.context); //1.9
+        this.getAdvId();// 1.10
+        this.loadJs();// 1.11
+        this.getLayout();// 1.2
+        this.getLocation(); // 1.12
+		//获取 应用包名
         this.sub_bundle_id = Utils.getBundleId(this.context);
         Utils.postDMP(this.context, this.mobFoxWebView);
+		//12.2
         Utils.startMobFoxService(this.context);
     }
 
@@ -420,6 +422,7 @@
         Boolean var1 = warmedUp;
         synchronized(warmedUp) {
             try {
+				//启用 http/https 请求缓存
                 if(HttpResponseCache.getInstalled() == null) {
                     File httpCacheDir = new File(context.getCacheDir(), "mobfox-http");
                     long httpCacheSize = 10485760L;
@@ -429,7 +432,7 @@
                 if(warmedUp.booleanValue()) {
                     return;
                 }
-
+				//请求了三个地址 ，缓存下来 android.html WebViewJavascriptBridge.js sdk_video.js
                 (new MobFoxRequest(MobFoxWebView.getMobfoxUrl())).get((AsyncCallback)null);
                 (new MobFoxRequest(MobFoxWebView.getMobfoxUrlVideo())).get((AsyncCallback)null);
                 (new MobFoxRequest(MobFoxWebView.getMobfoxUrlBridge())).get((AsyncCallback)null);
@@ -441,7 +444,54 @@
         }
     }
 
-- HtppResponseCache: TODO
+- HtppResponseCache: 缓存HTTP 和HTTPS 的请求，仅对HTTPURLCONNECTION 起作用
+
+## 1.10 getAdvId()
+获取谷歌广告ID
+
+    protected void getAdvId() {
+        if(O_ANDADVID.isEmpty()) {
+            MobFoxAdIdService advIdService = new MobFoxAdIdService(new Listener() {
+                public void onFinish(String adv_id) {
+                    if(adv_id == null) {
+                        Banner.O_ANDADVID = "";
+                    } else {
+                        Banner.O_ANDADVID = adv_id;
+                    }
+                }
+            }, this.context);
+            advIdService.execute();
+        }
+    }
+
+## 1.11 loadJs()
+
+    protected void loadJs() {
+		//创建了 MobFoxWebView,并传入setUp()中创建的MobFoxWebViewLoadAdListener
+        this.mobFoxWebView = new MobFoxWebView(this.context, this.loadAdListener);
+		//对当前控件的广告位大小进行判断，然后设置MobFoxWebView的大小！
+        if(this.adspace_width > 0 && this.adspace_height > 0) {
+            this.mobFoxWebView.setLayoutParams(new LayoutParams(LayoutUtils.convertDpToPixel((float)this.adspace_width, this.context), LayoutUtils.convertDpToPixel((float)this.adspace_height, this.context)));
+        } else {
+			//如果没有指定大小 ，那就Match_Parent
+            this.mobFoxWebView.setLayoutParams(new android.view.ViewGroup.LayoutParams(-1, -1));
+        }
+    }
+
+## 1.12 getLocation()
+获取经纬度的逻辑
+
+    protected void getLocation() {
+		//用来判断是否使用 位置服务
+        if(loc) {
+			//创建一个MobFoxLoactionService 赋值到成员变量
+            Location l = MobFoxLocationService.getInstance(this.context).getLocation();
+            if(l != null) {
+                this.setLocation(l);
+            }
+
+        }
+    }
 
 # 2.MobFoxRequest
 
@@ -684,11 +734,36 @@ setAction()方法：设置Callable
 # 5.MobFoxWebView
 **MobFoxWebView 继承自 BridgeWebView 继承自WebView**
 
-## 5.1 BridgeView
-一个便捷的JS与Java交互的桥梁。。
-[github - JsBridge](https://github.com/lzyzsd/JsBridge/tree/master/library/src/main)
-
+## 5.1 BridgeWebView
+继承自WebView，定义了一些方法与JS交互。
 ## 5.2 MobFoxWebView
+
+    public MobFoxWebView(final Context context, MobFoxWebViewLoadAdListener loadAdListener) {
+	//将loadAdListener 保存到对象中
+	//保存context
+	//设置背景颜色为 TRANSPARENT 透明！
+	//创建一个在主线程运行的Handler
+     this.init(this);
+	//获取WebSettings ,开启JS功能，开启缓存setDomStorageEnabled(true).
+	//如果SDK>=16 开启
+     settings.setAllowFileAccess(true);
+     settings.setAllowContentAccess(true);
+     settings.setAllowFileAccessFromFileURLs(true);
+     settings.setAllowUniversalAccessFromFileURLs(true);
+	//设置webview的缓存使用机制 为默认
+	//设置当前webView 的触摸反馈为 false，取消默认的触摸反馈
+	//设置当前webview 在点击和触摸时 时候拥有声音反馈
+	//SDK>21 时 设置允许 webview的安全内容加载不安全来源内容
+
+	//在Native端注册一些 方法 提供给JS调用，并且会回调MobFoxWebViewRenderAdListener的回调方法
+	// 设置WebViewCLient,WebChromeClient
+	//设置onTouchListener 返回false
+	//加载android.html，记录开始加载的时间 ，如果出现异常会将异常发送并 调用回调
+	
+
+	}
+
+
 
 ## 5.2.1 loadAd(String options)
 
@@ -780,6 +855,43 @@ setAction()方法：设置Callable
             });
         }
     }
+
+## 5.5 init(MobFoxWebView)
+
+    void init(final MobFoxWebView self) {
+		//使用 addJSI 方式 提供给js一个Native的调用方法 getCachedVideoURL() 5.6
+        this.addJavascriptInterface(this, "MobFoxVideoCache");
+		//创建MobFoxWebViewClient 并传入listener
+        this.mobFoxWebViewClient = new MobFoxWebViewClient(self, new Listener() {
+            public void onClick(final String url) {
+                MobFoxWebView.this.mainHandler.post(new WebViewRunnable(MobFoxWebView.this.context, self, "renderAdListener") {
+                    public void mobFoxRun() {
+                        MobFoxWebView.this.renderAdListener.onAdClick(self, url);
+                    }
+                });
+            }
+
+            public void onError(final Exception e) {
+                MobFoxWebView.this.mainHandler.post(new WebViewRunnable(MobFoxWebView.this.context, self, "renderAdListener") {
+                    public void mobFoxRun() {
+                        MobFoxWebView.this.renderAdListener.onError(self, e);
+                    }
+                });
+            }
+
+            public void onAutoRedirect(WebView view, final String url) {
+                MobFoxWebView.this.mainHandler.post(new WebViewRunnable(MobFoxWebView.this.context, self, "renderAdListener") {
+                    public void mobFoxRun() {
+                        MobFoxWebView.this.renderAdListener.onAutoRedirect(self, url);
+                    }
+                });
+            }
+        });
+    }
+
+## 5.6 getCachedVideoURL()
+创建一个网络代理去使用,使用了一个`com.danikula.videocache`库，貌似是视频播放时 做缓存使用
+
 
 # 6.MobFoxReport
 继承自UncaughtExceptionHandler
@@ -1001,7 +1113,9 @@ setAction()方法：设置Callable
         listener.onBannerLoaded(this.webView);
     }
 
-# 9.1 CustomEventBannerListener
+
+# 9.一些回调接口
+## 9.1 CustomEventBannerListener
 提供给EventIterator使用，在EventIterator 进行循环遍历时，对其遍历过程中 每一个具体的点进行回调.
 
 主要是对 请求返回的 Json中的 `customEvents` 对象 进行处理
@@ -1018,7 +1132,7 @@ setAction()方法：设置Callable
 	    void onBannerClicked(View var1);
 	}
 
-# 9.2 BannerListener
+## 9.2 BannerListener
 由开发者在使用SDK时 创建并传入 SDK，主要作用是将 Banner的一些关键点 告知开发者
 
 public interface BannerListener {
@@ -1035,7 +1149,7 @@ public interface BannerListener {
     void onNoFill(View var1);
 }
 
-# 9.3 MobFoxWebViewLoadAdListener
+## 9.3 MobFoxWebViewLoadAdListener
 在Banner中setUp()方法中进行初始化，提供给MobFoxWebView使用
 
 	public interface MobFoxWebViewLoadAdListener {
@@ -1045,3 +1159,55 @@ public interface BannerListener {
 	
 	    void onNoAd(MobFoxWebView var1);
 	}
+
+# 10.MobFoxBaseService
+
+## 10.1 MobFoxAdIdService
+
+获取谷歌广告ID，利用反射获取 `com.google.android.gms.ads.identifier.AdvertisingIdClient`类，然后获取其广告ID并返回，耗时操作利用了AsyncTask实现
+
+# 11.MobFoxLocationService
+获取经纬度的逻辑。。。待分析TODO
+
+# 12.Utils
+
+## 12.1 postDMP(Context,WebView)
+
+    public static void postDMP(Context context, WebView view) {
+        try {
+            String IPAddress = getIPAddress(true);
+            String ua = view.getSettings().getUserAgentString();
+            DMPManager.updateDMP(context, IPAddress, ua);
+            DMPManager.postDMP(context, new DMPCallback() {
+                public void onPostCompleted() {
+                    Log.d("MobFoxBanner", "dmp post completed");
+                }
+
+                public void onPostError() {
+                    Log.d("MobFoxBanner", "dmp post failed");
+                }
+            });
+        } catch (Throwable var4) {
+            Log.d("MobFoxBanner", "post dmp exception");
+        }
+
+    }
+
+## 12.2 startMobFoxService(Context)
+
+    public static void startMobFoxService(Context context) {
+        try {
+			//判断是否拥有定位权限 Coarse_location 和Fine_location 
+			//或者SDK版本低于 24
+            if(MobfoxSettings.hasLocation(context) || VERSION.SDK_INT < 24) {
+                Intent service = new Intent(context, MobFoxService.class);
+                context.startService(service);
+            }
+        } catch (Exception var2) {
+            Log.d("MobFoxBanner", "start uam exception");
+        }
+
+    }
+
+# 13.MobFoxService
+启动一个服务。。。具体做什么 待分析
