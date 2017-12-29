@@ -792,7 +792,7 @@ setAction()方法：设置Callable
         }
     }
 
-- ready 字段：TODO 说明
+- ready 字段：TODO 说明 应该是JS 调用Native注册的方法 设置true，由H5决定
 
 ## 5.3 _loadAd(String options)
 
