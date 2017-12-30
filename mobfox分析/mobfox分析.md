@@ -929,7 +929,7 @@ setAction()方法：设置Callable
         this.params = params;//赋值
         this.mobFoxWebView = mobFoxWebView;//赋值
         this.respObj = respObj;//赋值
-        JSONArray customEvents = null;
+        JSONArray customEvents = null; 
 
         try {
 			//获取一个customEvents 的数组
