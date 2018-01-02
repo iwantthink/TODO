@@ -11,7 +11,7 @@
 
 拥有四个构造函数，其中三个是在布局中使用，一个用于代码中创建使用。
 
-- 布局中使用：
+- 布局中使用： 
 
         this.context = context;//赋值context
         this.self = this;//赋值self
