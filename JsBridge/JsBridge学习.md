@@ -217,7 +217,7 @@ JSBridge是一座用JavaScript搭建起来的桥，一端是web，一端是nativ
 
 1. 设计出一个Native与JS交互的全局桥对象
 	
-	规定JS和Native之间的通信必须通过一个H5全局对象JSBridge来实现
+	规定JS和Native之间的通信必须通过一个H5全局对象JSBridge来实现。
 
 	- 这个对象有如下特点：
 
@@ -231,7 +231,7 @@ JSBridge是一座用JavaScript搭建起来的桥，一端是web，一端是nativ
 		- `callHandler( String,JSON,Function )`H5调用, **调用原生开放的api**,调用后实际上还是本地通过url scheme触发。调用时会将回调id存放到本地变量responseCallbacks中
 
 		- `_handleMessageFromNative( JSON )`Native调用, **原生调用H5页面注册的方法**,**或者通知H5页面执行回调方法**
-
+ 
 2. JS如何调用Native
 
 	在第一步中，定义好了全局桥对象，通过`callHandler()`方法来调用Native方法，它内部的流程是：
