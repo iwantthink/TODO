@@ -17,6 +17,8 @@ code review
 
 ~~分析countly~~
 
+**巩固java基础！学习Java核心技术卷1！**
+
 学习hotfix
 
 研究android 广告投放sdk
