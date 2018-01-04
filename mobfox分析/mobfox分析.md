@@ -9,7 +9,15 @@
 
 **初始化**
 
-拥有四个构造函数，其中三个是在布局中使用，一个用于代码中创建使用。
+拥有四个构造函数，其中俩个是在布局中使用，俩个用于代码中创建使用。可以分为3:1 ，前者不指定大小，后者指定大小。
+
+	public Banner(Context context)//代码中使用，需要手动指定LayoutParams
+	
+	public Banner(Context context, AttributeSet attrs)//XML中使用
+	
+	public Banner(Context context, AttributeSet attrs, int defStyleAttr)//通常使用不到 指定了style
+	
+	public Banner(Context context, int width, int height)//代码中使用，指定了大小，会完成指定LayoutParams的操作
 
 - 布局中使用： 
 
@@ -227,6 +235,8 @@
         }
     }
 
+- banner_pos:作用 TODO 还不清楚 做什么用。。。
+
 ## 1.4 loadBanner(JsonObject)
 
     protected void loadBanner(JSONObject params) {
@@ -420,7 +430,7 @@
 
 ## 1.9 warmUp(Context ctx)
 
-   public static void warmUp(Context context) {
+    public static void warmUp(Context context) {
         Boolean var1 = warmedUp;
         synchronized(warmedUp) {
             try {
@@ -917,6 +927,9 @@ setAction()方法：设置Callable
 
 ## 6.2 postException()
 组装一条Json，添加参数。然后创建一个MobFoxRequest 去发送
+
+## 6.3 postCrash()
+与6.2 相似，不过一个是用来发送DefaultExeceptionHandler锁截取到的crash，一个是用来 手动发送Exception
 
 # 7.EventIterator
 
