@@ -766,7 +766,7 @@ Python内置的`sorted()`函数就可以对list进行排序，另外还可以接
 
 如果需要反向排序，传入第三个参数`reverse = True`即可
 
-### 5.2 返回函数
+## 5.2 返回函数
 
 1. 函数作为返回值
 
@@ -800,3 +800,222 @@ Python内置的`sorted()`函数就可以对list进行排序，另外还可以接
 		    for i in range(1, 4):
 		        fs.append(f(i)) # f(i)立刻被执行，因此i的当前值被传入f()
 		    return fs
+
+## 5.3 匿名函数
+
+关键字`lambda`表示匿名函数,`:`冒号之前是参数，之后是表达式
+
+	#俩者等价
+	def f(x):
+	    return x * x
+	
+	lambda x: x * x
+
+匿名函数有个限制，**只能有一个表达式，不能写`return`，返回值就是表达式的结果**
+
+匿名函数没有名字，所以不用担心函数名冲突
+
+匿名函数也是一个函数对象，可以将匿名函数赋值给一个变量，再利用变量进行调用
+
+匿名函数也是函数，所以可以作为返回值返回
+
+## 5.4 装饰器
+
+**函数也是对象，默认有一个`__name__`属性代表函数的名字**
+
+使用`@+函数名`，添加到被定义的函数之上.即可实现**装饰器Decorator**,装饰器不需要改变原始的函数即可替原始函数添加功能。
+
+	@log
+	def now():
+	    print('2015-3-25')
+	# log 函数如下所示，返回一个wrapper
+	def log(func):
+	    def wrapper(*args, **kw):
+	        print('call %s():' % func.__name__)
+	        return func(*args, **kw)
+	    return wrapper
+
+- 等同于`now = log(now)`
+
+	由于`log()`是一个decorator，返回一个函数，所以，原来的now()函数仍然存在，只是现在同名的now变量指向了新的函数，于是调用now()将执行新函数，即在log()函数中返回的wrapper()函数。
+
+- `warpper(*args,**kw)`表示函数可以接收任意参数
+
+
+如果decorator本身需要参数，那就需要编写一个包含`wrapper`的高阶函数，例如
+
+	def log(text):
+	    def decorator(func):
+	        def wrapper(*args, **kw):
+	            print('%s %s():' % (text, func.__name__))
+	            return func(*args, **kw)
+	        return wrapper
+	    return decorator
+
+	@log('execute')
+	def now():
+	    print('2015-3-25')
+	# 效果等同于
+	>>> now = log('execute')(now)
+
+- 首先执行`log('execute')`，返回的是`decorator`函数，再调用返回的函数，参数是now函数，返回值最终是wrapper函数。
+
+**被装饰过后的函数，实际上函数的`__name__`参数已经发生了变化，对于有些依赖函数签名的代码来说执行可能会出错**。可以通过Python内置的`functools.wraps`实现类似`wrapper__name__=func.__name__`的功能
+
+	# 无参数
+	import functools
+	
+	def log(func):
+	    @functools.wraps(func)
+	    def wrapper(*args, **kw):
+	        print('call %s():' % func.__name__)
+	        return func(*args, **kw)
+	    return wrapper
+	
+	#有参数
+	import functools
+	
+	def log(text):
+	    def decorator(func):
+	        @functools.wraps(func)
+	        def wrapper(*args, **kw):
+	            print('%s %s():' % (text, func.__name__))
+	            return func(*args, **kw)
+	        return wrapper
+	    return decorator
+
+	# 兼容俩种情况
+	def log(param):
+	    def decorator(func):
+	        def wrapper(*args, **kw):
+	            print('start')
+	            return func(*args, **kw)
+	        return wrapper
+        # param 类型是 str.所以返回函数引用
+	    if isinstance(param, str):
+	        return decorator
+        # param 类型是 函数！ 所以返回调用decorator(param)的返回值 
+	    elif not isinstance(param, str):
+	        return decorator(param)
+
+## 5.5 偏函数
+
+Python中的`functools`模块提供了许多功能，其中一个就是**偏函数**(`Partial function`).这里的偏函数与数学意义上的不一样
+
+**偏函数可以实现将一个函数所需的某些参数固定(即给定默认值),然后返回一个新的函数(这个函新函数不需要传入已经固定的参数)，**
+
+- `int()`函数可以把字符串转换为整数，默认按十进制，`int()`函数提供了额外的`base`参数，用来设定 进制，默认十进制
+
+		>>> int('123',base= 8)
+
+- 偏函数的作用：
+		# 下面函数 in2 将参数base=2 固定
+		def int2(x, base=2):
+		    return int(x, base)
+		# 等同于
+		>>> import functools
+		>>> int2 = functools.partial(int, base=2)
+
+
+创建偏函数时，可以传入 函数对象，`*args`,`**kw`这三种参数
+
+	int2 = functools.partial(int, base=2)
+	#等价于
+	kw = { 'base': 2 }
+	int('10010', **kw)
+
+	#当传入 
+	max2 = functools.partial(max, 10)
+	#等价于
+	# 10 会被添加到 *args的左边
+	args = (10, 5, 6, 7)
+	max(*args)
+
+
+# 6. 模块
+
+在Python中，一个`.py`文件就被称为一个模块(module)
+
+使用模块可以避免函数名和变量名冲突，相同名字的函数和变量可以分别存在不同模块中。
+
+**编写模块时，尽量不要与内置函数名冲突**
+
+Python中存在**包**的概念，只要顶层的包名不与别人冲突，那所有的模块都不会冲突。例如加入包之后，`abc.py`的模块名 就会从`abc`变成`package.abc`
+
+- **每一个包目录下必须存在一个`__init__.py`文件，只有存在 Python才会将这个目录当做包，而不是普通目录**。`__init__.py`文件可以为空，也可以存在Python代码，其模块名就是包名
+
+**自定义模块时，模块名不允许和Python自带的模块名冲突，否则无法导入系统自带的模块**
+
+**查看系统是否已存在该模块，检查方法是在Python交互环境执行import abc，若成功则说明系统存在此模块。**
+
+
+## 6.1 使用模块
+
+**Python模块的标准文件模板：**
+
+	#!/usr/bin/env python3
+	# -*- coding: utf-8 -*-
+	
+	`a test module`
+	
+	__author__ = 'ryan'
+
+- 第1行注释可以让这个hello.py文件直接在Unix/Linux/Mac上运行，第2行注释表示.py文件本身使用标准UTF-8编码
+
+- 任何模块**代码**的第一行字符串都会被视为模块的文档注释
+
+- 可以不添加文件模板
+
+**使用模块步骤:**
+
+1. 导入模块，通过`import`关键字
+
+2. 导入之后 **即可通过模块名调用模块内部功能**
+
+	例如：`import sys`，就有了指向sys模块的`sys`变量，**`sys`模块有一个`argv`变量，用list存储了命令行的所有参数**。`argv`至少有一个元素，因为第一个元素永远是当前`.py`文件的名称
+
+**在使用命令行运行模块文件时，Python解释器会将一个特殊变量`__name__`置为`__main__`,而在其他地方导入该模块时不会改变**。所以可以利用这一点写一些测试的代码
+
+	if __name__=='__main__':
+	    test()
+
+	def test:
+    	print('argv = %s'%module.argv[0])
+
+
+## 6.2 作用域
+
+Python中，**通过在函数和变量前添加`_`前缀来控制作用域**
+
+1. 正常的函数和变量名是公开的，可以直接被引用
+
+2. 类似`__xx__`这样前后各有俩个`_`的变量是特殊变量，可以被直接引用，但是有特殊用途，例如`__author`,`__name__`,`__doc__`。自定义变量时尽量不冲突
+
+3. 类似`_xxx`和`__xxx`这类的函数和变量名就是非公开的，不应该被直接引用，**（但是实际上Python并没有一种方法可以完全限制访问变量和函数）**
+
+**总结：外部不需要引用的函数全部定义成private，只有外部需要引用的函数才定义为public。**
+
+## 6.3 安装第三方模块
+
+在Python中，安装第三方模块，是通过包管理工具`pip`完成的。
+
+一般来说，第三方库都会在Python官方的`pypi.python.org`网站注册，要安装一个第三方库，必须先知道该库的名称，可以在官网或者pypi上搜索，比如Pillow的名称叫Pillow，因此，安装Pillow的命令就是：
+
+	pip install Pillow
+
+在使用Python时，我们经常需要用到很多第三方库，例如，上面提到的Pillow，以及MySQL驱动程序，Web框架Flask，科学计算Numpy等。用pip一个一个安装费时费力，还需要考虑兼容性。**推荐直接使用`Anaconda`**，这是一个基于Python的数据处理和科学计算平台，它已经内置了许多非常有用的第三方库，装上`Anaconda`，就相当于把数十个第三方模块自动安装好了，非常简单易用。
+
+**模块搜索路径：**
+
+当我们添加一个模块时，默认情况下Python解释器会搜索**当前目录、所有已安装的内置模块和第三方模块**，搜索路径存放在sys模块的path变量中：
+
+	['', 'E:\\python\\python35.zip', 'E:\\python\\DLLs', 'E:\\python\\lib', 'E:\\python', 'E:\\python\\lib\\site-packages']
+
+**如果要添加自己的搜索目录，有俩种方式：**
+
+1. 直接修改`sys.path`。这种方式是在运行时修改，运行结束之后失效!
+
+	sys.path.append('E:.....')
+
+2. 设置环境变量`PYTHONPATH`,该环境变量的内容会被自动添加到模块搜索路径中，设置方式与PATH环境变量相似
+
