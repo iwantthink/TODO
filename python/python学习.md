@@ -1200,3 +1200,322 @@ OOP程序设计中，定义一个类可以继承自某个现有的class
 	>>>s.name =='jack' # 实例属性 和 类属性同时存在
 	>>>print(Student.name) # 类属性不会被实例属性覆盖
 	>>>del s.name # 如果删除了 实例属性，就会使用类属性
+
+# 8 面对对象高级编程
+
+## 8.1 使用`__slots__`
+Python作为动态语言，可以使用动态绑定，即正常情况下，定义了一个class之后，可以程序运行过程中给实例绑定任何属性和方法。
+
+	# 定义类
+	class Student(object):
+	    pass
+	# 绑定属性
+	>>> s = Student()
+	>>> s.name = 'Michael' # 动态给实例绑定一个属性
+	>>> print(s.name)
+	Michael
+	# 绑定方法
+	>>> def set_age(self, age): # 定义一个函数作为实例方法
+	...     self.age = age
+	...
+	>>> from types import MethodType
+	>>> s.set_age = MethodType(set_age, s) # 给实例绑定一个方法
+	>>> s.set_age(25) # 调用实例方法
+	>>> s.age # 测试结果
+	25
+
+- 对一个实例绑定的属性和方法，在另外一个实例是不起作用的。**为了能给所有实例都绑定属性或方法，可以给class绑定**
+
+		>>> def set_score(self, score):
+		...     self.score = score
+		...
+		>>> Student.set_score = set_score
+
+
+**定义class时，可以通过使用`__slots__`变量限制该class实例能够添加的属性**
+	
+	class Student(object):
+	    __slots__ = ('name', 'age') # 用tuple定义允许绑定的属性名称
+
+- **`__slots__`仅对当前类的实例起作用，除非在子类中也定义`__slots__`，否则对继承的子类是不起作用的**。
+
+- **当子类和父类同时存在`__slots__`时，子类实例就会被子类和父类中的`__slots__`共同作用！**
+
+## 8.2 使用`@property`
+
+Python内置的`@property`装饰器可以实现把一个get方法当做属性来调用。`@property`本身会创建另外一个装饰器`方法名.setter`,把一个set方法变成属性赋值
+
+	class Student(object):
+	
+	    @property
+	    def score(self):
+	        return self._score
+	
+	    @score.setter
+	    def score(self, value):
+	        if not isinstance(value, int):
+	            raise ValueError('score must be an integer!')
+	        if value < 0 or value > 100:
+	            raise ValueError('score must between 0 ~ 100!')
+	        self._score = value
+
+
+## 8.3 多重继承
+
+Python支持多重继承，只需要在定义时的`()`中填写多个父类即可，这样子类可以同时获得多个父类的所有功能
+
+
+在设计类的继承关系时，通常都是单一继承下来的，但是如果需要加入额外的功能，通过多重继承即可实现。**这种设计通常称之为MixIn**
+
+	class Dog(Mammal, RunnableMixIn, CarnivorousMixIn):
+	    pass
+
+## 8.4 定制类
+
+形如`__xxx__`的变量或函数名可以帮助定制类，例如`__slots__`变量用来限制实例添加变量，`__len__()`函数让class能够被`len()`函数作用
+
+
+`__str__()`方法是返回用户看到的字符串，`__repr__()`是返回开发者看到的字符串，即为调试服务。所以可以重写这俩个方法，以实现自定义输出内容
+
+	# 重写 __str__
+	>>> class Student(object):
+	...     def __init__(self, name):
+	...         self.name = name
+	...     def __str__(self):
+	...         return 'Student object (name: %s)' % self.name
+	...
+	>>> print(Student('Michael'))
+	Student object (name: Michael)
+	# 直接输出 s，会调用__repr__()
+	>>> s = Student('Michael')
+	>>> s
+	<__main__.Student object at 0x109afb310>
+	# 重写 __repr__
+	class Student(object):
+	    def __init__(self, name):
+	        self.name = name
+	    def __str__(self):
+	        return 'Student object (name=%s)' % self.name
+	    __repr__ = __str__
+
+**一个类如果想被`for...in ..`循环，就必须实现`__iter__(),__next__`方法**
+
+- `__iter__()`方法返回一个迭代对象，然后Python会调用其`__next__`方法获取循环的下一个值，直到遇到`StopIteration`错误时退出循环
+
+		class Fib(object):
+		    def __init__(self):
+		        self.a, self.b = 0, 1 # 初始化两个计数器a，b
+		
+		    def __iter__(self):
+		        return self # 实例本身就是迭代对象，故返回自己
+		
+		    def __next__(self):
+		        self.a, self.b = self.b, self.a + self.b # 计算下一个值
+		        if self.a > 100000: # 退出循环的条件
+		            raise StopIteration()
+		        return self.a # 返回下一个值
+
+
+**`__iter__()`方法只能让类可以作用于for循环，但是无法当做list来使用，实现`__getitem__()`方法之后允许类按下标取元素**
+
+	class Fib(object):
+	    def __getitem__(self, n):
+	        a, b = 1, 1
+	        for x in range(n):
+	            a, b = b, a + b
+	        return a
+
+- 要让类实现切片，就需要对`__getitem__()`方法参数进行判断，传入的参数是索引或切片，然后做对应的处理
+		
+		class Fib(object):
+		    def __getitem__(self, n):
+		        if isinstance(n, int): # n是索引
+		            a, b = 1, 1
+		            for x in range(n):
+		                a, b = b, a + b
+		            return a
+		        if isinstance(n, slice): # n是切片
+		            start = n.start
+		            stop = n.stop
+		            if start is None:
+		                start = 0
+		            a, b = 1, 1
+		            L = []
+		            for x in range(stop):
+		                if x >= start:
+		                    L.append(a)
+		                a, b = b, a + b
+		            return L
+
+- 要让类实现step(`l[:10:2]`)，必须在`__getitem__()`处理。要正确实现一个`__getitem__()`需要很多的工作去做。**归功于动态语言的`鸭子类型`，不需要强制继承某个接口，完全可以将自定义类表现的像Python自带的list,tuple,dic一样**
+
+- `__setitem__()`用来实现赋值，`__delitem__()`用来实现删除元素
+
+
+实现`__getattr__()`方法，可以避免在调用不能存在的类的方法或属性时 出现错误
+
+- 当调用不存在的属性时，Python解释器会试图调用`__getattr__(self,属性名)`来尝试获取属性
+
+		>>> s = Student()
+		>>> s.name
+		'Michael'
+		>>> s.score #score属性不存在
+		99
+
+- `__getattr__()`方法中，返回函数也是可以的
+
+		class Student(object):
+		
+		    def __getattr__(self, attr):
+		        if attr=='age':
+		            return lambda: 25
+		# 调用方式 也要从 变量 改成 函数
+		>>> s.age()
+		25
+
+- 实现了`__getattr__()`方法之后，即使出现 未在方法中的 属性或方法，也不会报错，只会返回`None`。如果要约束class仅响应个别属性，就需要抛出`AttributeError`错误
+
+		class Student(object):
+		
+		    def __getattr__(self, attr):
+		        if attr=='age':
+		            return lambda: 25
+		        raise AttributeError('\'Student\' object has no attribute \'%s\'' % attr)
+
+
+`__call__()`方法可以实现 直接对实例进行调用
+
+	>>>s = Stu()
+	>>>s
+	__main__.Stu2 object at 0x0000020F2CCC2978>
+	
+	class Student(object):
+	    def __init__(self, name):
+	        self.name = name
+	
+	    def __call__(self):
+	        print('My name is %s.' % self.name)
+	
+	>>> s()
+	My name is Michael.
+
+- `__call__()`方法还可以定义参数，对实例进行直接调用跟函数一样
+
+- **判断对象是否是一个可被调用的对象，通过判断类型是否为`Callable`实现。Python提供了`callable()`函数来判断**
+
+## 8.5 使用枚举类
+
+**Python提供`Enum`类,其可以把一组相关联的常量定义在一个class中，且class不可变，同时成员可以直接比较**
+	
+	from enum import Enum
+	
+	Month = Enum('Month', ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
+	
+	
+	for name, member in Month.__members__.items():
+	    print(name, '=>', member, ',', member.value)
+
+- value属性是自动赋给成员的`int`常量，默认从`1`开始
+
+如果需要更精确的控制枚举类型，可以从`Enum`派生自定义类
+
+	from enum import Enum, unique
+	
+	@unique
+	class Weekday(Enum):
+	    Sun = 0 # Sun的value被设定为0
+	    Mon = 1
+	    Tue = 2
+	    Wed = 3
+	    Thu = 4
+	    Fri = 5
+	    Sat = 6
+
+- `@unique`装饰器可以保证没有重复值
+
+
+	>>> day1 = Weekday.Mon
+	>>> print(day1)
+	Weekday.Mon
+	>>> print(Weekday.Tue)
+	Weekday.Tue
+	>>> print(Weekday['Tue'])
+	Weekday.Tue
+	>>> print(Weekday.Tue.value)
+	2
+	>>> print(day1 == Weekday.Mon)
+	True
+	>>> print(day1 == Weekday.Tue)
+	False
+	>>> print(Weekday(1))
+	Weekday.Mon
+	>>> print(day1 == Weekday(1))
+	True
+	>>> Weekday(7)
+	Traceback (most recent call last):
+	  ...
+	ValueError: 7 is not a valid Weekday
+	>>> for name, member in Weekday.__members__.items():
+	...     print(name, '=>', member)
+	...
+	Sun => Weekday.Sun
+	Mon => Weekday.Mon
+	Tue => Weekday.Tue
+	Wed => Weekday.Wed
+	Thu => Weekday.Thu
+	Fri => Weekday.Fri
+	Sat => Weekday.Sat
+
+## 8.6 使用元类
+
+动态语言和静态语言最大的不同是函数和类的定义不是在编译时定义的，而是运行时动态创建的
+
+**例如**：定义一个`Hello`的class，将其放到`hello.py`模块
+	
+	class Hello(object):
+	    def hello(self, name='world'):
+	        print('Hello, %s.' % name)
+
+**当Python解释器载入`hello`模块时，会依次执行该模块的所有语句，执行结果就是动态创建一个`Hello`的class对象**
+
+
+	>>> from hello import Hello
+	>>> h = Hello()
+	>>> h.hello()
+	Hello, world.
+	>>> print(type(Hello))
+	<class 'type'>
+	>>> print(type(h))
+	<class 'hello.Hello'>
+
+- `type()`函数可以查看一个类或变量的类型，**`Hello`是一个class，它的类型就是`type`**.而`h`是一个实例，它的类型就是class`Hello`
+
+**动态语言函数和类的定义是运行时动态创建的，其创建class的方法就是`type()`函数，`type()`函数既可以返回一个对象的类型，也可以创建出新的类**
+
+举例通过`type()`函数创建指定的类：
+
+		>>> def fn(self, name='world'): # 先定义函数
+		...     print('Hello, %s.' % name)
+		...
+		>>> Hello = type('Hello', (object,), dict(hello=fn)) # 创建Hello class
+		>>> h = Hello()
+		>>> h.hello()
+		Hello, world.
+		>>> print(type(Hello))
+		<class 'type'>
+		>>> print(type(h))
+		<class '__main__.Hello'>
+
+- 创建一个class对象，`type()`函数依次传入三个参数
+
+	1. class的名称
+	2. 继承的父类集合(Python支持多重继承，集合使用tuple,需要注意tuple只存在一个元素时的写法)
+	3. class的方法名称与对应函数绑定
+
+- 通过`type()`函数创建的类和直接写class是完全一样的，因为Python解释器在遇到class定义时，就是扫描一下class定义的语法，然后调用`type()`函数创建出class
+
+- **动态语言本身支持运行期动态创建类**
+
+### 8.6.1 metaclass
+要控制类的创建行为，除了使用`type()`动态创建类之外，还可以使用`metaclass`
+
