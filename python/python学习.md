@@ -1748,8 +1748,194 @@ Python支持多重继承，只需要在定义时的`()`中填写多个父类即�
 
 ## 9.1 错误处理
 
+Python有俩种错误：语法错误和异常
 
+- 语法错误：
 
+		>>> while True print('Hello world')
+		  File "<stdin>", line 1, in ?
+		    while True print('Hello world')
+		                   ^
+		SyntaxError: invalid syntax
 
+- 异常：
 
+	即运行期监测到的错误，大多数异常都不会被程序处理，都以错误信息的形式展现
+
+		>>> 10 * (1/0)
+		Traceback (most recent call last):
+		  File "<stdin>", line 1, in ?
+		ZeroDivisionError: division by zero
+
+	**异常处理：Python内置`try...except...finally...`错误处理机制**
+		
+		>>> while True:
+		        try:
+		            x = int(input("Please enter a number: "))
+		            break
+		        except ValueError:
+		            print("Oops!  That was no valid number.  Try again   ")
+
+	- try语句中出现了异常，会去except中去匹配，若匹配则执行，若不匹配，这个异常会传递给上层的try
+
+	- 一个try语句可以包含多个except匹配，分别处理不同的异常
+
+	- 一个except可以同时处理多个异常，这些异常需要被放在一个tuple中
+
+		  except (RuntimeError, TypeError, NameError):
+
+	- 最后一个except语句 可以忽略异常的名称，将会被当做通配符使用，可以在这里打印信息，或再次抛出异常
+	
+			except:
+			    print("Unexpected error:", sys.exc_info()[0])
+			    raise
+
+	**try except语句还有一个可选的`else`语句，其必须被放在所有except语句之后，这个语句将会在没有发生任何异常的时候执行**
+
+			for arg in sys.argv[1:]:
+			    try:
+			        f = open(arg, 'r')
+			    except IOError as i:
+			        print('cannot open', arg)
+			    else:
+			        print(arg, 'has', len(f.readlines()), 'lines')
+			        f.close()
+
+	**异常处理不仅仅可以处理直接发生在try语句中的异常，还能处理调用函数里抛出的异常（间接调用的也行）**
+
+	**Python中所有的错误类型都是继承自`BaseException`**
+
+	**Python内置`logging`模块可以快速打印错误信息**
+
+			def main():
+			    try:
+			        bar('0')
+			    except Exception as e:
+			        logging.exception(e)
+
+### 9.1.1 抛出异常
+
+Python使用`raise`语句抛出一个指定的异常
+
+	>>> raise NameError('HiThere')
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in ?
+	NameError: HiThere
+
+`raise`唯一的一个参数指定了要被抛出的异常。它必须是一个异常的实例或者是异常的类（也就是 Exception 的子类）。
+
+**`raise`语句在不带参数时，会将当前错误原样抛出**
+
+	>>> try:
+	        raise NameError('HiThere')
+	    except NameError:
+	        print('An exception flew by!')
+	        raise
+   
+### 9.1.2 自定义异常
+
+异常类需要直接或间接的继承自`Exception`类
+
+	>>> class MyError(Exception):
+	        def __init__(self, value):
+	            self.value = value
+	        def __str__(self):
+	            return repr(self.value)
+	   
+**大多数异常的名字都以`Error`结尾，这与标准的异常命名一样**
+
+当创建一个模块有可能抛出多种不同的异常时，一种通常的做法是为这个包建立一个基础异常类，然后基于这个基础类为不同的错误情况创建不同的子类
+
+### 9.1.3 定义清理行为
+
+异常处理机制有一个可选的语句`finally`,它定义了无论在任何情况下都会执行的清理行为
+
+	>>> try:
+	...     raise KeyboardInterrupt
+	... finally:
+	...     print('Goodbye, world!')
+
+- 无论`try`语句中有没有发生异常，`finally`语句都会执行
+
+- 如果一个异常在`try`语句(或者是`except语句和else语句`)被抛出，又没有任何`except`与之匹配，那么这个异常会在`finally`语句执行之后再次被抛出
+
+### 9.1.4 预定义的清理行为
+
+关键词`with`可以保证诸如文件之类的对象在使用之后一定会正确的执行清理方法。
+
+	with open("myfile.txt") as f:
+	    for line in f:
+	        print(line, end="")
+
+- 无论代码是否出问题，文件f总会被关闭
+
+## 9.2 调试
+
+调试可以通过`print()`不断打印信息
+
+### 9.2.1 assert
+调试通过`assert`断言可以进行调试,断言失败会抛出`AssertionError`
+
+	def foo(s):
+	    n = int(s)
+	    assert n != 0, 'n is zero!'
+	    return 10 / n
+	
+	def main():
+	    foo('0')
+
+Python可以使用 `-O`参数关闭`assert`,关闭之后`assert`语句可以当做`pass`处理
+
+### 9.2.2 logging
+
+通过`logging`模块，不过抛出错误，而且可以输出到文件
+
+	import logging
+	
+	logging.basicConfig(level = logging.INFO)
+	s = '0'
+	n = int(s)
+	logging.info('n = %d' % n)
+	print(10 / n)
+
+- `logging`允许指定输出大于等指定级别的信息，有`debug,info,warning,error`等级别，例如level = info ,就会忽略debug级别的信息
+
+### 9.2.3 pdb
+
+Python提供了调试器`pdb`,让程序以单步方式运行。
+
+- 命令行中使用：
+
+	通过命名行中添加参数`-m pdb`启动调试模式
+	
+	在调试模式中，输入命令`l`来查看代码，输入命令`n`进行单步执行，任何时候都可以输入命令`p 变量名`来查看变量的值，输入命令`q`结束调试
+
+- 代码中使用：
+
+	导入`pdb`模块，通过`pdb.set_trace()`设置断点，然后运行代码，程序会在断点处自动进入pdb调试模式
+
+	通过命令`c`可以继续运行
+
+		$ python err.py 
+		> /Users/michael/Github/learn-python3/samples/debug/err.py(7)<module>()
+		-> print(10 / n)
+		(Pdb) p n
+		0
+		(Pdb) c
+		Traceback (most recent call last):
+		  File "err.py", line 7, in <module>
+		    print(10 / n)
+		ZeroDivisionError: division by zero
+
+### 9.2.4 IDE
+
+使用带有调试功能的IDE即可
+
+[Visual Studio Code](https://code.visualstudio.com/)，需要安装Python插件。
+
+[PyCharm](http://www.jetbrains.com/pycharm/)
+
+另外，Eclipse加上pydev插件也可以调试Python程序。
+
+## 9.3 单元测试
 
