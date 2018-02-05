@@ -2072,3 +2072,234 @@ Python内置`open()`函数，传入文件名和标识符，会获取到文件对
 - 当写文件时，操作系统不一定会立刻把数据写入磁盘，而是放到内存缓存起来，空闲时再写入。只有在调用了`close()`方法是，操作系统才保证把没有写入的数据全部写入磁盘
 
 - `w`模式写文件时，如果文件已经存在，会直接覆盖(相当于删除后新创建一个文件)。可以通过`a`标识符 切换到 `append`追加模式。
+
+
+## 10.2 StringIO 和BytesIO
+
+`StringIO`就是在内存中读写str
+
+- 要把str写入`StringIO`,需要先创建一个`StringIO`，然后像文件一样写入即可
+
+		>>> from io import StringIO
+		>>> f = StringIO()
+		>>> f.write('hello')
+		5
+		>>> f.write(' ')
+		1
+		>>> f.write('world!')
+		6
+		>>> print(f.getvalue())
+		hello world!
+		
+	- `getvalue()`方法用于获得写入后的str
+
+- 要读取`StringIO`,可以用一个str初始化`StringIO`,然后像文件一样读取即可
+
+		>>> from io import StringIO
+		>>> f = StringIO('Hello!\nHi!\nGoodbye!')
+		>>> while True:
+		...     s = f.readline()
+		...     if s == '':
+		...         break
+		...     print(s.strip())
+		...
+		Hello!
+		Hi!
+		Goodbye!
+
+
+`BytesIO`就是在内存中操作二进制数据
+
+- 要写入`BytesIO`,需要先创建一个`BytesIO`,然后写入`bytes`
+
+		>>> from io import BytesIO
+		>>> f = BytesIO()
+		>>> f.write('中文'.encode('utf-8'))
+		6
+		>>> print(f.getvalue())
+		b'\xe4\xb8\xad\xe6\x96\x87'
+
+	- 写入的是经过`utf-8`编码的字节
+
+- 要读取`BytesIO`，可以用`bytes`初始化`BytesIO`,然后像文件一样读取
+
+		>>> from io import BytesIO
+		>>> f = BytesIO(b'\xe4\xb8\xad\xe6\x96\x87')
+		>>> f.read()
+		b'\xe4\xb8\xad\xe6\x96\x87'
+
+## 10.3 文件和目录
+
+Python内置了`os`模块可以直接调用操作系统提供的接口函数，实现一些类似`dir`,`cp`的命令
+
+	>>> import os
+	>>> os.name # 操作系统类型
+	'nt'
+
+- 输出`posix`,说明系统是`Linux`,`Unix`,`Mac OS X`. 如果输出`nt`,表示系统为Windows
+
+- **`os`模块的某些函数是跟操作系统有关的**
+
+
+### 10.3.1 环境变量
+
+在操作系统中定义的环境变量，全部保存在os.environ这个变量中，可以直接查看：
+
+	>>> os.environ
+	environ({'VERSIONER_PYTHON_PREFER_32_BIT': 'no', 'TERM_PROGRAM_VERSION': '326', 'LOGNAME': 'michael', 'USER': 'michael', 'PATH': '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/X11/bin:/usr/local/mysql/bin', ...})
+
+- 要获取某个环境变量的值，可以调用`os.environ.get('key')`:
+
+### 10.3.1 操作文件和目录
+
+**操作文件和目录的函数一部分在`os`模块，一部分在`os.path`模块中**
+
+	# 查看当前目录的绝对路径:
+	>>> os.path.abspath('.')
+	'/Users/michael'
+	# 在某个目录下创建一个新目录，首先把新目录的完整路径表示出来:
+	>>> os.path.join('/Users/michael', 'testdir')
+	'/Users/michael/testdir'
+	# 然后创建一个目录:
+	>>> os.mkdir('/Users/michael/testdir')
+	# 删掉一个目录:
+	>>> os.rmdir('/Users/michael/testdir')
+
+
+由于不同操作系统拥有不同的路径分隔符，所以在把两个路径合成一个时，不要直接拼字符串，而要通过`os.path.join()`函数
+
+- 在`Linux/Unix/Mac`下，`os.path.join()`返回这样的字符串：
+
+		part-1/part-2
+
+- 而Windows下会返回这样的字符串：
+
+		part-1\part-2
+
+同样的道理 拆分路径时也不要直接拆字符串，而是通过`os.path.split()`函数。**这些合并，拆分路径的函数不要求目录和文件真实存在，它们只对字符串进行操作**
+
+- 获取路径和文件名
+
+		>>> os.path.split('/Users/michael/testdir/file.txt')
+		('/Users/michael/testdir', 'file.txt')
+
+- 直接获取文件扩展名
+
+		>>> os.path.splitext('/path/to/file.txt')
+		('/path/to/file', '.txt')
+
+- 重命名和删除文件
+
+		# 对文件重命名:
+		>>> os.rename('test.txt', 'test.py')
+		# 删掉文件:
+		>>> os.remove('test.py')
+
+
+**复制文件的函数在`os`模块中并不存在，因为复制文件并不是由操作系统提供的系统调用。**理论上可以通过读写文件完成文件复制，但是`shutil`模块已经提供了`copyfile()`函数，这个模块可以看做是`os`模块的补充
+
+
+## 10.4 序列化
+
+在程序运行的过程中，所有变量都是保存在内存中，一旦程序结束，变量所占用的内存就被操作系统全部回收，那么下次重新运行程序，变量会恢复初始值
+
+**变量从内存中变成可存储或传输的过程称之为序列化，Python中叫做`pickling`,其他语言中也被称之为serialization，marshalling，flattening等等。反之，将变量内容从序列化的对象重新读到内存里称之为反序列化，即`unpickling`**
+
+**Python提供了`pickle`模块来实现序列化**，序列化之后，可以将序列化之后的内容写入磁盘，或通过网络传输
+
+- 序列化
+
+		>>> import pickle
+		>>> d = dict(name='Bob', age=20, score=88)
+		>>> pickle.dumps(d)
+		b'\x80\x03}q\x00(X\x03\x00\x00\x00ageq\x01K\x14X\x05\x00\x00\x00scoreq\x02KXX\x04\x00\x00\x00nameq\x03X\x03\x00\x00\x00Bobq\x04u.'
+		# 写入文件
+		>>> f = open('dump.txt', 'wb')
+		>>> pickle.dump(d, f)
+		>>> f.close()
+
+	- `pickle.dumps()`函数可以将任意对象序列化成`bytes`,`pickle.dump()`函数可以直接把对象序列化之后下乳一个`file-like Object`
+
+- 反序列化
+
+		>>> f = open('dump.txt', 'rb')
+		>>> d = pickle.load(f)
+		>>> f.close()
+		>>> d
+		{'age': 20, 'score': 88, 'name': 'Bob'}
+
+	- `pickle.loads()`函数可以反序列化出对象，`pickle.load()`函数可以从一个`file-like Object`对象中直接反序列化出对象
+
+**序列化和反序列化之后的对象不再是同一个对象！它们只是内容相同！**
+
+`pickle`模块的问题和所有其他编程语言特有的序列化问题一样，就是其只能作用于`Python`!而且不同版本的Python彼此都不兼容。
+
+### 10.4.1 JSON
+
+如果要在不同的编程语言之间传递对象，就必须把对象序列化为标准格式，比如XML，但更好的方法是序列化为JSON，因为JSON表示出来就是一个字符串，可以被所有语言读取，也可以方便地存储到磁盘或者通过网络传输。JSON不仅是标准格式，并且比XML更快，而且可以直接在Web页面中读取，非常方便。
+
+`Json`表示的对象就是标准的`JavaScript`语言的对象，Json和Python内置的数据类型对应如下：
+
+1. Json类型:`{}` Python类型：`dict`
+2. Json类型:`[]` Python类型：`list`
+3. Json类型:`string` Python类型：`str`
+4. Json类型:`1234.56` Python类型：`int`or`float`
+5. Json类型:`true/false` Python类型：`True/False`
+6. Json类型:`null` Python类型：`None`
+
+**Python内置`json`模块，提供了Python对象到`Json`格式的转换.Json标准规定Json编码是`UTF-8`**
+
+- Python->Json
+
+		>>> import json
+		>>> d = dict(name='Bob', age=20, score=88)
+		>>> json.dumps(d)
+		'{"age": 20, "score": 88, "name": "Bob"}'
+
+	- `json.dumps()`函数返回一个`str`,内容是标准的Json，`json.dump()`可以直接把Json 写入到一个`file-like Object`
+
+- Json->Python
+
+		>>> json_str = '{"age": 20, "score": 88, "name": "Bob"}'
+		>>> json.loads(json_str)
+		{'age': 20, 'score': 88, 'name': 'Bob'}
+
+	- `json.loads()`函数可以将Json反序列化为Python对象。`json.load()`可以从`file-like Object`中读取字符串并反序列化
+
+### 10.4.2 Json进阶
+
+Python的`dict`对象可以直接序列化为Json的`{}`,但是有的时候，需要使用`class`表示对象，然后序列化。但是直接进行Json的序列化是不行的，因为默认情况下，`dumps()`函数不知道如何将`class`实例转换成一个Json的`{}`对象
+
+**`dumps()`函数拥有一个可选参数`default`，用来指定转换函数。这个转换函数作用就是将 对象变成一个可序列化为Json的对象**
+
+		def student2dict(std):
+		    return {
+		        'name': std.name,
+		        'age': std.age,
+		        'score': std.score
+		    }
+		
+		>>> print(json.dumps(s, default=student2dict))
+		{"age": 20, "name": "Bob", "score": 88}
+
+- `Stu`类的实例会先通过`student2dict()`函数转换为`dict`,然后转换成Json
+
+**如果不需要那么高的定制化，可以直接使用`__dict__`属性来实现转换函数，该属性通常`class`的实例都有，它就是一个用来存储实例变量的`dict`。当然也有例外，就是定义了`__slots__`的`class`**
+
+	print(json.dumps(s, default=lambda obj: obj.__dict__))
+
+**`class`实例的反序列化 也是同样的道理，需要编写一个`Json`->`Python`对象的转换函数**
+
+	def dict2student(d):
+	    return Student(d['name'], d['age'], d['score'])
+	
+	>>> json_str = '{"age": 20, "score": 88, "name": "Bob"}'
+	>>> print(json.loads(json_str, object_hook=dict2student))
+	<__main__.Student object at 0x10cd3c190>
+
+
+# 11 进程和线程
+
+CPU执行代码是顺序执行的，当单核CPU执行多任务时，操作系统会轮流让各个任务交替执行，由于CPU执行速度快，故而会感觉所有任务同时执行
+
+
