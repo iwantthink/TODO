@@ -1869,6 +1869,8 @@ Python使用`raise`语句抛出一个指定的异常
 
 - 无论代码是否出问题，文件f总会被关闭
 
+- 更多查看`contextlib`13.7节
+
 ## 9.2 调试
 
 调试可以通过`print()`不断打印信息
@@ -3197,3 +3199,306 @@ Python处理日期和时间的标准库
 	>>> c
 	Counter({'g': 2, 'm': 2, 'r': 2, 'a': 1, 'i': 1, 'o': 1, 'n': 1, 'p': 1})
 	
+## 13.3 base64
+
+Base64是一种用64个字符来表示任意二进制数据的方法
+
+- 用记事本打开exe、jpg、pdf这些文件时，我们都会看到一大堆乱码，因为二进制文件包含很多无法显示和打印的字符，所以，如果要让记事本这样的文本处理软件能处理二进制数据，就需要一个二进制到字符串的转换方法。Base64是一种最常见的二进制编码方法。
+
+**Base64原理：**
+
+1. 准备一个包含64个字符的数组
+
+		['A', 'B', 'C', ... 'a', 'b', 'c', ... '0', '1', ... '+', '/']
+
+2. 对二进制数据进行处理，每三个字节一组，一共是`3*8=24`bit,分为4组，每组对应6个bit。
+
+	![](https://cdn.liaoxuefeng.com/cdn/files/attachments/001399415038305edba53df7d784a7fa76c6b7f6526873b000)
+
+3. 得到4个数字作为索引，然后查表，获得相应的4个字符，就是编码后的字符串
+
+- Base64编码会把三字节的二进制数据编码为四字节的文本数据，长度增加33%，好处是编码后的文本数据可以在邮件正文，网页等直接显示
+
+- 末尾不足三个字节的情况下，Base64会用`\x00`字节在末尾补足，然后还会在编码的末尾添加1个或2个`=`号(`=`号表示补足了多少字节，解码时候会去除)
+
+
+### 13.3.1 base64模块
+
+Python内置`base64`模块，提供了`b64encode()`和`b64decode()`函数进行base64转换，**俩个函数所需参数都是二进制数据！**
+
+	>>> import base64
+	>>> base64.b64encode(b'binary\x00string')
+	b'YmluYXJ5AHN0cmluZw=='
+	>>> base64.b64decode(b'YmluYXJ5AHN0cmluZw==')
+	b'binary\x00string'
+
+由于标准的Base64编码后可能出现字符`+`和`/`,在URL中就不能直接作为参数，所有`base64`模块提供了一种`url safe`的base64编码(其实就是把`+`和`/`变成`-`和`_`)。`base64`模块提供了`urlsafe_b64encode()`和`urlsafe_b64decode()`俩个函数
+
+	>>> base64.b64encode(b'i\xb7\x1d\xfb\xef\xff')
+	b'abcd++//'
+	>>> base64.urlsafe_b64encode(b'i\xb7\x1d\xfb\xef\xff')
+	b'abcd--__'
+	>>> base64.urlsafe_b64decode('abcd--__')
+	b'i\xb7\x1d\xfb\xef\xff'
+
+可以通过自定义64个字符的排列顺序来自定义Base64编码
+
+Base64是一种通过查表的编码方法，不能用于加密，即使使用自定义的编码表也不行。Base64适用于小段内容的编码，比如数字证书签名，Cookie的内容等
+
+由于`=`字符在URL,Cookie中会造成歧义，所以很多Base64编码会去除`=`字符。**这时，需要记住一点，Base64是将3个字节变成4个字节来处理，所以Base64编码的长度永远是4的倍数，因此在反编码的时候需要判断编码长度，然后在末尾添加`=`字符**
+
+
+## 13.4 struct
+
+Python提供了`struct`模块用来解决`bytes`和其他二进制数据类型的转换
+
+- Python中没有专门处理字节的数据类型，`b'str'`使用二进制str表示字节，所以Python中 ` 字节数组 = 二进制str`
+
+在Python中，如果要把一个32位无符号整数变成字节，也就是4个长度的`bytes`,需要配合运算符这么写：
+
+	>>> n = 10240099
+	>>> b1 = (n & 0xff000000) >> 24
+	>>> b2 = (n & 0xff0000) >> 16
+	>>> b3 = (n & 0xff00) >> 8
+	>>> b4 = n & 0xff
+	>>> bs = bytes([b1, b2, b3, b4])
+	>>> bs
+	b'\x00\x9c@c'
+
+- 非常麻烦，并如果是浮点数的话就不能用这种方式进行转换
+
+**`struct`模块提供了`pack`函数和`unpack`函数用来在任意数据类型和`bytes`之间进行转换**
+
+	>>> import struct
+	>>> struct.pack('>I', 10240099)
+	b'\x00\x9c@c'
+
+- 第一个参数是处理指令，`>I`字符 前者`'>'`表示字节顺序为`big-endian`.后者`'I'`表示4字节无符号整数
+
+
+	>>> struct.unpack('>IH', b'\xf0\xf0\xf0\xf0\x80\x80')
+	(4042322160, 32896)
+
+- 根据`>IH`的说明，后面的bytes依次变为I（4字节无符号整数）和H（2字节无符号整数）。
+
+`struct`模块定义的数据类型可以参考:[官方文档链接](https://docs.python.org/3/library/struct.html#format-characters)
+
+
+## 13.5 hashlib
+
+摘要算法又称哈希算法、散列算法。它通过一个函数，把任意长度的数据转换为一个长度固定的数据串（通常用16进制的字符串表示）。摘要算法就是通过摘要函数对任意长度的数据`data`计算出固定长度的摘要`digest`,目的就是为了发现原始数据是否被人篡改(摘要函数是一个单向函数，计算`f(data)`很容易，但是反推很困难)
+
+Python的`hashlib`模块，提供了常见的摘要算法,例如MD5,SHA1等
+
+
+	import hashlib
+	
+	md5 = hashlib.md5()
+	md5.update('how to use md5 in '.encode('utf-8'))
+	md5.update('python hashlib?'.encode('utf-8'))
+	print(md5.hexdigest())
+
+- 如果需要计算的字符串很长，可以分多条多次调用`update()`,最后的计算结果跟一次性调用是一样的
+
+- MD5是最常见的摘要算法，速度很快，生成结果是固定的128位字节，通常用一个32位的16进制字符串表示
+
+
+	import hashlib
+	
+	sha1 = hashlib.sha1()
+	sha1.update('how to use sha1 in '.encode('utf-8'))
+	sha1.update('python hashlib?'.encode('utf-8'))
+	print(sha1.hexdigest())
+
+- SHA1的结果是160位字节，通常用一个40位的16进制字符串表示
+
+- 比SHA1更安全的算法是SHA256和SHA512，不过越安全的算法越慢，而且摘要长度更长
+
+**不同数据可能通过某个摘要算法得到相同的结果，因为任何摘要算法都是把无限多的数据集合映射到一个有限的集合中。这种情况称为碰撞。**
+
+摘要算法可以应用在账号密码的存储。常用的MD5口令很容易被反推，可以通过加盐来增加安全性。
+
+
+
+## 13.6 hmac
+
+Hmac算法：`Keyed-Hashing for Message Authentication`,它通过一个标准算法，在计算Hash的过程中，把`key`(也就是盐)混入计算过程中。采用Hmac替代自己的md5+salt算法，更标准化也更安全。**Hmac算法针对所有哈希算法都通用**
+
+
+	>>> import hmac
+	>>> message = b'Hello, world!'
+	>>> key = b'secret'
+	>>> h = hmac.new(key, message, digestmod='MD5')
+	>>> # 如果消息很长，可以多次调用h.update(msg)
+	>>> h.hexdigest()
+	'fa4ee7d173f2d97ee79022d1a7355bcf'
+
+- 需要注意 传入的key和message都是`bytes`类，所以需要先进行编码
+
+## 13.7 itertools
+
+Python的内建模块`itertools`提供了用于操作迭代对象的函数
+
+`count(start=0,step=1)`函数创建一个无限的迭代器
+
+	>>> import itertools
+	>>> natuals = itertools.count(1)
+	>>> for n in natuals:
+	...     print(n)
+
+`cycle(iterable)`会把传入的一个序列无限重复下去
+
+	>>> import itertools
+	>>> cs = itertools.cycle('ABC') # 注意字符串也是序列的一种
+	>>> for c in cs:
+	...     print(c)
+	'A'  'B'  'C'  'A'....
+
+
+`repeat(object[, times])`会把传入的元素无限重复下去，第二个参数可以限定重复次数
+
+	>>> ns = itertools.repeat('A', 3)
+	>>> for n in ns:
+	...     print(n)
+	...
+	A
+	A
+	A
+
+`takewhile(predicate,iterable)`可以对无限序列添加条件，截取出一个有限的序列
+
+	>>> natuals = itertools.count(1)
+	>>> ns = itertools.takewhile(lambda x: x <= 10, natuals)
+	>>> list(ns)
+	[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+`chain(*iterables)`可以把一组迭代对象串联起来，形成一个更大的迭代器
+
+	>>> for c in itertools.chain('ABC', 'XYZ'):
+	...     print(c)
+	# 迭代效果：'A' 'B' 'C' 'X' 'Y' 'Z'
+
+`groupby(iterable, key=None)`把迭代器中相领的重复的元素挑出来放到一块
+
+	>>> for key, group in itertools.groupby('AAABBBCCAAA'):
+	...     print(key, list(group))
+	...
+	A ['A', 'A', 'A']
+	B ['B', 'B', 'B']
+	C ['C', 'C']
+	A ['A', 'A', 'A']
+
+
+**`itertools`模块提供的全部是处理迭代功能的函数，返回的都是`Iterator`**
+
+## 13.7 contextlib
+[with语句和上下文管理器](http://www.cnblogs.com/nnnkkk/p/4309275.html)
+
+### 13.7.1 with语句
+
+在Python中任何正确实现了上下文管理，就可以被用于`with`语句
+	
+`with`语句可以使用`try...finally..`的功能
+
+	f = open("test.txt")
+	try:
+	    for line in f.readlines():
+	        print(line)
+	finally:
+	    f.close()
+	# 上下俩者相同
+	with open("text.txt") as f:
+	    for line in f.readlines()
+	　　　　print(line)
+
+
+**`with`语句的基本语法结构：**
+
+	with expression [as variable]:
+	　　　 with-block
+
+- `expression` 是上下文管理器，其含有`__enter__()`和`__exit__()`函数
+
+- `[as variable]` ，会返回上下文管理器expression调用`__enter__`函数返回的对象。
+
+- `with-block` 是执行语句，执行完毕，就进行资源清理，其实就是调用`__exit__()`函数
+
+**`with`语句不仅可以管理文件，还可以管理锁，连接等等**
+
+	#管理锁
+	import  threading
+	lock = threading.lock()
+	with lock:
+	    #执行一些操作
+	    pass
+
+### 13.7.2 上下文管理器
+
+**`with`语句主要依赖于 上下文管理器，所谓上下文管理器就是实现了上下文协议的类，这个上下文协议就是指一个类 实现`__enter__()`和`__exit__()`方法**
+
+
+- `__enter__(self):` 执行一些环境准备工作，同时返回一资源对象
+
+- `__exit__(self,type,value,traceback):` 参数分别是 异常类型，异常信息和堆栈(如果执行体语句没有引发异常，这三个参数都是None)。返回值`True/False`表示异常有没有被处理，如果返回False，引发的异常将会被传递出上下文。`__exit__()`函数内部引发的异常会覆盖执行体中的异常
+
+
+### 13.7.3 contextlib模块
+
+自定义上下文管理器，除了通过实现`__enter__()`和`__exit__()`方法之外，还可以通过`contextlib`模块中包含的装饰器`@contextmanager`和一些辅助函数来实现
+
+装饰器`@contextmanager`只需要写一个生成器函数就可以代替自定义的上下文管理器
+
+  	  @contextmanager
+        def some_generator(<arguments>):
+            <setup>
+            try:
+                yield <value>
+            finally:
+                <cleanup>
+
+`with`语句用法如下：
+
+	with some_generator(<arguments>) as <variable>:
+	            <body>
+
+- `some_generator`函数在在yield之前的代码等同于上下文管理器中的`__enter__`函数。
+
+- `yield`的返回值等同于`__enter__`函数的返回值，即如果with语句声明了`as <variable>`，则`yield`的值会赋给`variable`
+
+- 然后执行`<cleanup>`代码块，等同于上下文管理器的`__exit__`函数。此时发生的任何异常都会再次通过yield函数返回。
+
+
+**`contextlib`模块提供`nested()`函数用来嵌套处理多个上下文管理器，但是`with`语句本身已经支持多个上下文管理器的使用，所以意义不大**
+
+	  @contextmanager
+	  def my_context(name):
+	      print("enter")
+	      try:
+	          yield name
+	     finally:
+	         print("exit")
+	 
+	 #使用nested函数来调用多个管理器
+	 print("---------使用nested函数调用多个管理器-----------")
+	 with nested(my_context("管理器一"), my_context("管理器二"),my_context("管理器三")) as (m1,m2,m3):
+	     print(m1)
+	     print(m2)
+	     print(m3)
+	 
+	 #直接使用with来调用调用多个管理器
+	 print("---------使用with调用多个管理器-----------")
+	 with my_context("管理器一") as m1, my_context("管理器二") as m2, my_context("管理器三") as m3:
+	     print(m1)
+	     print(m2)
+	     print(m3)
+
+**`contextlib`模块提供`closing()`函数帮助具有`close()`方法的资源对象生成上下文管理器**
+
+	import urllib, sys
+	from contextlib import closing
+	
+	with closing(urllib.urlopen('http://www.yahoo.com')) as f:
+	    for line in f:
+	        sys.stdout.write(line)
+
+## 13.8 urllib
