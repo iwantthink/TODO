@@ -3502,3 +3502,289 @@ Python的内建模块`itertools`提供了用于操作迭代对象的函数
 	        sys.stdout.write(line)
 
 ## 13.8 urllib
+
+Python的`urllib`包下有`request,response`等模块，提供了一系列操作URL的功能
+
+**Get：**
+
+`urlib`包下的`reuquest`模块可以抓取URL内容，返回HTTP响应
+
+	from urllib import request
+	
+	with request.urlopen('https://api.douban.com/v2/book/2129650') as f:
+	    data = f.read()
+	    print('Status:', f.status, f.reason)
+	    for k, v in f.getheaders():
+	        print('%s: %s' % (k, v))
+	    print('Data:', data.decode('utf-8'))
+	# 输出Log
+	Status: 200 OK
+	Server: nginx
+	Date: Tue, 26 May 2015 10:02:27 GMT
+	Content-Type: application/json; charset=utf-8
+	Content-Length: 2049
+	Connection: close
+	Expires: Sun, 1 Jan 2006 01:00:00 GMT
+	Pragma: no-cache
+	Cache-Control: must-revalidate, no-cache, private
+	X-DAE-Node: pidl1
+	Data: {"rating":{"max":10,"numRaters":16,"average":"7.4","min":0},"subtitle":"","author":["廖雪峰编著"],"pubdate":"2007-6",...}
+
+- 返回的是字节，所以需要进行反编码
+
+`request`模块里的`Request`类，可以通过这个类添加 请求头
+
+	req = request.Request('http://www.douban.com/')
+	req.add_header('User-Agent', 'Mozilla/6.0 (iPhone; CPU iPhone OS 8_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/8.0 Mobile/10A5376e Safari/8536.25')
+	with request.urlopen(req) as f:
+	    print('Status:', f.status, f.reason)
+	    for k, v in f.getheaders():
+	        print('%s: %s' % (k, v))
+	    print('Data:', f.read().decode('utf-8'))
+
+**POST:**
+
+要以POST发送一个请求，只需要在调用`urlopen()`函数时，传入`data = xxx`参数即可(参数是字节)
+
+	with request.urlopen(req, data='post body'.encode('utf-8')) as f:
+	    print('Status:', f.status, f.reason)
+	    for k, v in f.getheaders():
+	        print('%s: %s' % (k, v))
+	    print('Data:', f.read().decode('utf-8'))
+
+
+**Handler:**
+
+`request`模块里的`ProxyHandler`类可以实现通过Proxy访问
+
+	proxy_handler = urllib.request.ProxyHandler({'http': 'http://www.example.com:3128/'})
+	proxy_auth_handler = urllib.request.ProxyBasicAuthHandler()
+	proxy_auth_handler.add_password('realm', 'host', 'username', 'password')
+	opener = urllib.request.build_opener(proxy_handler, proxy_auth_handler)
+	with opener.open('http://www.example.com/login.html') as f:
+	    pass
+
+
+## 13.9 XML
+
+操作XML有俩种方式：DOM和SAX。 DOM 会将整个XML读入内存，解析为树，因此占用内存大，解析慢，优点是可以任意遍历树的节点。SAX是流模式，边读边解析，占用内存小，解析快，缺点是需要自己处理事件
+
+
+Python中使用SAX解析XML，只需要`start_element`,`end_element`,`char_data`三个函数即可开始解析xml
+
+例如：当SAX解析器读到一个节点`<a href="/">python</a>`会产生三个事件：
+
+1. `start_element`事件，在读取`<a href="/">`时；
+
+2. `char_data`事件，在读取`python`时；
+
+3. `end_element`事件，在读取`</a>`时。
+
+
+	from xml.parsers.expat import ParserCreate
+	
+	class DefaultSaxHandler(object):
+	    def start_element(self, name, attrs):
+	        print('sax:start_element: %s, attrs: %s' % (name, str(attrs)))
+	
+	    def end_element(self, name):
+	        print('sax:end_element: %s' % name)
+	
+	    def char_data(self, text):
+	        print('sax:char_data: %s' % text)
+	
+	xml = r'''<?xml version="1.0"?>
+	<ol>
+	    <li><a href="/python">Python</a></li>
+	    <li><a href="/ruby">Ruby</a></li>
+	</ol>
+	'''
+	
+	handler = DefaultSaxHandler()
+	parser = ParserCreate()
+	parser.StartElementHandler = handler.start_element
+	parser.EndElementHandler = handler.end_element
+	parser.CharacterDataHandler = handler.char_data
+	parser.Parse(xml)
+
+- 需要注意的是读取一大段字符串时，CharacterDataHandler可能被多次调用，所以需要自己保存起来，在EndElementHandler里面再合并。
+
+生成XML：
+
+	L = []
+	L.append(r'<?xml version="1.0"?>')
+	L.append(r'<root>')
+	L.append(encode('some & data'))
+	L.append(r'</root>')
+	return ''.join(L)
+
+## 13.10 HMTLParser
+
+Python提供了 HTMLParser来解析HTML，由于HTML本质是XML的子集，但是其语法没有XML那么严格，所以不能用标准的DOM或SAX来解析HTML
+
+	from html.parser import HTMLParser
+	from html.entities import name2codepoint
+	
+	class MyHTMLParser(HTMLParser):
+	
+	    def handle_starttag(self, tag, attrs):
+	        print('<%s>' % tag)
+	
+	    def handle_endtag(self, tag):
+	        print('</%s>' % tag)
+	
+	    def handle_startendtag(self, tag, attrs):
+	        print('<%s/>' % tag)
+	
+	    def handle_data(self, data):
+	        print(data)
+	
+	    def handle_comment(self, data):
+	        print('<!--', data, '-->')
+	
+	    def handle_entityref(self, name):
+	        print('&%s;' % name)
+	
+	    def handle_charref(self, name):
+	        print('&#%s;' % name)
+	
+	parser = MyHTMLParser()
+	parser.feed('''<html>
+	<head></head>
+	<body>
+	<!-- test html parser -->
+	    <p>Some <a href=\"#\">html</a> HTML&nbsp;tutorial...<br>END</p>
+	</body></html>''')
+
+# 14 常用第三方模块
+
+所有的第三方模块基本都会在[PyPI](https://pypi.python.org/pypi)上注册，只要找到对应模块名称即可用pip安装
+
+## 14.1 Pillow
+
+PIL:Python Imaging Library ,PIL仅支持到2.7，现在的`Pillow`是其兼容版本，支持最新的3.x 且加入很多新特性
+
+安装Pillow可以通过pip `pip install pillow`,或者通过Anaconda
+
+更多具体操作查看[官网API文档](https://pillow.readthedocs.io/en/latest/)
+
+## 14.2 requests
+
+`requests`模块是比Python内置的`urllib`模块更加高级的模块
+
+安装`requests`:`pip install requests`
+
+	>>> r = requests.get('https://api.github.com/user', auth=('user', 'pass'))
+	>>> r.status_code
+	200
+	>>> r.headers['content-type']
+	'application/json; charset=utf8'
+	>>> r.encoding
+	'utf-8'
+	>>> r.text
+	u'{"type":"User"...'
+	>>> r.json()
+	{u'private_gists': 419, u'total_private_repos': 77, ...}
+
+- 对于带参数的URL,可以传入一个`dict`作为`params`参数
+
+- 无论响应内容是文本还是二进制内容，都可以使用`content`属性来获得`bytes`对象
+
+- requests获取HTTP响应头信息只用通过`headers`属性即可返回一个包含所有响应头信息的dict
+
+- **`requests`模块对于特定类型的响应，如JSON 可以直接获取 只用调用`json()`函数即可**
+
+- 当需要传入Http Header时，可以在构造函数中将一个dict传入`headers`参数
+
+- 当需要`POST`请求时，只需要将`get()`函数改成`post()`函数，然后传入`data`参数作为Post请求的数据
+
+		>>> r = requests.post('https://accounts.douban.com/login', data={'form_email': 'abc@example.com', 'form_password': '123456'})
+
+	- requesets默认使用`application/x-www-form-urlencoded`对POST数据编码。
+
+	- 如果POST的数据是JSON，可以直接使用`json`参数
+
+			params = {'key': 'value'}
+			r = requests.post(url, json=params) # 内部自动序列化为JSON
+
+上传文件时需要更复杂的编码格式，但是通过requests简化成`files`参数
+
+	>>> upload_files = {'file': open('report.xls', 'rb')}
+	>>> r = requests.post(url, files=upload_files)
+
+- 读取文件时，必须使用`rb`即二进制模式读取，这样获取的`bytes`长度才是文件的长度
+
+将`post()`方法替换成`put()`,`delete()`等，就可以以不同的请求方式请求资源
+
+### 14.2.1 Cookie
+
+requests对Cookie 做了特殊处理，使得不必解析Cookie即可获取指定Cookie
+
+	>>> r.cookies['ts']
+	'example_cookie_12345'
+
+要在请求中传入Cookie，只需要传入`cookies`参数
+
+	>>> cs = {'token': '12345', 'status': 'working')
+	>>> r = requests.get(url, cookies=cs)
+
+### 14.2.2 超时
+
+指定超时时间，使用`timeout`参数即可，单位是秒
+
+	>>> r = requests.get(url, timeout=2.5) # 2.5秒后超时
+
+
+## 14.3 chardet
+
+`chardet`模块提供了检测编码的功能，在Python中提供了Unicode表示的`str`和`bytes`俩种类型，并且可以通过`encode()`和`decode()`进行转换，但是这无法在不知道编码的情况下进行
+	
+	>>> chardet.detect(b'Hello, world!')
+	{'encoding': 'ascii', 'confidence': 1.0, 'language': ''}
+	
+[官方文档](https://chardet.readthedocs.io/en/latest/supported-encodings.html)
+
+## 14.4 psutil
+
+`psutil = process and system utilities`模块可以获取系统信息，实现系统监控，而且是跨平台的。
+
+[官方文档](https://github.com/giampaolo/psutil)
+
+获取CPU信息
+
+	>>> import psutil
+	>>> psutil.cpu_count() # CPU逻辑数量
+	4
+	>>> psutil.cpu_count(logical=False) # CPU物理核心
+	2
+	# 2说明是双核超线程, 4则是4核非超线程
+
+# 15 virtualenv
+
+
+
+在开发Python应用程序的时候，系统安装的Python3只有一个版本：3.4。所有第三方的包都会被pip安装到Python3的site-packages目录下。
+
+如果我们要同时开发多个应用程序，那这些应用程序都会共用一个Python，就是安装在系统的Python 3。如果应用A需要jinja 2.7，而应用B需要jinja 2.6怎么办？
+
+- virtualenv为每个应用创建一套`隔离`的Python运行环境，解决了不同应用间多版本冲突的问题。
+
+
+[参考文档](https://www.cnblogs.com/chaosimple/p/4475958.html)
+
+# 16 图形界面
+
+Python支持多种图形界面的第三方库：TK,wxWidgets,Qt,GTK
+
+Python自带的库支持TK的Tkinter,无需安装包
+
+我们编写的Python代码会调用内置的Tkinter，Tkinter封装了访问Tk的接口；
+
+Tk是一个图形库，支持多个操作系统，使用Tcl语言开发；
+
+Tk会调用操作系统提供的本地GUI接口，完成最终的GUI。
+
+所以，我们的代码只需要调用Tkinter提供的接口就可以了。
+
+Python内置的Tkinter可以满足基本的GUI程序的要求，如果是非常复杂的GUI程序，建议用操作系统原生支持的语言和库来编写。
+
