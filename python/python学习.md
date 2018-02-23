@@ -595,7 +595,7 @@ Python可以自定义函数，同时也内置了许多函数，可以通过`help
 	>>> person('Adam', 45, gender='M', job='Engineer')
 	name: Adam age: 45 other: {'gender': 'M', 'job': 'Engineer'}
 
-**可以直接将`dict`传入关键字参数，但是需要在`dict`之前 添加`**`符号**
+**可以直接将`dict`传入关键字参数，但是需要在`dict`之前 添加俩个`*`符号 **
 
 **关键字参数仅获取到传入的`dict`的一份拷贝，对这份拷贝的改动不会影响到函数外的`dict`**
 
