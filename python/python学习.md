@@ -3027,7 +3027,7 @@ Python处理日期和时间的标准库
 
 `datetime`类拥有一个`@classmethod`函数`fromtimestamp()`可以将timstamp转换为datetime
 
-- `fromtimestamp()`是转换为当地时间，`utffromtimestamp()`是转换为UTC标准时区的时间
+- `fromtimestamp()`是转换为当地时间，`utcfromtimestamp()`是转换为UTC标准时区的时间
 
 ### 13.1.2 字符型时间和datetime
 
