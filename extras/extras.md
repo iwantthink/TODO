@@ -10,3 +10,7 @@
 	最终是通过添加`-libraryjars C:\Program Files\Java\jre1.8.0_151\lib\rt.jar `到混淆规则中，解决了这个问题(此外我还额外添加了 Android 默认的混淆规则进去)
 
 	系统自动生成的aar-release(混淆后)是可以正常使用的
+
+- 混淆之后生成的SDK， 会在 某些特定的机型上出现 `AbstractMethodError` 异常. 观察 特征：主要都是一些继承抽象类 的类 找不到对应方法导致的。
+
+	目前的解决办法是：将这些类keep掉，应该可以只keep 特定的方法
