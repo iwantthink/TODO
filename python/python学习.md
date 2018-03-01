@@ -2610,7 +2610,7 @@ Python中线程有俩种使用方式：**函数或者用类来包装线程的对
 		
 		结果 balance = -8
 
-**Python提供了`Lock`机制，通过`threading`模块**
+**Python提供了`Lock`机制，通过`threading`模块 **
 
 	balance = 0
 	lock = threading.Lock()
