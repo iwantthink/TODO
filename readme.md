@@ -31,6 +31,8 @@ SDK性能优化
 
 学习python。。。
 
+利用transfromapi 设计一些 插件
+
 [学习android architecture Components..](https://developer.android.com/topic/libraries/architecture/index.html)
 
 **做一个做计划（记忆曲线）的demo apk**
