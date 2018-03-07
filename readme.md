@@ -59,3 +59,5 @@ jenkins+jacoco
 - 混淆
 
 - 数据加密
+
+- 加固
