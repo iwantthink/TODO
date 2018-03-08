@@ -28,7 +28,7 @@ ClassLoader就是类加载器，具体作用就是将class文件加载到jvm虚�
 ## 1.1 默认的ClassLoader
 Java提供俩种类型的类加载器：系统类加载器和自定义类加载器。**Java系统类加载器**默认分为三种ClassLoader类型:
 
-- **BootStrap ClassLoader**:称为 引导类加载器，是java类加载层次中最顶层的类加载器，负责加载JDK中的核心类库，如：rt.jar,resources.jar,charsets,jar等。默认在`/JAVA_HOME/jre/lib` 目录下，也可以通过启动Java虚拟机时指定`-Xbootclasspath`选项，来改变Bootstrap ClassLoader的加载目录。  存在于Launcher中。
+- **BootStrap ClassLoader：**称为 引导类加载器，是java类加载层次中最顶层的类加载器，负责加载JDK中的核心类库，如：rt.jar,resources.jar,charsets.jar等。默认加载路径在`/JAVA_HOME/jre/lib` 目录下，也可以通过启动Java虚拟机时指定`-Xbootclasspath/a:path`选项，来改变Bootstrap ClassLoader的加载目录。  存在于Launcher中。
 
 	Java虚拟机的启动就是通过 Bootstrap ClassLoader创建一个初始类来完成的。**由于Bootstrap ClassLoader是使用C/C++语言实现的， 所以该加载器不能被Java代码访问到**。
 
@@ -45,7 +45,7 @@ Java提供俩种类型的类加载器：系统类加载器和自定义类加载�
 		C:\Program Files\Java\jdk1.8.0_102\jre\lib\jfr.jar;
 		C:\Program Files\Java\jdk1.8.0_102\jre\classes
 
-- **Extension ClassLoader**:称为扩展类加载器，负责加载java的扩展类库，默认加载`JAVA_HOME/JRE/LIB/EXT`目录下的所有jar.可以通过`-Djava.ext.dirs`选项添加和修改Extensions ClassLoader加载的路径。 存在于Launcher中。
+- **Extension ClassLoader**:称为扩展类加载器，负责加载java的扩展类库，默认加载`JAVA_HOME/JRE/LIB/EXT`目录下的所有jar.可以通过`-D java.ext.dirs`选项添加和修改Extensions ClassLoader加载的路径。 存在于Launcher中。
 
 	可以通过`System.out.println(System.getProperty("java.ext.dirs"))`方法来获取Extensions ClassLoader所加载的目录（JVM中运行才有效），打印结果如下：
 
@@ -334,7 +334,7 @@ PathClassLoader不建议开发者直接使用。来查看它的代码：
 
 > A class loader that loads classes from .jar and .apk files containing a classes.dex entry. This can be used to execute code not installed as part of an application.
 
-对比PathClassLoader只能加载已安装应用的dex或apk文件，DexClassLoader没有此限制，可以从SD卡上加载classes.dex的.jar和.apk文件，**这也是插件化和热修复的基础，在不需要安装应用的情况下，完成需要使用的dex加载。**
+对比PathClassLoader只能加载已安装应用的dex或apk文件，DexClassLoader没有此限制，可以从SD卡上加载包含classes.dex的.jar和.apk文件，**这也是插件化和热修复的基础，在不需要安装应用的情况下，完成需要使用的dex加载。**
 
 **DexClassLoader只有一个构造方法，其具体实现在BaseDexClassLoader**
 
@@ -398,7 +398,7 @@ Android应用打包成apk文件时，class文件会被dx.jar工具打包成 dex�
 
 当 Android 系统安装一个应用的时候，会针对不同平台对 Dex 进行优化，这个过程由一个专门的工具来处理，叫 DexOpt 。DexOpt 是在第一次加载 Dex 文件的时候执行的，该过程会生成一个 ODEX 文件，即 Optimised Dex。执行 ODEX 的效率会比直接执行 Dex 文件的效率要高很多，加快 App 的启动和响应。
 
-优化后的ODEX文件存储在`/data/dalvik-cache`下，后缀名还是 .dex 。具体可以查看 相关文章链接一。
+优化后的ODEX文件存储在`/data/dalvik-cache`下，**后缀名还是 `.dex` **。具体可以查看 [相关文章链接一](http://www.mywiki.cn/hovercool/index.php/ART%E5%92%8CDalvik)。
 
 Android中的Dalvik/ART 无法像JVM那样直接加载class文件和jar文件中的class，需要通过dx工具来转换成 Dalvik byte code才行，**只能通过dex或者包含dex的jar、apk文件来加载**。（注意odex文件后缀可能是.dex或是.odex ，同属于dex文件），**因此Android中的ClassLoader就交给了BaseDexClassLoader。**
 
@@ -564,7 +564,7 @@ ODEX相关文章：
 
 - **参数ClassLoader definingContext**:
 
-- 总的功能就是将 dexPath路径中的 含有dex的文件 组装成一个Element[] 数组！
+- **总的功能就是将 dexPath路径中的 含有dex的文件 组装成一个Element[] 数组！**
 
 ### 3.3.2 DexPathList-findClass()
 
@@ -593,3 +593,91 @@ ODEX相关文章：
 
 **注意：**
 实际在项目中使用BaseDexClassLoader或DexClassLoader去加载某个dex或者apk的class时，是无法调用`findClass()`因为它是被protected修饰的。实际上需要去调用`loadClass(String className)`方法，该方法在ClassLoader中具体实现。
+
+
+# 4. 利用DexClassLoader实现加载本地 dex文件实例
+
+1. 创建俩个类，`luck.ryan.ISayHello.java`和`luck.ryan.HelloJava.java`
+
+		package luck.ryan;
+		
+		public interface ISayHello {
+		    String say();
+		}
+		
+		package luck.ryan;
+		
+		public class HelloJava implements ISayHello {
+		    @Override
+		    public String say() {
+		        return "i am hello  from dex file";
+		    }
+		}
+
+2. 编写task 将这俩个类的.class文件打成jar包
+
+		task makeJar(type: org.gradle.api.tasks.bundling.Jar) {
+		
+		    baseName "hellojava"
+		
+		    from "build/intermediates/classes/debug/"
+		
+		    into "/"
+		
+		    exclude {
+		        it.path.contains('hmtdemo')||it.path.contains('android')
+		    }
+		}
+
+	- exclude 只是为了排除其他类
+
+	- 利用gradlew makeJar 命令即可 在build/libs 下面找到这个jar
+
+3. 利用dx.bat 文件对jar包进行处理，生成dex文件
+
+		dx --dex --output=sayhello_dex.jar sayhello.jar
+
+	- dx.bat 文件处于 `E:\sdk\build-tools`下的具体版本中
+
+	- 执行完命令之后会生成新的jar包，这个jar包包含dex文件
+
+4. 将包含dex文件的jar包放入手机存储空间
+
+5. 在一个app中编写如下代码
+
+	    public void testHotFix() {
+	
+	        // 获取到包含 class.dex 的 jar 包文件
+	        final File jarFile =
+	                new File(Environment.
+	                        getExternalStorageDirectory().getPath()
+	                        + File.separator + "HMT_TEST" + File.separator + "hello.jar");
+	        if (!jarFile.exists()) {
+	            return;
+	        }
+	
+	        // 如果没有读权限,确定你在 AndroidManifest 中是否声明了读写权限
+	
+	        // getCodeCacheDir() 方法在 API 21 才能使用,实际测试替换成 getExternalCacheDir() 等也是可以的
+	        // 只要有读写权限的路径均可
+	        DexClassLoader dexClassLoader =
+	                new DexClassLoader(jarFile.getAbsolutePath(), getExternalCacheDir().getAbsolutePath(), null, getClassLoader());
+	
+	        Log.d(TAG, "testHotFix cacheDir = " + getExternalCacheDir().getAbsolutePath());
+	        try {
+	            // 加载 HelloJava 类
+	            Class clazz = dexClassLoader.loadClass("luck.ryan.HelloJava");
+	            // 强转成 ISayHello, 注意 ISayHello 的包名需要和 jar 包中的一致
+	            ISayHello iSayHello = (ISayHello) clazz.newInstance();
+	            Log.d(TAG, "testHotFix = " + iSayHello.say());
+	        } catch (ClassNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (InstantiationException e) {
+	            e.printStackTrace();
+	        } catch (IllegalAccessException e) {
+	            e.printStackTrace();
+	        }
+	
+	    }
+
+6. run!!!!!!
