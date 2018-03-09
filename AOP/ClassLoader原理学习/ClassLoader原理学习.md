@@ -330,6 +330,8 @@ PathClassLoader不建议开发者直接使用。来查看它的代码：
 	- ZygoteInit中的调用是用来启动相关的系统服务
 	- ApplicationLoaders中用来加载系统安装过的apk，用来加载apk内的class，其调用是在LoadApk类中getClassLoader()方法，得到的就是PathClassLoader
 
+- PathClassLoader并没有重写BaseDexClassLoader中的方法，类似findClass 之类的逻辑都是在BDCL中被实现，这点PathClassLoader和DexClassLoader都一样
+
 ### 3.1.3 DexClassLoader
 
 > A class loader that loads classes from .jar and .apk files containing a classes.dex entry. This can be used to execute code not installed as part of an application.
@@ -412,6 +414,22 @@ ODEX相关文章：
 - BaseDexClassLoader的结构：
 
 	![](http://ac-qygvx1cc.clouddn.com/a6f9824c199cf304.jpg)
+
+- BaseDexClassLoader构造函数：
+
+		public class BaseDexClassLoader extends ClassLoader {
+		    ...
+		    public BaseDexClassLoader(String dexPath, File optimizedDirectory, String libraryPath, ClassLoader parent){
+		        super(parent);
+		        this.pathList = new DexPathList(this, dexPath, libraryPath, optimizedDirectory);
+		    }
+		    ...
+		}
+
+	- `dexPath`:待加载的程序文件(一般是dex文件，也可以是包含dex的jar/apk/zip文件)所在目录
+	- `optimizedDirectory`：dex文件的输出目录（因为在加载jar/apk/zip等压缩格式的程序文件时会解压出其中的dex文件，该目录就是专门用于存放这些被解压出来的dex文件的）。
+	- `libraryPath`：加载程序文件时需要用到的库路径。
+	- `parent`：父加载器
 
 - `private final DexPathList pathList`这个字段非常重要，BDCL继承自ClassLoader实现了许多方法都是基于这个字段，例如:findClass(),findResource(),findResources(),findLibrary()。
 
