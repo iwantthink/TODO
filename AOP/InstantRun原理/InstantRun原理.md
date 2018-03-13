@@ -3,12 +3,17 @@
 
 [instant-run-how-does-it-work](https://medium.com/google-developers/instant-run-how-does-it-work-294a1633367f)
 
-[Instant Run 浅析](http://jiajixin.cn/2015/11/25/instant-run/)
+
 
 [Instant Run 谈Android替换Application和动态加载机制](http://w4lle.com/2016/05/02/%E4%BB%8EInstant%20run%E8%B0%88Android%E6%9B%BF%E6%8D%A2Application%E5%92%8C%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E6%9C%BA%E5%88%B6/)
 
+[Instant Run 原理以及源码分析 旧版本](https://www.jianshu.com/p/780eb85260b3)
 
+[Instant Run 浅析 旧版本](http://jiajixin.cn/2015/11/25/instant-run/)
 
+[Instant Run 原理以及源码分析 新版本](https://www.jianshu.com/p/5947855e3362)
+
+[Instant Run源码地址](https://android.googlesource.com/platform/tools/base/+/gradle_3.0.0/instant-run/)
 
 # 1.介绍
 
@@ -100,16 +105,146 @@ manifest文件合并、打包，和res一起被AAPT合并到APK中，同样项�
 3. Instant Run 成功运行，下次使用时，会通过决策，合理运用冷温热插拔来协助缩短构建和部署时间
 
 
-# 5.Instant Run 无法回退
+# 5.Instant Run 实现细节
 
-代码更改可以通过热拔插快速部署，但是热拔插会影响应用的初始化，所以我们不得不通过重启应用来响应这些修改。
+Instant Run 由一个插件和一个库文件组成(gradle plugin + instant-run.jar)
+
+## 5.1 低版本
+
+- 参考[Instant Run 浅析 旧版本 ](http://jiajixin.cn/2015/11/25/instant-run/),[Instant Run 原理以及源码分析 旧版本](https://www.jianshu.com/p/780eb85260b3)
+
+## 5.2 高版本 3.0.0
+
+### 5.2.1 程序如何运行：
+
+`Instant Run`将app 拆分成俩部分，分离了 业务代码。另外`IR`在安装时，通过查看AS的**RUN窗口**，可以发现安装命令变成如下：
+	
+	$ adb install-multiple -r -t -p com.luck.ryan.hotfix E:\github\HOT_FIX\app\build\intermediates\split-apk\debug\slices\slice_1.apk E:\github\HOT_FIX\app\build\outputs\apk\debug\app-debug.apk 
+	
+同时，通过root过后的手机，进入`data/app/com.luck.ryan/`目录下，会发现存在多个.apk文件
+
+- `slice_1.apk`包含的是业务代码(即需要instant run的代码)。`app-debug.apk`包含的是支持Instant Run 的代码和一些资源文件清单文件等。
+
+- `slice_1.apk`可以在`app\build\intermediates\split-apk\debug\slices`路径下找到，其中的代码可以在`app\build\intermediates\transforms\instantRun\debug\0`中找到，代码会被修改成如下形式：
+
+	   public MainActivity() {
+	        IncrementalChange var1 = $change;
+	        if(var1 != null) {
+	            Object[] var10001 = (Object[])var1.access$dispatch("init$args.([Lcom/ryan/hotfix/MainActivity;[Ljava/lang/Object;)Ljava/lang/Object;", new Object[]{null, new Object[0]});
+	            Object[] var2 = (Object[])var10001[0];
+	            this(var10001, (InstantReloadException)null);
+	            var2[0] = this;
+	            var1.access$dispatch("init$body.(Lcom/ryan/hotfix/MainActivity;[Ljava/lang/Object;)V", var2);
+	        } else {
+	            super();
+	        }
+	    }
+	
+	    public void onCreate(Bundle savedInstanceState) {
+	        IncrementalChange var2 = $change;
+	        if(var2 != null) {
+	            var2.access$dispatch("onCreate.(Landroid/os/Bundle;)V", new Object[]{this, savedInstanceState});
+	        } else {
+	            super.onCreate(savedInstanceState);
+	            this.setContentView(2131296283);
+	            Log.d("MainActivity", "msg = " + (new HelloJava()).say());
+	            this.getName("abcdeg");
+	        }
+	    }
+	
+	    public void getName(String name) {
+	        IncrementalChange var2 = $change;
+	        if(var2 != null) {
+	            var2.access$dispatch("getName.(Ljava/lang/String;)V", new Object[]{this, name});
+	        } else {
+	            Log.d("MainActivity", name);
+	        }
+	    }
 
 
+### 5.2.2 程序和AS如何通信
 
-# 6.Instant Run 实现细节
+（[Instant Run源码地址](https://android.googlesource.com/platform/tools/base/+/gradle_3.0.0/instant-run/)）：
 
-**动态加载(俩种机制)：**
+俩者通过`Server` 和ServiceCommunicator俩个类进行通信。应用安装后先启动ContentProvider(`InstantRunContentProvider`),然后在Provider中创建Server实例，并启动，开启了socket等待AS连接。接着协商协议版本，读取消息头等后续操作
 
-1. 修改Java代码需要重启应用加载dex，而在Application初始化时替换了Application，新建了一个自定义的DexClassLoader去加载所有的dex文件，称之为**重启更新机制**
+> Content Provider that abuses a quirk of early Android initialization to start the instant run service very early, before Application.onCreate(): content providers get initialized before Application.onCreate() is called.
+> 之所以使用ContentProvider 是为了解决了使用额外Service可能导致的ANR
 
-2. 修改代码不需要重启，新建一个`ClassLoader`去加载修改部分，称之为**热更新机制**
+- 客户端(AS)
+
+	修改业务代码时，通过点击AS的Instant Run 按键， 会生成一个Dex文件，包含 被修改的类和一个`AppPatchesLoaderImpl`
+
+	- 被修改的类，即补丁类：
+
+			public class MainActivity$override implements IncrementalChange {
+			    public MainActivity$override() {
+			    }
+			
+			    public static Object init$args(MainActivity[] var0, Object[] var1) {
+			        Object[] var2 = new Object[]{new Object[]{var0, new Object[0]}, "android/app/Activity.()V"};
+			        return var2;
+			    }
+			
+			    public static void init$body(MainActivity $this, Object[] var1) {
+			    }
+			
+			    public static void onCreate(MainActivity $this, Bundle savedInstanceState) {
+			        Object[] var2 = new Object[]{savedInstanceState};
+			        MainActivity.access$super($this, "onCreate.(Landroid/os/Bundle;)V", var2);
+			        $this.setContentView(2131296283);
+			        Log.d("MainActivity", "msg = " + (new HelloJava()).say());
+			        $this.getName("abcdeg");
+			    }
+			
+			    public static void getName(MainActivity $this, String name) {
+			        Log.d("MainActivity", name);
+			    }
+			
+			    public Object access$dispatch(String var1, Object... var2) {
+			        switch(var1.hashCode()) {
+			        case -1443662126:
+			            getName((MainActivity)var2[0], (String)var2[1]);
+			            return null;
+			        case -1359307449:
+			            init$body((MainActivity)var2[0], (Object[])var2[1]);
+			            return null;
+			        case -641568046:
+			            onCreate((MainActivity)var2[0], (Bundle)var2[1]);
+			            return null;
+			        case -639852501:
+			            return init$args((MainActivity[])var2[0], (Object[])var2[1]);
+			        default:
+			            throw new InstantReloadException(String.format("String switch could not find '%s' with hashcode %s in %s", new Object[]{var1, Integer.valueOf(var1.hashCode()), "com/ryan/hotfix/MainActivity"}));
+			        }
+			    }
+			}
+
+	- `AppPatchesLoaderImpl`类中包含被修改类的信息
+
+			public class AppPatchesLoaderImpl extends AbstractPatchesLoaderImpl {
+			    public static final long BUILD_ID = 1520927787779L;
+			
+			    public AppPatchesLoaderImpl() {
+			    }
+			
+			    public String[] getPatchedClasses() {
+			        return new String[]{"com.ryan.hotfix.MainActivity"};
+			    }
+			}
+
+- 服务端(APP)
+
+	AS通过SOCKET告知APP，然后APP的Server类进行处理。AS会向APP 发送信息 标志APP 需要加载新的PATCHES，源码中的**`case MESSAGE_PATCHES`**，会调用`handleHotSwapPatch()`方法进行处理
+
+	`handleHotSwapPatch()`方法主要 会将AS生成的dex文件通过DexClassLoader加载进来，然后通过反射创建`AppPatchesLoaderImpl`实例，调用其`getPatchedClasses()`方法，获取哪些代码发生了变化的列表，然后会调用其`load()`方法，循环所读取到的发生了变换的列表，并做如下事情：
+
+	1. 通过反射创建被修改的类(dex中的类，不是原始的那个类)
+
+	2. 再用 `ClassLoader` 把 修改过的类 load 进来，由于在最开始 gradle 编译 app-debug.apk 时，就使用 asm 等字节码操作工具给每个类都生成了一个 $change 静态成员，同时在每个方法的开头都插入了逻辑，判断 $change 是否为空，为空则走正常逻辑，否则走修复后的逻辑；这里通过反射直接把 MainActivity$override 实例赋值给了 $change 成员；同时，如果以前已经热部署过了一次或者多次，会把 $change 成员的 $change 字段置为 true，表明之前的过期了。
+
+	接着会调用`restart()`方法，然后最终调用到`Restarter.restartActivityOnUiThread()`方法
+
+	`restartActivityOnUiThread（）`方法最终会去调用`activity.restart()`方法。**到这里 类会重新加载，并且此时`$change`成员不为空，且指向了被修复的类。**
+
+	
