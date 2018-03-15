@@ -69,7 +69,7 @@ jenkins+jacoco
 
 - ~~学习 利用classloader实现热修复~~
 
-- 学习 instant run
+- ~~学习 instant run~~
 
 - 学习利用 instant run 实现热修复
 
