@@ -61,7 +61,7 @@
 
 ![](https://upload-images.jianshu.io/upload_images/1313748-e7c0b89defecdc1e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/417)
 
-Android Studio monitors： 运行着Gradle任务来生成增量.dex文件（这个dex文件是对应着开发中的修改类） Android Studio会提取这些.dex文件发送到`App Server`(socket)，交给自定义的类加载去加载.dex文件
+Android Studio monitors： 运行着Gradle任务来生成增量.dex文件（这个dex文件是对应着开发中的修改类） Android Studio会提取这些.dex文件发送到`App Server`(通过socket)，交给自定义的类加载去加载.dex文件
 
 **加载的原理：**
 
@@ -100,7 +100,7 @@ manifest文件合并、打包，和res一起被AAPT合并到APK中，同样项�
 
 1. 在有Instant Run的环境下：一个新的`App Server`类会被注入到App中，与Bytecode instrumentation协同监控代码的变化
 
-2. 同时会生成一个新的Application类，它注入了一个自定义类加载器,同时确保该Application类会启动我们所需的新注入的`App Server`(长连接，socket)。Manifest会被修改来确保应用能使用这个新的Application类(如果已经存在Application，Instant Run创建的这个Application类会代理已存在的Application)
+2. ~~同时会生成一个新的Application类，它注入了一个自定义类加载器,同时确保该Application类会启动我们所需的新注入的`App Server`(长连接，socket)。Manifest会被修改来确保应用能使用这个新的Application类(如果已经存在Application，Instant Run创建的这个Application类会代理已存在的Application)~~
 
 3. Instant Run 成功运行，下次使用时，会通过决策，合理运用冷温热插拔来协助缩短构建和部署时间
 
