@@ -8,6 +8,13 @@
 
 [美团 Robust热更新使用图解](http://blog.csdn.net/dawN4get/article/details/72861966)
 
+# 1. 使用方式
+
+参考[Robust-官方文档](https://github.com/Meituan-Dianping/Robust/blob/master/README-zh.md)即可实现，注意除了需要生成 补丁包 以及添加依赖之外。还需要 手动调用加载补丁包的方法`new PatchExecutor(ctx,patchManipulate,robustCallback).start()`
+
+    public PatchExecutor(Context context, PatchManipulate patchManipulate, RobustCallBack robustCallBack)
+
+
 # 1. 原理解析
 
 1. 打基础包时插桩，在每个类中插入一段类型为 `ChangeQuickRedirect`静态变量的逻辑
@@ -18,4 +25,3 @@
 ## 1.1 基础概念
 
 打基础包时，Robust会为每个类新增一个类型`ChangeQuickRedirect`的静态变量，并且在每个方法前，增加判断变量是否为空的逻辑，如果不为空，则走插桩的逻辑，否则走正常逻辑
-
