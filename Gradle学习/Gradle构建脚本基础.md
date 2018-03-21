@@ -21,7 +21,7 @@ Gradle中所有的内容都是基于俩个基本概念：**项目和任务**
 	    }
 	}
 
-- 在命令行shell中，移动了包含该构建脚本的目录，并使用`gradle -q hello`执行此构建脚本
+- 在命令行shell中，移动到包含该构建脚本的目录，并使用`gradle -q hello`执行此构建脚本
 
 - 这个构建脚本定义了一个任务，任务名称是`hello`,并且添加了一个action.当执行`gradle hello`时，会去执行提供了的action，这个action只是一个包含一些待执行的groovy代码的闭包
 
