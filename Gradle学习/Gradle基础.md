@@ -77,7 +77,9 @@
 
 - **Groovy支持函数调用的时候通过 参数名1：参数值1，参数名2：参数值2 的方式来传递参数**
 
-		apply plugin:'com.android.library
+		apply plugin:'com.android.library'
+
+- 根据Groovy的语法，一个Property会自动生成get/set方法
 
 ### 1.1 Project和tasks和action
 - 每个项目的编译至少有一个project
@@ -89,8 +91,6 @@
 - 每一个Library和每一个module都是单独的Project。根据Gradle的要求，每一个Project在其根目录下都需要有一个build.gradle
 
 - task在build.gradle中被定义
-
-- 根据Groovy的语法，一个Property会自动生成get/set方法
 
 
 ### 1.2 Gradle工作流程
@@ -151,9 +151,12 @@
 	println "Parent: " + gradle.parent  
 
 - settings.gradle和module下的build.gradle ,得到的gradle实例对象是一样的(根据hashCode判断)
+
 - HomeDir是gradle可执行程序的路径
+
 - User Home Dir:gradle配置的目录,存储了一些配置文件,以及编译过程中的缓存文件，生成的类文件，编译过程中依赖的插件等
-- gradle对象 默认是Settings和Project的成员变量.
+
+- **gradle对象 默认是Settings和Project的成员变量.**
 
 ##### 1.2.2.2 Project对象
 - 每个`build.gradle`文件会转换成一个Project对象.
@@ -174,33 +177,47 @@
 	通过Project的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
 	
 		- 除了加载二进制文件,还可以加载gradle文件
-		>from: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
-		plugin: Plugin的Id或者是插件的具体实现类 
-		to: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
+		> **from**: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
+		>
+		> **plugin**: Plugin的Id或者是插件的具体实现类 
+
+		> **to**: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
 	
 	2. 配置插件。例如设置哪里读取源文件。
 	
 	3. 设置属性
 
 		- 如果是单个脚本，则不需要考虑属性的跨脚本使用。但是Gradle往往包含不止一个build.gradle文件！例如,build.gradle,settings.gralde 和自定义的build.gradle.**Gradle提供了一种名为extra property的方法**
+
 		- **extra property是额外属性的意思**，在第一次定义该属性的时候需要通过ext前缀来标示它是一个额外的属性。定义好之后，后面的存取就不需要ext前缀了。**ext属性支持Project和Gradle对象即Project和Gradle对象都可以设置ext属性**
+
 		- 属性值可以从local.properties中读取
 				Properties p = new Properties()
 				File pF = new File(rootDir.getAbsolutePath()+'/local.properties')
 				properties.load(pF.newDataInputStream())
-		- **可以直接获取ext前缀，表明操作的是外置属性**，表明操作的是外置属性.定义属性或设置属性时需要ext前缀。读取时就不需要ext前缀了
+
+		- **可以直接获取ext前缀，表明操作的是外置属性**.定义属性或设置属性时需要ext前缀。读取时就不需要ext前缀了
+
 				gradle.ext.api = p.getProperty('sdk.api')
 				println gradle.api 
+
 		除了`ext.xxx=value`这种定义方式之外，还可以使用`ext{}`这种书写方式。**ext{}不是ext函数传入Closure，但是ext{}中的{}的确是Closure**
 				ext{
 					    getVersionNameAdvanced = this.&getVersionNameAdvanced  
 				}
+
 		- **加载utils.gradle的Project对象**和**utils.gradle对象本身所代表的Script对象**的关系。
+
 			- 当一个Project apply一个gradle文件时，这个gradle文件会转换成一个Script对象
+
 			- Script中有一个delegate对象，这个delegate默认是被设置为 加载Script的Project对象(即调用apply的project)
+
 			- 在apply中有一个to参数，可以将delegate指定为别的对象
+
 			- **delegate作用**：当Script中操作一些不是Script自己定义的变量或函数时，gradle会到Script的delegate对象去找，看看有没有定义这些变量或函数
+
 		- utils.gradle对应的project就是加载utils.gradle的project
+
 		- utils中的ext 就是对应project的ext。
 
 
@@ -212,7 +229,7 @@
 
 - Task创建的时候可以指定Type，通过`type:typeName`表达。作用就是告诉Gradle，该Task是从哪个基类Task 派生。 则新建的Task也具有基类Task的功能。例如：`task mTask(type:Copy)`，mTask也是一个Copy Task
 
--  task mTask{configure closure}。花括号代表一个Closure，会在Gradle创建这个Task之后返回给用户之前，先执行这个Closure的内容
+-  **`task mTask{configure closure}`。花括号代表一个Closure，会在Gradle创建这个Task之后返回给用户之前，先执行这个Closure的内容,这个Closure可以被当做一个配置项的存在，去做一些配置，例如设置分组，添加描述等**
 
 -  task mTask<<{xxx},意思是把closure作为一个action添加到Task的action队列，并且最后才去执行它(`<<`符号是doLast的代表)
 
@@ -234,20 +251,27 @@
 
 - 在创建task时，通常可以传入一个Closure,**这个Closure是用来配置task的，会在task返回之前执行。**
 
->task myTask  <==myTask是新建Task的名字  
->task myTask { configure closure } //closure用来设置配置
->task myType << { task action } <==注意，<<符号是doLast的缩写  
->task myTask(type: SomeType)  
->task myTask(type: SomeType) { configure closure }
+		task myTask  <==myTask是新建Task的名字  
+		
+		task myTask { configure closure } //closure用来设置配置
+		
+		task myType << { task action } <==注意，<<符号是doLast的缩写 ，用来添加action
+		
+		task myTask(type: SomeType)  
+		
+		task myTask(type: SomeType) { configure closure }
 
-	task('task1')<<{println 'task1 is created'}
-	task(task2,type:Copy){
-		from 'xxxx'
-		into 'yyyy'
-	}
-	task task3<<{println 'task3 is created'}
+		task('task1')<< { println 'task1 is created'}
 
-- Task另外一种创建方式
+		task(task2,type:Copy){
+			from 'xxxx'
+			into 'yyyy'
+		}
+
+		task task3<<{println 'task3 is created'}
+
+- **Task另外一种创建方式**
+
 		tasks.create(name:'task4'){
 			group 'test'
 			description 'i am task4'
@@ -278,6 +302,7 @@
 		}
 
 - Gradle可以动态创建 Task
+
 		4.times{
 			task "task$it"{
 				doLast{
@@ -287,6 +312,7 @@
 		}
 
 - 创建任务之后,可以在运行时动态添加依赖关系
+
 		task0.dependsOn(task1,task2,task3)
 
 - 可以为task添加来自其他project的依赖
@@ -303,7 +329,7 @@
 			}
 		}
 
-- 依赖可以使用一个闭包来返回闭包
+- 依赖可以使用一个闭包来返回Task
 
 		task6.dependsOn {
 			tasks.findAll{
