@@ -1,4 +1,6 @@
+[拥抱 Android Studio 之五：Gradle 插件开发](http://blog.bugtags.com/2016/03/28/embrace-android-studio-gradle-plugin/)
 
+[官方文档-自定义插件](https://docs.gradle.org/current/userguide/custom_plugins.html)
 ---
 一定要注意Android studio 中gradle的版本,gradle插件和gradle是不同的。前者用来配置环境使得AS支持gradle，后者是用于Gradle开发
 ---
@@ -97,7 +99,7 @@ Gradle支持俩种类型的Task：
 ## 2.1 编写简单的插件
 以下的例子都是在build.gradle中编写的,有些GradleAPI 在AndroidStudio中 不存在，因为Gradle的版本问题。。一些API 在特定版本之后才出现
 ---
-- 给出的例子中设置的插件类型是Project类型的，可以在Plugin<>泛型中设置更多的类型参数（目前不太可能）
+给出的例子中设置的插件类型是Project类型的，可以在Plugin<>泛型中设置更多的类型参数（现在已经支持 Gradle/Setting/Project等）
 
 		apply plugin:GreetingPlugin //直接依赖 去使用！
 	
@@ -110,6 +112,8 @@ Gradle支持俩种类型的Task：
 	        	}
 	    	}
 		}
+
+- build script形式的插件，需要直接在编写 插件的build.gradle中去apply插件，然后在项目中apply这个文件
 
 ## 2.2 从构建中获取输入信息
 - 其实就是从apply插件的 build.gradle 中 传递参数给插件！
@@ -241,8 +245,12 @@ Gradle支持俩种类型的Task：
 		    compile gradleApi()
 		    compile localGroovy()
 		}
-2. 提供一个`.properties`文件放到`META-INF/gradle-plugins`文件夹下,文件名就是插件的id(就是在build.gradle时 apply plugin:'文件名',建议与自己设置的gourpId+artifactId相符合)，implementation-class 指向具体的实现类(请填写完整的类名)
+2. 提供一个`.properties`文件放到`META-INF/gradle-plugins`文件夹下,**文件名就是插件的id**(就是在build.gradle时 apply plugin:'文件名',建议与自己设置的gourpId+artifactId相符合)，implementation-class 指向具体的实现类(请填写完整的类名)
 		implementation-class=org.gradle.GreetingPlugin
+
+	- `gradle-plugins`，可以指定多个properties文件，定义多个插件
+
+	- properties文件名 被用作添加插件时的插件名称
 
 3. 在其他项目中使用自定义的插件
 	- 这是发布到maven的情况
@@ -252,6 +260,8 @@ Gradle支持俩种类型的Task：
 			    repositories {
 			        maven {
 			            url uri('../repo')
+			            url 'E:/github/HOT_FIX/repo/'
+
 			        }
 			    }
 			    dependencies {
@@ -444,5 +454,4 @@ Managing a collection of objects
 
 
 ## 3.3 发布到Jcenter仓库
-
 
