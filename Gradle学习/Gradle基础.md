@@ -102,9 +102,15 @@
 
 1.  **初始化阶段**：执行settings.gradle.创建 Project 对象，如果有多个build.gradle，也会创建多个project.
 
+	- Hook:gradle.beforeProject{project->}
+
 2.  **配置阶段**：在这个阶段，会解析每个Project中的build.gradle(执行所有的编译脚本)，同时还会创建project的所有的task，并创建一个有向图来描述Task之间的依赖关系.作为构建一部分的构建脚本会被执行
 
+	- Hook:gradle.taskGraph.whenReady{graph->}
+
 3.  **执行阶段**：在这个阶段，gradle 会根据传入的参数决定如何执行这些task（在配置阶段被创建和配置的）,真正action的执行代码就在这里.gradle按顺序执行每个任务。
+
+	- Hook:gradle.buildFinished{result ->}
 
 - Gradle有一个初始化流程,这个时候setting.gradle会执行
 
