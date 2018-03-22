@@ -702,7 +702,7 @@ Gradle支持 enhanced tasks(增强型任务)，即这些任务拥有自己的属
 	> gradle -q copy
 	I am the new one.
 
-- 示例1表示用自定义的任务去替换了一个`Copy`类型的任务，因为它们使用相同的名称。另外必须将新任务的`override`属性设置为true，否则Gradle会抛出一个异常提示任务名称已经存在。
+- 示例1表示用自定义的任务去替换了一个`Copy`类型的任务，因为它们使用相同的名称。另外必须将新任务的`overwrite`属性设置为true，否则Gradle会抛出一个异常提示任务名称已经存在。
 
 ## 2.9 跳过任务
 Gradle提供了多种方式来跳过任务执行
@@ -924,7 +924,7 @@ Gradle通过一个**Increamental Build 增量构建**的功能来支持这种行
 ### 2.10.4 Stale task outputs
 
 ## 2.11 Task rules
-有时需要一个任务的行为依赖于一个用哦与极大或无穷的数值范围的参数。一个很好的方式就是使用task rules
+有时需要一个任务的行为依赖于一个在极大或无穷的数值范围的参数。一个很好的方式就是使用task rules
 
 **示例1**：Task rule
 
