@@ -1,10 +1,17 @@
 [拥抱 Android Studio 之五：Gradle 插件开发](http://blog.bugtags.com/2016/03/28/embrace-android-studio-gradle-plugin/)
 
 [官方文档-自定义插件](https://docs.gradle.org/current/userguide/custom_plugins.html)
----
-一定要注意Android studio 中gradle的版本,gradle插件和gradle是不同的。前者用来配置环境使得AS支持gradle，后者是用于Gradle开发
----
+
+[Gradle 使用指南 -- Plugin DSL 扩展](http://www.heqiangfly.com/2016/03/16/development-tool-gradle-customized-plugin-dsl-extension/)
+
+[Gradle低于4.2的版本如何实现嵌套DSL](https://stackoverflow.com/questions/28999106/define-nested-extension-containers-in-gradle?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa)
+
+
+
+**一定要注意Android studio 中gradle的版本,gradle插件和gradle是不同的。前者用来配置环境使得AS支持gradle，后者是用于Gradle开发**
+
 # 1.自定义任务类
+
 Gradle支持俩种类型的Task：
 
 1. 简单类型的Task，可以通过一些`action Closure` 定义。`action closure`确定了Task的行为
@@ -276,55 +283,6 @@ Gradle支持俩种类型的Task：
 			}
 
 
-## 2.6 为插件提供DSL
-- 通过`extension object` 可以为插件添加项目属性和DSL块
-
-### 2.6.1 嵌套的DSL元素
-- 要创建一个嵌套的DSL元素，需要使用`ObjectFactory`对象来生成一个装饰过的对象
-
-- 如下例子中，插件通过构造函数将 项目的`ObjectFactory`传递给`extension object`
-
-
-		class Person {
-		    String name
-		}
-		
-		class GreetingPluginExtension {
-		    String message
-		    final Person greeter
-		
-		    @javax.inject.Inject
-		    GreetingPluginExtension(ObjectFactory objectFactory) {
-		        // Create a Person instance
-		        greeter = objectFactory.newInstance(Person)
-		    }
-		
-		    void greeter(Action<? super Person> action) {
-		        action.execute(greeter)
-		    }
-		}
-		
-		class GreetingPlugin implements Plugin<Project> {
-		    void apply(Project project) {
-		        // Create the extension, passing in an ObjectFactory for it to use
-		        def extension = project.extensions.create('greeting', GreetingPluginExtension, project.objects)
-		        project.task('hello') {
-		            doLast {
-		                println "${extension.message} from ${extension.greeter.name}"
-		            }
-		        }
-		    }
-		}
-		
-		apply plugin: GreetingPlugin
-		
-		greeting {
-		    message = 'Hi'
-		    greeter {
-		        name = 'Gradle'
-		    }
-		}
-
 
 ### 2.6.2 配置对象集合
 Managing a collection of objects
@@ -454,4 +412,326 @@ Managing a collection of objects
 
 
 ## 3.3 发布到Jcenter仓库
+//TODO
 
+# 4. Plugin DSL简介
+
+[Gradle-官方文档-Implementing a dsl](https://docs.gradle.org/current/userguide/custom_plugins.html#sec:implementing_a_dsl)
+
+在进行Gradle配置时，很多配置是在`build.gradle`中进行设置的，插件可以在构建过程中获取这些配置。
+
+- 构建脚本中的扩展声明以及扩展属性和自定义任务属性之间的映射发生Gradle生命周期的 配置阶段
+
+通过查看`build.gradle`中的DSL的注释可以看到如下例子：
+
+	android {
+		....
+	}
+
+- `android`是这个DSL 创建时的名称
+
+- **实际上`android`类型是`ExtensionContainer`，它是一个对象，意味着它也可以调用方法**
+
+- 每个`build.gradle`会对应一个`Project`,`android`这个对象是通过`Project`对象的` ExtensionContainer getExtensions();`方法获取到的
+
+- 上面的代码，实际上是在调用如下方法
+
+		com.android.build.gradle.AppExtension android(Closure configuration)
+
+## 4.2 DSL创建的原理
+
+创建DSL 主要是调用一下方法：
+
+	project.extensions.create('myplugin', MyExtension.class)
+
+`create`方法有三个重载方法：
+
+    @Incubating
+    <T> T create(Class<T> var1, String var2, Class<? extends T> var3, Object... var4);
+
+    @Incubating
+    <T> T create(TypeOf<T> var1, String var2, Class<? extends T> var3, Object... var4);
+
+    <T> T create(String name, Class<T> type, Object... constructionArguments);
+
+创建DSL时，通常使用第三个重载方法，其参数组成如下：
+
+1. `String name`:被创建的extension的名称，即在`build.gradle`中可以配置的代码块方法名称
+
+2. `Class<T> type`:被创建的extension的类型，即关联的扩展实体类
+
+3. `Object... constructionArguments`:构造extension实例时传入的参数
+
+		//如果需要把在apply方法中的project传入
+		project.extensions.create('myplugin',MyExtension.class),project
+		//对应的扩展实体类需要添加一个待有Project类的构造函数
+		class MyExtension {
+		    ......
+		    public MyExtension(Project project) {
+		    }
+		    ......
+		}
+
+## 4.3 Plugin中DSL的创建
+
+通过`project.extensions` 可以为插件添加项目属性和DSL块
+
+### 4.3.1 DSL基本实现
+
+1. 创建关联的扩展实体类
+
+		package com.ryan.log
+		
+		class Person {
+		    String mName;
+		}
+
+2. 在Plugin的apply方法中创建
+
+		class Log implements Plugin<Project> {
+		
+		    @Override
+		    void apply(Project project) {
+		        project.extensions.create("Person", Person.class)
+		        project.task('printPerson').doLast {
+		            println project.Person.mName
+		        }
+		    }
+		}
+
+3. 集成插件之后使用
+
+		apply plugin:'com.ryan.log'
+		
+		Person{
+		    mName 'Ryan'
+		}
+
+### 4.3.2 DSL中的成员变量为扩展实体类时
+
+1. 创建关联的扩展实体类，成员变量也是扩展实体类
+
+		package com.ryan.log
+		
+		class Company {
+		    Person mPerson;
+		}
+
+2. 在Plugin的apply方法中创建
+
+        project.extensions.create("Company", Company.class)
+        project.task('printCompany').doLast {
+            println project.Company.mPerson.mName
+        }
+
+3. 集成插件后使用
+
+		Company{
+		    mPerson Person{
+		        mName 'Jack'
+		    }
+		}
+
+### 4.3.3 通过增强型任务实现DSL
+
+
+	class GreetingPlugin implements Plugin<Project> {
+	    void apply(Project project) {
+	        def extension = project.extensions.create('greeting', GreetingPluginExtension, project)
+	        project.tasks.create('hello', Greeting) {
+	            message = extension.message
+	            outputFiles = extension.outputFiles
+	        }
+	    }
+	}
+	
+	class GreetingPluginExtension {
+	    final Property<String> message
+	    final ConfigurableFileCollection outputFiles
+	
+	    GreetingPluginExtension(Project project) {
+	        message = project.objects.property(String)
+	        message.set('Hello from GreetingPlugin')
+	        outputFiles = project.files()
+	    }
+	
+	    void setOutputFiles(FileCollection outputFiles) {
+	        this.outputFiles.setFrom(outputFiles)
+	    }
+	}
+	
+	class Greeting extends DefaultTask {
+	    final Property<String> message = project.objects.property(String)
+	    final ConfigurableFileCollection outputFiles = project.files()
+	
+	    void setOutputFiles(FileCollection outputFiles) {
+	        this.outputFiles.setFrom(outputFiles)
+	    }
+	
+	    @TaskAction
+	    void printMessage() {
+	        outputFiles.each {
+	            logger.quiet "Writing message 'Hi from Gradle' to file"
+	            it.text = message.get()
+	        }
+	    }
+	}
+	
+	apply plugin: GreetingPlugin
+	
+	greeting {
+	    message = 'Hi from Gradle'
+	    outputFiles = files('a.txt', 'b.txt')
+	}
+
+
+
+## 4.4 嵌套DSL
+
+在Gradle4.2之前，官方文档未明确指出嵌套DSL的创建方法
+
+### 4.4.1 Gradle>=4.2
+嵌套DSL类型如下：
+
+	android {
+	    compileSdkVersion 23
+	    buildToolsVersion "23.0.1"
+	    defaultConfig {
+	        applicationId "com.example.heqiang.testsomething"
+	        minSdkVersion 23
+	        targetSdkVersion 23
+	    }
+	}
+
+
+同时通过`@javax.inject.Inject`声明一个带有`org.gradle.api.model.ObjectFactory`参数的构造函数，并在这个构造函数中通过`ObjectFactory`创建嵌套DSL实例
+
+- 如下例子中，插件通过构造函数将 项目的`ObjectFactory`传递给`extension object`
+
+
+		class Person {
+		    String name
+		}
+		
+		class GreetingPluginExtension {
+		    String message
+		    final Person greeter
+		
+		    @javax.inject.Inject
+		    GreetingPluginExtension(ObjectFactory objectFactory) {
+		        // Create a Person instance
+		        greeter = objectFactory.newInstance(Person)
+		    }
+		
+		    void greeter(Action<? super Person> action) {
+		        action.execute(greeter)
+		    }
+		}
+		
+		class GreetingPlugin implements Plugin<Project> {
+		    void apply(Project project) {
+		        // Create the extension, passing in an ObjectFactory for it to use
+		        def extension = project.extensions.create('greeting', GreetingPluginExtension, project.objects)
+		        project.task('hello') {
+		            doLast {
+		                println "${extension.message} from ${extension.greeter.name}"
+		            }
+		        }
+		    }
+		}
+		
+		apply plugin: GreetingPlugin
+		
+		greeting {
+		    message = 'Hi'
+		    greeter {
+		        name = 'Gradle'
+		    }
+		}
+
+### 4.4.2 Gradle < 4.2
+
+
+1. 创建关联的扩展实体类，需要在构造函数创建被嵌套的DSL扩展实体类
+
+		package com.ryan.log
+		
+		class Company {
+		    String mCompany
+		
+		    public Company() {
+		        this.extensions.create("Person", Person.class)
+		    }
+		}
+
+2. 集成插件后使用
+
+		Company{
+		
+		    mCompany 'Hypers'
+		
+		    Person{
+		        mName  'Jack'
+		    }
+		}
+
+
+
+
+## 4.5 DSL-对象集合
+
+通过`Project.container(Java.lang.Class)`方法创建`NamedDomainObjectContainer`实例，这个类NDOC提供了很多管理和配置对象的方法。
+
+为了能够使用`project.container（Class）`方法，**传入的实例必须暴露一个唯一的常量，名称为'name'。**
+
+1. 创建class，必须包含`name`字段，且这个字段必须从构造函数中传入
+
+		package com.ryan.log
+		
+		class Person {
+		    String name
+		    String lastName
+		    Integer age
+		
+		    Person(String name) {
+		        this.name = name
+		    }
+		}
+
+2. 在Plugin中进行声明
+
+		class Log implements Plugin<Project> {
+		
+		    @Override
+		    void apply(Project project) {
+				//创建一个Person实例的container
+		        def persons = project.container(Person.class)
+				//将container 对应成 扩展对象
+		        project.extensions.persons = persons
+		
+		        project.task("printPersons") << {
+		            persons.all {
+		                println "person name = ${it.lastName}"
+		                println "person age = ${it.age}"
+		            }
+		        }
+		    }
+		}
+
+3. 集成插件后使用
+
+		persons{
+		    ryan{
+		        lastName = 'ma'
+		        age = 18
+		    }
+		
+		    jack{
+		        lastName = 'duan'
+		        age = 17
+		    }
+		
+		}
+
+
+赋值必须使用`=`等号。。。。
