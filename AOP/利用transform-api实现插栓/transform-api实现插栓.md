@@ -7,6 +7,8 @@
 
 [android插件官方网站](http://tools.android.com/build#TOC-The-following-release-tags-are-availablestudio-3.0studio-2.3studio-2.2studio-2.0studio-1.5studio-1.4...And-for-gradle:gradle_3.0.0gradle_2.3.0gradle_2.2.0gradle_2.0.0gradle_1.5.0...)
 
+[Transform-Api 官方文档](http://tools.android.com/tech-docs/new-build-system/transform-api)
+
 # 简介
 从`com.android.tools.build:gradle:1.5.0-beta1`开始，gradle插件包含了一个`Transform`接口，允许第三方插件在class文件转成dex文件之前操作编译好的class文件，这个API目标就是简化class文件的自定义操作而不用对Task进行处理
 
@@ -33,20 +35,23 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 **使用方式**：
 
-	android.registerTransform(theTransform) 
-	
-	android.registerTransform(theTransform, dependencies)
+	AppExtension.registerTransform(Transform transform,Object....dependencies)
+
+    public void registerTransform(@NonNull Transform transform, Object... dependencies) {
 
 
 ## 1.1 使用方式
-- 要使用Transform 必须得先添加 依赖`compile 'com.android.tools.build:gradle-api:2.3.3'`或者`compile 'com.android.tools.build:gradle:2.3.0'`
+
+要使用Transform 必须得先添加 依赖`compile 'com.android.tools.build:gradle-api:2.3.3'`或者`compile 'com.android.tools.build:gradle:2.3.0'`。因为当我们通过调用`android.registerTransform()`方法添加`Transform`，所使用的`android`的类型实际上是`AppExtension`,而这相关类存在于`gradle-api-xxx.jar`包中，**另外：这个包就是 gradle-plugin包**。
 
 - 这里有个区别就是 `Com.android.tools.build.gradle Api`和`Com.android.tools.build.gradle`,前者是APIs to customize Android Gradle Builds
 ， 后者是Gradle plug-in to build Android applications. 前者只添加一个`gradle-api`jar包，后者会添加 很多个jar包例如`dex`,`builder`之类的。**但是要注意后者包含前者！**
 
+**Gradle 的各种版本(Gradle-Plugin 3.0.0开始，改为保存在Google自己提供的`google()`仓库 )：**
 
-- [gradle 在maven库中的版本](https://mvnrepository.com/artifact/com.android.tools.build/gradle)
-[gradle-api 在Maven库中的版本](https://mvnrepository.com/artifact/com.android.tools.build/gradle-api)
+1. [gradle 在maven库中的版本](https://mvnrepository.com/artifact/com.android.tools.build/gradle)
+
+2. [gradle-api 在Maven库中的版本](https://mvnrepository.com/artifact/com.android.tools.build/gradle-api)
 
 
 
@@ -54,11 +59,12 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 - [TransformManager](https://android.googlesource.com/platform/tools/base/+/gradle_2.0.0/build-system/gradle-core/src/main/groovy/com/android/build/gradle/internal/pipeline/TransformManager.java)
 
-- 编译运行一下module，查看gradle console 可以看到没有了`preDex`Task,多了一些transform开头的Task。
+编译运行一下module，查看gradle console 可以看到没有了`preDex`Task,多了一些transform开头的Task。
 
 ## 1.3 TransformManager介绍
 ### 1.3.1 getTaskNamePrefix
-- gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理所有的Trasnsform子类，里面有一个方法`getTaskNamePrefix`,在这个方法中可以获取Task的前缀，以transform开头，之后凭借`ContentType`(这个ContentType代表这个Transform的输入文件类型，类型主要有俩种：1.Classes，2.Resources 。ContentType之间使用And连接，拼接完成之后加上With，之后紧跟这个Transform的Name,name在getName()方法中重写返回即可)
+
+gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理所有的Trasnsform子类，里面有一个方法`getTaskNamePrefix`,在这个方法中可以获取Task的前缀，以transform开头，之后凭借`ContentType`(这个ContentType代表这个Transform的输入文件类型，类型主要有俩种：1.Classes，2.Resources 。ContentType之间使用And连接，拼接完成之后加上With，之后紧跟这个Transform的Name,name在getName()方法中重写返回即可)
 
 源码如下： 
 
