@@ -1165,3 +1165,5 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 [Gradle-旧版本文档](https://sites.google.com/a/android.com/tools/tech-docs/new-build-system/user-guide#TOC-Advanced-Build-Customization)
 
 [Android-Dsl-APi](https://google.github.io/android-gradle-dsl/current/index.html)
+
+[Gradle深入与实战（六）Gradle的背后是什么？](http://benweizhu.github.io/blog/2015/03/31/deep-into-gradle-in-action-6/)
