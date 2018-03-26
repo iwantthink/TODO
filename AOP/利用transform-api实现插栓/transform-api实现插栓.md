@@ -9,6 +9,16 @@
 
 [Transform-Api 官方文档](http://tools.android.com/tech-docs/new-build-system/transform-api)
 
+# 重要提示
+
+从gradle-plugin 3.0.0 开始，Google 将Android的一些库放到自己的Google()仓库里了。地址如下：
+
+https://dl.google.com/dl/android/maven2/index.html
+
+但是Google()并没有提供文件遍历功能，所以无法直接访问路径去下载。但是实际上源码还是在那个路径下放着，所以只需要输入待下载文件的完整的路径即可下载。
+
+例如：需要下载`gradle-3.0.0-sources.jar` ,只需要将完整的路径输入即可，https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/3.0.0/gradle-3.0.0-sources.jar
+
 # 简介
 从`com.android.tools.build:gradle:1.5.0-beta1`开始，gradle插件包含了一个`Transform`接口，允许第三方插件在class文件转成dex文件之前操作编译好的class文件，这个API目标就是简化class文件的自定义操作而不用对Task进行处理
 
@@ -64,7 +74,9 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 ## 1.3 TransformManager介绍
 ### 1.3.1 getTaskNamePrefix
 
-gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理所有的Trasnsform子类，里面有一个方法`getTaskNamePrefix`,在这个方法中可以获取Task的前缀，以transform开头，之后凭借`ContentType`(这个ContentType代表这个Transform的输入文件类型，类型主要有俩种：1.Classes，2.Resources 。ContentType之间使用And连接，拼接完成之后加上With，之后紧跟这个Transform的Name,name在getName()方法中重写返回即可)
+gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理所有的Trasnsform子类，里面有一个方法`getTaskNamePrefix`,在这个方法中可以**获取Task的前缀**，以`transform`开头，之后根据输入类型，即`ContentType`,将输入类型添加到名称中.`ContentType`之间使用`And`连接，拼接完成之后加上`With`，之后紧跟这个Transform的Name,name是在getName()方法中重写返回
+
+- `ContentType`代表这个Transform的输入文件类型，类型主要有俩种：1.`Classes`，2.`Resources` 。
 
 源码如下： 
 
@@ -86,41 +98,110 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 		        return sb.toString();
 		    }
 
-- ContentType是一个接口，有一个默认的枚举类的实现类，里面定义了俩种文件，一种是Class文件，另一种就是资源文件
+- ContentType是一个接口，有一个默认的枚举类的实现类，**里面定义了俩种文件，一种是Class文件，另一种就是资源文件**
 
 源码如下：
 
-	interface ContentType {
+    /**
+     * A content type that is requested through the transform API.
+     */
+    interface ContentType {
+
+        /**
+         * Content type name, readable by humans.
+         * @return the string content type name
+         */
+        String name();
+
+        /**
+         * A unique value for a content type.
+         */
+        int getValue();
+    }
+
+    /**
+     * The type of of the content.
+     */
+    enum DefaultContentType implements ContentType {
+        /**
+         * The content is compiled Java code. This can be in a Jar file or in a folder. If
+         * in a folder, it is expected to in sub-folders matching package names.
+         */
+        CLASSES(0x01),
+
+        /** The content is standard Java resources. */
+        RESOURCES(0x02);
+
+        private final int value;
+
+        DefaultContentType(int value) {
+            this.value = value;
+        }
+
+        @Override
+        public int getValue() {
+            return value;
+        }
+    }
+
+
+- `Scrope`是另一个枚举类，可以翻译为 作用域，`Scrope`和`ContentType`一起组成输出产物的目录结构，可以看到`app-build-intermediates-transforms-dex`就是由这俩个值组合产生的。具体`Scrope`的作用可以看注释
+	
+	    /**
+	     * Definition of a scope.
+	     */
+	    interface ScopeType {
+	
 	        /**
-	         * Content type name, readable by humans.
-	         * @return the string content type name
+	         * Scope name, readable by humans.
+	         * @return a scope name.
 	         */
 	        String name();
 	
 	        /**
-	         * A unique value for a content type.
+	         * A scope binary flag that will be used to encode directory names. Must be unique.
+	         * @return a scope binary flag.
 	         */
 	        int getValue();
 	    }
 	
 	    /**
-	     * The type of of the content.
+	     * The scope of the content.
+	     *
+	     * <p>
+	     * This indicates what the content represents, so that Transforms can apply to only part(s)
+	     * of the classes or resources that the build manipulates.
 	     */
-	    enum DefaultContentType implements ContentType {
-	        /**
-	         * The content is compiled Java code. This can be in a Jar file or in a folder. If
-	         * in a folder, it is expected to in sub-folders matching package names.
-	         */
-	        CLASSES(0x01),
+	    enum Scope implements ScopeType {
+	        /** Only the project content */
+	        PROJECT(0x01),
+	        /** Only the sub-projects. */
+	        SUB_PROJECTS(0x04),
+	        /** Only the external libraries */
+	        EXTERNAL_LIBRARIES(0x10),
+	        /** Code that is being tested by the current variant, including dependencies */
+	        TESTED_CODE(0x20),
+	        /** Local or remote dependencies that are provided-only */
+	        PROVIDED_ONLY(0x40),
 	
 	        /**
-	         * The content is standard Java resources.
+	         * Only the project's local dependencies (local jars)
+	         *
+	         * @deprecated local dependencies are now processed as {@link #EXTERNAL_LIBRARIES}
 	         */
-	        RESOURCES(0x02);
+	        @Deprecated
+	        PROJECT_LOCAL_DEPS(0x02),
+	        /**
+	         * Only the sub-projects's local dependencies (local jars).
+	         *
+	         * @deprecated local dependencies are now processed as {@link #EXTERNAL_LIBRARIES}
+	         */
+	        @Deprecated
+	        SUB_PROJECTS_LOCAL_DEPS(0x08);
 	
 	        private final int value;
 	
-	        DefaultContentType(int value) {
+	        Scope(int value) {
 	            this.value = value;
 	        }
 	
@@ -131,39 +212,23 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 	    }
 
 
-- `Scrope`是另一个枚举类，可以翻译为 作用域，`Scrope`和`ContentType`一起组成输出产物的目录结构，可以看到`app-build-intermediates-transforms-dex`就是由这俩个值组合产生的。具体`Scrope`的作用可以看注释
-
-		enum Scope {
-		        /** Only the project content */
-		        PROJECT(0x01),
-		        /** Only the project's local dependencies (local jars) */
-		        PROJECT_LOCAL_DEPS(0x02),
-		        /** Only the sub-projects. */
-		        SUB_PROJECTS(0x04),
-		        /** Only the sub-projects's local dependencies (local jars). */
-		        SUB_PROJECTS_LOCAL_DEPS(0x08),
-		        /** Only the external libraries */
-		        EXTERNAL_LIBRARIES(0x10),
-		        /** Code that is being tested by the current variant, including dependencies */
-		        TESTED_CODE(0x20),
-		        /** Local or remote dependencies that are provided-only */
-		        PROVIDED_ONLY(0x40);
-		
-		        private final int value;
-		
-		        Scope(int value) {
-		            this.value = value;
-		        }
-		
-		        public int getValue() {
-		            return value;
-		        }
-		    }
-
-
 
 ### 1.3.2 getName()
-- As目录`app-build-intermediates-transforms`，这个目录下 有一个`proguard`目录，是Transform `ProguardTransform`产生的，在源码中可以找到其实现了`getName`方法，返回了`proguard`.这个`getName()`方法返回的值就创建了`proguard`这个目录
+
+
+    /**
+     * Returns the unique name of the transform.
+     *
+     * <p>This is associated with the type of work that the transform does. It does not have to be
+     * unique per variant.
+     */
+    @NonNull
+    public abstract String getName();
+
+#### 1.3.2.1 举例
+
+
+1. As目录`app/build/intermediates/transforms`，这个目录下 有一个`proguard`目录，是Transform `ProguardTransform`产生的，在源码中可以找到其实现了`getName`方法，返回了`proguard`.这个`getName()`方法返回的值就创建了`proguard`这个目录
 
 		@NonNull
 	    @Override
@@ -171,7 +236,9 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 	        return "proguard";
 	    }
 
-- 接着看这个`ProguardTrasnform`的输入文件类型
+	- 继承关系：`ProGuardTransform`->`BaseProguardAction`->`ProguardConfigurable`->`Transform`
+
+2. 接着看这个`ProguardTrasnform`的输入文件类型
 
 		@NonNull
 	    @Override
@@ -183,58 +250,44 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 
 			public static final Set<ContentType> CONTENT_JARS = ImmutableSet.<ContentType>of(CLASSES, RESOURCES);
 				
-- 因此根据`getTaskNamePrefix`的生成规则，这个`Transform`最终在控制台显示的名字	
+3. 因此根据`getTaskNamePrefix`的生成规则，这个`Transform`最终在控制台显示的名字	
 
 			transformClassesAndResourcesWithProguardForDebug
 	
 	- For后面跟的是buildType+productFlavor，比如QihooDebug，XiaomiRelease，Debug，Release。
 
 ### 1.3.3 输出产物的目录生成规则
-1. 输出产物的目录指的是`/proguard/release/jars/3/1f/main.jar`
+
+1. 输出产物的目录指的是`/proguard/release/0.jar`
 
 2. `proguard`上面说了，是`getName()`方法返回的，而`release`则是`buildType`的名字，注意这里不一定是只有`buildType`，如果你的项目中指定了`productFlavor`，那么可能`release`的上一个节点还有`productFlaovor`，就像这样`/proguard/qihoo/release/`。
 
-3. 在`ProGuardTransform`中重写了`getScopes`方法，先忽略`isLibrary`的情况，先分析作为app module不是library的情况。可以看到最终返回的是`TransformManager.SCOPE_FULL_PROJECT`
+3. 在`ProGuardTransform`在其父类`ProguardConfigurable`中重写了`getScopes`方法，先忽略`isLibrary`的情况，先分析作为app module不是library的情况。可以看到最终返回的是`TransformManager.SCOPE_FULL_PROJECT`
 		
-		public Set<Scope> getScopes() {
-		  if (isLibrary) {
-		      return Sets.immutableEnumSet(Scope.PROJECT, Scope.PROJECT_LOCAL_DEPS);
-		  }
-		
-		  return TransformManager.SCOPE_FULL_PROJECT;
-		}
+	    @NonNull
+	    @Override
+	    public Set<? super Scope> getScopes() {
+	        if (variantType == VariantType.LIBRARY) {
+	            return TransformManager.SCOPE_FULL_LIBRARY_WITH_LOCAL_JARS;
+	        }
+	
+	        return TransformManager.SCOPE_FULL_PROJECT;
+	    }
 
 	**TransformManager.SCOPE\_FULL\_PROJECT的值如下**：
 	
-		public static final Set<Scope> SCOPE_FULL_PROJECT = Sets.immutableEnumSet(
-            Scope.PROJECT,
-            Scope.PROJECT_LOCAL_DEPS,
-            Scope.SUB_PROJECTS,
-            Scope.SUB_PROJECTS_LOCAL_DEPS,
-            Scope.EXTERNAL_LIBRARIES);
+	    public static final Set<Scope> SCOPE_FULL_PROJECT =
+	            Sets.immutableEnumSet(
+	                    Scope.PROJECT,
+	                    Scope.SUB_PROJECTS,
+	                    Scope.EXTERNAL_LIBRARIES);
 
-	将这五个Scope的值加一起正好是`1f`,这就是目录中的`1f`的来源。
+4. 在`proguard/release/`目录下，还有一个`_content_.json`文件，里面保存有`scopes,types,format,present`等信息。可以在`ProguardTransform`的`doMinification`方法中找到输出代码：
 
-4. 目录中的`3`是根据`TransformManager.CONTENT_JAR`中的俩个值相加所得，`ImmutableSet.<ContentType>of(CLASSES, RESOURCES)` 表示Proguard 的输入文件既有class文件又有资源文件，这俩个枚举的值相加等于3!
+		File outFile =output.getContentLocation(
+		                            "combined_res_and_classes", outputTypes, scopes, Format.JAR);
 
-5. `ProguardTransform`中有如下一段代码,`asJar`这个变量在构造函数中被赋值为true
-
-		File outFile = output.getContentLocation("main", outputTypes, scopes,asJar ? Format.JAR : Format.DIRECTORY);
-	
-	`Format.JAR`代表输出文件有一个后缀jar,如果是`Format.DIRECTORY`则代表输出文件是目录结构。
-
-	从这段代码还可以看到输出文件的文件名为`main`,最终输出文件是`main.jar`
-
-	`Format.JAR`还代表是在`jars`目录下面的子目录中。如果是`Format.DIRECTORY`,那就是在`folders`目录下的子目录中
-
-6. **文件目录=》jars，outputTypes=》3，scopes=》1f，文件名=》main.jar**组成了`jars/3/1f/main.jar`,这就是输出产物的目录结构，即`ProguardTransform`的产物。另外这个文件路径中还可能会包含`buildType`和`productFlavor`!
-		
-		/proguard/qihoo/release/jars/3/1f/main.jar
-		/proguard/qihoo/debug/jars/3/1f/main.jar
-		/proguard/xiaomi/release/jars/3/1f/main.jar
-		/proguard/xiaomi/debug/jars/3/1f/main.jar
-
-7. 这个`ProguardTransform`的输出产物，会作为下一个依赖它的`Transform`的输入产物。~~~当然，输入产物是根据`getInputTypes`方法中返回的文件类型去对应的目录读取输入文件，同时如果定义了输入文件为`class`文件，那么资源文件就会被过滤然后传递到下一个`Transform`中~~~\
+5. 这个`ProguardTransform`的输出产物，会作为下一个依赖它的`Transform`的输入产物
 
 ### 1.3.4 输出输入的关系
 在没有开启混淆的情况下,ProguardTransform的下一个Transform是DexTransform。 
@@ -285,9 +338,9 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 
 可以看到proguard的产物`transforms\proguard\release`变成了 dex的输入文件.
 
-- 结论：可以向gradle plugin 注册一个Transform ,这个Transform注册之后，需要在编译成成字节码之后被执行，执行完之后再去执行混淆的`ProguardTransform`。这样`ProguardTransform`的输入文件就变成自定义的Transform的输入文件，然后自定义的Transform的输出文件就变成了 `ProguardTransform`的输入文件。 
+结论：**可以向gradle plugin 注册一个Transform ,这个Transform注册之后，需要在编译成字节码之后被执行，执行完之后再去执行混淆的`ProguardTransform`。这样`ProguardTransform`的输入文件就变成自定义的Transform的输入文件，然后自定义的Transform的输出文件就变成了 `ProguardTransform`的输入文件。 **
 
-	开启混淆其实也是类似的做法，只是把`ProguardTransform`换成了`DexTransform`
+**开启混淆其实也是类似的做法，只是把`ProguardTransform`换成了`DexTransform`**
 
 
 ### 1.3.5 自定义Transform
@@ -808,4 +861,70 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 - 具体的混淆的逻辑。。建议看gradle的源码，因为上面的这些步骤 就是对gradle混淆的源码的复现
 
 
-# 2. BaseExtension
+# 2. Android DSL和Gradle 类的对应关系
+
+## 2.1 添加插件
+
+在Android  Studio 添加插件时：
+
+	apply plugin: 'com.android.application'
+
+实际上`apply()`方法是属于当前`build.gradle`对应的Project对象(每个`build.gradle`会对应一个Project对象)。默认的Project对象应该是`DefaultProject`类型的,这一点可以通过查看这个类的继承关系得知，`Project`是一个接口，它的继承关系是：
+
+	Project(接口)->ProjectInternal(接口)->DefaultProject（类）
+
+	AbstractPluginAware(抽象类)-> DefaultProject(类)
+
+	PluginAware(接口)->PluginAwareInternal(接口)->AbstractPluginAware(抽象类)
+
+- 实际上`apply()`方法是在`PluginAware`接口中被定义的
+
+- `Project`默认实现是`DefaultProject`
+
+## 2.2 插件
+
+`apply plugin: 'com.android.application'` ,表示添加插件，`com.android.application`实际上就是这个插件的名称，即`resources/META-INF.gradle-plugins/.properties`目录下的`.properties`文件的名称
+
+每一个插件，用代码来表示 实际上就是实现了`org.gradle.api.Plugin`接口的一个类，它有一个`apply()`方法，**注意这个apply方法和Project.apply()是不同的，它们具有不同的作用**
+
+**实际上，`application`对应的插件类就是 `AppPlugin`,这一点可以从代码注释中看到**
+	
+	/**
+	 * Gradle plugin class for 'application' projects.
+	 */
+	public class AppPlugin extends BasePlugin implements Plugin<Project> {
+		。。。
+	}
+
+`AppPlugin`的继承关系
+
+插件中的`apply()`会创建`Extension`提供开发者使用
+
+    @NonNull
+    @Override
+    protected BaseExtension createExtension(
+            @NonNull Project project,
+            @NonNull ProjectOptions projectOptions,
+            @NonNull Instantiator instantiator,
+            @NonNull AndroidBuilder androidBuilder,
+            @NonNull SdkHandler sdkHandler,
+            @NonNull NamedDomainObjectContainer<BuildType> buildTypeContainer,
+            @NonNull NamedDomainObjectContainer<ProductFlavor> productFlavorContainer,
+            @NonNull NamedDomainObjectContainer<SigningConfig> signingConfigContainer,
+            @NonNull NamedDomainObjectContainer<BaseVariantOutput> buildOutputs,
+            @NonNull ExtraModelInfo extraModelInfo) {
+        return project.getExtensions()
+                .create(
+                        "android",
+                        AppExtension.class,
+                        project,
+                        projectOptions,
+                        instantiator,
+                        androidBuilder,
+                        sdkHandler,
+                        buildTypeContainer,
+                        productFlavorContainer,
+                        signingConfigContainer,
+                        buildOutputs,
+                        extraModelInfo);
+    }
