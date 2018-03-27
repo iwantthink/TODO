@@ -49,6 +49,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
     public void registerTransform(@NonNull Transform transform, Object... dependencies) {
 
+- 第二个参数代表手动可以添加的依赖
 
 ## 1.1 使用方式
 
@@ -360,9 +361,14 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 		}
 
 	- 这里的`extensions.getByType(AppExtension)`是去获取插件对象，就是我们在`build.gradle`中添加的`apply plugin: 'com.android.application'`,**除了`AppExtension`之外，还有`com.android.library projects`对应`LibraryExtension`,`TestExtension`对应`com.android.test projects`**
+
 	- 通过这个`AppExtension`，可以获取许多`Android`的属性
+
 	- 这里指定插件适应于`app`而不是`library`
+
 	- 换一种写法`project.extensions.getByName('android')` 也能实现同样的功能.**`AppExtension` 就是扩展的类型，`android`就是AppExtension的名称**
+
+	- 直接创建匿名类`Transform`，会报NullPointExc。。
 
 2. Transform具体的实现，需要注意的是`Transform`是在`package com.android.build.api`下的.除了实现一些抽象方法之外，还需要去重写一个`transform(TransformInvocation transformInvacation)`方法
 
@@ -432,6 +438,8 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\1847cb314b40784e3716b3be490b8e694e5e9f42\output\jars\classes.jar
 	- directoryInput输入路径如下：
 			log: MyTransform directoryInput path = E:\github\CustomizePluginDemo\app\build\intermediates\classes\apple\release
+
+	- **无法直接获取到Class文件的地址去修改Class文件，取而代之的是通过`TransformOutputProvider`传入标识文件的参数然后获取到对应的文件**
 
 4. 最后只用在TODO的地方对需要修改的文件 进行ASM操作即可，记得先删除，再保存回`dest`中
 
