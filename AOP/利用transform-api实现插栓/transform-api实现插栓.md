@@ -436,10 +436,21 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 			log: MyTransform jarinput path = E:\sdk\extras\android\m2repository\com\android\support\support-annotations\25.3.1\support-annotations-25.3.1.jar
 			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\f48922dbc0641d50d385fd74aa662575552d735c\output\jars\classes.jar
 			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\1847cb314b40784e3716b3be490b8e694e5e9f42\output\jars\classes.jar
+
 	- directoryInput输入路径如下：
 			log: MyTransform directoryInput path = E:\github\CustomizePluginDemo\app\build\intermediates\classes\apple\release
 
-	- **无法直接获取到Class文件的地址去修改Class文件，取而代之的是通过`TransformOutputProvider`传入标识文件的参数然后获取到对应的文件**
+	- 通过调用` transformInput.directoryInputs`会返回输入的文件夹的集合，通常是`.class`文件的文件夹
+
+	- 通过调用`transformInput.jarInputs`会返回输入的Jar文件的集合，通常是依赖
+
+	- **通过`TransformOutputProvider`可以获取到输出文件的输出路径**
+
+	- 自定义Transform的执行顺序是在：.java编译成.class之后，.class转换成.dex之前 。这一点可以从文档简介中看到
+
+	 		to manipulate compiled class files before they are converted to dex files
+
+	- Transform 都是一一对应的，上一个Transform的输出文件 就是下一个Transform的输入文件。所以需要将输出文件输出到指定位置 以供下一个Transform去使用，这个过程应该是TransformManager去控制的。
 
 4. 最后只用在TODO的地方对需要修改的文件 进行ASM操作即可，记得先删除，再保存回`dest`中
 
