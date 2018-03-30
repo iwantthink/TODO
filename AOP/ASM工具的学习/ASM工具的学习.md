@@ -18,6 +18,8 @@
 
 	[java 虚拟机的堆栈](https://www.zhihu.com/question/29833675)
 
+	[ASM-Maven地址](https://mvnrepository.com/artifact/org.ow2.asm/asm)
+
 #  CoreAPI-Classes部分
 
 ## 1.1 结构
