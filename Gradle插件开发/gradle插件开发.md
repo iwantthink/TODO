@@ -2,6 +2,10 @@
 
 [官方文档-自定义插件](https://docs.gradle.org/current/userguide/custom_plugins.html)
 
+[使用buildSRC形式创建插件](https://www.jianshu.com/p/d53399cd507b)
+
+[使用BuildSrc形式创建插件-2](http://www.heqiangfly.com/2016/03/15/development-tool-gradle-customized-plugin/)
+
 [Gradle 使用指南 -- Plugin DSL 扩展](http://www.heqiangfly.com/2016/03/16/development-tool-gradle-customized-plugin-dsl-extension/)
 
 [Gradle低于4.2的版本如何实现嵌套DSL](https://stackoverflow.com/questions/28999106/define-nested-extension-containers-in-gradle?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa)
@@ -25,7 +29,7 @@ Gradle支持俩种类型的Task：
 
 - **Build script：**可以直接在构建脚本中定义任务类。有利于任务类自动编译并，并且这个任务类自动的会被包含在构建脚本的类路径中。缺点就是任务类在构建脚本外部不可见，所以就无法在没有定义任务类的地方去使用
 
-- **buildScr Project：**可以将任务类的源码放在 `rootProjectDir/buildSrc/src/main/groovy`目录下。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外任务类对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+- **buildScr Project：**可以将任务类的源码放在 `rootProjectDir/buildSrc/src/main/groovy`目录下（即和app文件夹在同一级下）。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外任务类对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
 
 - **Standalone project：**在独立的项目里编写任务类,打成Jar包使用 或发布到仓库，之后可以直接引用。
 
@@ -333,6 +337,19 @@ Managing a collection of objects
 
 - 使用`Project.container()`方法创建了一些`NamedDomainObjectContainer`类的实例,这个类 具有许多方法来管理和配置对象。
 - 为了使用任何具有`project.container`方法的类型，它必须将名为`name`的属性公开为对象的唯一名称和常量名称。 容器方法的project.container（Class）变体通过尝试调用具有单个字符串参数的类的构造函数来创建新的实例，该参数是对象的所需名称。 查看允许自定义实例化策略的project.container方法变体的上述链接。
+
+## 2.7 buildSrc形式的插件
+
+将插件源码放到 `rootProjectDir/buildSrc/src/main/groovy`目录下。
+
+此外，还需要在buildSrc根目录下创建`build.gradle`进行添加依赖，仓库，应用插件等操作
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fputk0t5xyj20cl0ai74g.jpg)
+
+Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外插件对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+
+
+**成功编译之后，在当前目录 即可通过 `apply plugin:com.ryan.log.LOG`的形式进行添加插件，注意：不要使用字符串形式 **
 
 # 3.Gradle插件开发实例
 本文基于 Android studio 开发，其实也可以通过idea 开发。
