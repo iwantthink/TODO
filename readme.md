@@ -72,6 +72,6 @@ jenkins+jacoco
 
 - ~~学习 instant run~~
 
-- 学习利用 instant run 实现热修复
+- ~~学习利用 instant run 实现热修复~~
 
 - 关于AOP插件的学习
