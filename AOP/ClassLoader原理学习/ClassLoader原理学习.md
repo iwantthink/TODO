@@ -45,7 +45,7 @@ Java提供俩种类型的类加载器：系统类加载器和自定义类加载�
 		C:\Program Files\Java\jdk1.8.0_102\jre\lib\jfr.jar;
 		C:\Program Files\Java\jdk1.8.0_102\jre\classes
 
-- **Extension ClassLoader**:称为扩展类加载器，负责加载java的扩展类库，默认加载`JAVA_HOME/JRE/LIB/EXT`目录下的所有jar.可以通过`-D java.ext.dirs`选项添加和修改Extensions ClassLoader加载的路径。 存在于Launcher中。
+- **Extension ClassLoader**:称为扩展类加载器，负责加载java的扩展类库，默认加载`JAVA_HOME/JRE/LIB/EXT`目录下的所有jar.可以通过`-Djava.ext.dirs`选项添加和修改Extensions ClassLoader加载的路径。 存在于Launcher中。
 
 	可以通过`System.out.println(System.getProperty("java.ext.dirs"))`方法来获取Extensions ClassLoader所加载的目录（JVM中运行才有效），打印结果如下：
 
@@ -184,7 +184,7 @@ ClassLoader使用的双亲委托模式来搜索类，每个ClassLoader 实例都
 	2. 调用loadClass父类加载器上的方法。如果父类加载器为空，则使用jvm内置的类加载器(Bootstrap ClassLoader)
 	3. 调用findClass(String)来查找类
 
-- 二进制名称例子：
+- 二进制名称示例：
 
 	   "java.lang.String"
 	   "javax.swing.JSpinner$DefaultEditor"
@@ -413,7 +413,7 @@ ODEX相关文章：
 ## 3.3 BaseDexClassLoader源码分析
 - BaseDexClassLoader的结构：
 
-	![](http://ac-qygvx1cc.clouddn.com/a6f9824c199cf304.jpg)
+	![](http://ww1.sinaimg.cn/large/6ab93b35gy1fqgnvp1vj6j20rh0aydh0.jpg)
 
 - BaseDexClassLoader构造函数：
 
