@@ -278,6 +278,8 @@ Android 的Dalvik/ART 虚拟机和标准 JVM 一样，也是需要加载class文
 
 [PathClassLoader/DexClassLoader 源码地址](https://android.googlesource.com/platform/libcore-snapshot/+/ics-mr1/dalvik/src/main/java/dalvik/system)
 
+[DexClassLoader源码地址](https://android.googlesource.com/platform/libcore/+/master/dalvik/src/main/java/dalvik/system/DexClassLoader.java)
+
 ### 3.1.1 BootClassLoader
 
 与Java中的BootstrapClassLoader不同，它是由Java实现的而不是由C/C++实现
