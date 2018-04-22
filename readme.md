@@ -76,3 +76,7 @@ jenkins+jacoco
 - ~~学习利用 instant run 实现热修复~~
 
 - 关于AOP插件的学习
+
+
+研究插件化
+
