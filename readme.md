@@ -81,3 +81,5 @@ jenkins+jacoco
 研究插件化
 
 分析Java集合类的原理。
+
+研究锁屏广告
