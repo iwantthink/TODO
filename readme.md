@@ -83,3 +83,5 @@ jenkins+jacoco
 分析Java集合类的原理。
 
 研究锁屏广告
+
+分析ActivityThread
