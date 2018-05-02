@@ -78,7 +78,7 @@ prepareMainLooper()方法是由Android environment调用的，同样的创建了
 
 2. 将Looper绑定到当前的线程
 
-**实际上，通过ThreadLocal 能够保证一个线程只会有一个Looper，同时一个Looper只持有一个MessageQueue**
+	**实际上，通过ThreadLocal 能够保证一个线程只会有一个Looper，同时一个Looper只持有一个MessageQueue**
 
 ## 2.3 loop()
 
