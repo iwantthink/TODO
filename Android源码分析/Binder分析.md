@@ -92,9 +92,9 @@ Binder机制并不是通过以上方式实现的，**通信是一个广泛的概
 
 ![](http://7sbqce.com1.z0.glb.clouddn.com/2016binder-procedure.png)
 
-1. Server进程向SM注册，告诉SM自己的名字，有什么能力。即Server告诉SM自己叫ASM，自己有个object对象，可以执行add操作。于是SM建立了一张表，然后保存了这些信息
+1. Server进程向SM注册，告诉SM自己的名字，有什么能力。即Server告诉SM自己叫ASM，自己有个object对象，可以执行add操作。于是SM建立了一张表，然后保存了这些信息(简化了SM注册的流程，见下文)
 
-2. client向SM查询：我需要联系 名字=ASM 的进程中的object对象。**这时候，进程之间通信的数据都会经过运行在内核空间里面的Binder驱动，Binder驱动在数据流过的时候做了一点处理，它并不会直接给client返回一个真正的object对象，而是返回一个object的代理对象(objectProxy),这个objectProxy也有一个add方法，这个add方法所做的事情只是将参数进行包装然后交给binder驱动(简化了SM流程，见下文)**
+2. client向SM查询：我需要联系 名字=ASM 的进程中的object对象。**这时候，进程之间通信的数据都会经过运行在内核空间里面的Binder驱动，Binder驱动在数据流过的时候做了一点处理，它并不会直接给client返回一个真正的object对象，而是返回一个object的代理对象(objectProxy),这个objectProxy也有一个add方法，这个add方法所做的事情只是将参数进行包装然后交给binder驱动**
 
 3. client并不知道返回的对象不是真正的对象，其实它也没有必要知道，因为它只需要一个结果。那么client拿到了这个代理对象并调用对应的方法之后，这个方法包装了参数 并交给驱动
 
@@ -103,3 +103,317 @@ Binder机制并不是通过以上方式实现的，**通信是一个广泛的概
 - **由于驱动返回的objectProxy与Server进程中的十分相似，给人的感觉像是Server进程中的object对象传递到了Client进程。因此 称Binder对象是可以进行跨进程传递的对象**
 
 	但是实际上Binder跨进程传输时并不是真的把一个对象传输到了另外一个进程
+
+- **对于Binder的访问，如果是在同一个进程(不需要跨进程)，那么直接返回原始的Binder实体。如果在不同的进程，那么会返回一个代理对象**。这一点可以在AIDL的生成代码中看到
+
+- SM和Server通常不在一个进程中，所以Server进程向SM注册的过程也是跨进程通信，驱动也会对这个过程进行一些处理：**Server注册到SM中的对象实际上也是代理对象**，当client向SM查询的时候，驱动会返回给client另外一个代理对象。实际上Server进程的本地对象仅有一个，其他进程拥有的都是它的代理。
+
+**Client进程只不过是持有了Server端的代理；代理对象协助驱动完成了跨进程通信。**
+
+## 1.4 Binder具体的体现
+
+Binder的设计采用了面向对象的思想，在Binder通信模型的四个角色中(client,server,sm,driver)都代表"Binder"。这样对于Binder通信的使用者来说，Server里的Binder或者Client里的Binder没有区别，只要一个Binder对象能够返回结果就行，甚至SM，Binder驱动都不用关心，这就是抽象的体现
+
+
+**各类Binder对象：**
+
+- **通常情况下,Binder指的是一种通信机制**。使用AIDL进行Binder通信，这时的Binder就是指Binder这种IPC机制
+
+- 对于Server进程来说，**Binder指的是Binder本地对象**
+
+- 对于Clinet进程来说，**Binder指的是Binder代理对象**，其只是Binder本地对象的一个远程代理，对于这个代理Binder对象的操作，会通过驱动最终转发到Binder本地对象上去完成。(对于拥有Binder的使用者来说，并不会关心其拥有的是代理Binder还是本地Binder)
+
+- 对于传输过程来说，Binder是可以进行跨进程传递的对象。Binder驱动会对具有跨进程传递能力的对象做特殊处理，自动完成代理对象和本地对象的转换。(即将代理对象收到的参数 传给 本地对象， 再将本地对象返回的结果 传给 代理对象)
+
+**通过面向对象思想，将进程间的通信转化为对某个Binder对象的引用的调用**。实际上Binder对象是一个可以跨进程引用的对象，它的实体(本地对象)位于一个进程中，而其代理对象可以在系统的任意一个进程中。**同时，这个引用和Java里的引用一样，既可以是强类型也可以是弱类型，而且可以从一个进程传递给另外的进程，让所有进程都能访问同一个Server，这样就像将一个对象或引用 赋值给了另外一个引用**。Binder模糊了进程边界，淡化了进程间通信过程，整个系统仿佛运行于同一个面向对象的程序之中。形形色色的Binder对象以及星罗棋布的引用仿佛粘接各个应用程序的胶水，这也是Binder在英文里的原意。
+
+### 1.4.1 驱动里的Binder
+
+已知Server进程里的Binder对象是Binder本地对象，Client进程里的Binder对象是Binder代理对象，且在Binder对象进行跨进程传递的时候(**由于驱动返回的objectProxy与Server进程中的十分相似，给人的感觉像是Server进程中的object对象传递到了Client进程。因此 称Binder对象是可以进行跨进程传递的对象**)，Binder驱动会自动完成本地对象和代理对象的转换。
+
+因此，Binder驱动必然保存了每一个跨进程的Binder对象的相关信息。在驱动中，**Binder本地对象 体现为 一个叫做`binder_node`的数据结构,Binder代理对象 体现为 一个叫做`binder_ref`的数据结构**。有的地方将Binder本地对象称为Binder实体，将Binder代理对象称为Binder引用(句柄)。其实就是指的Binder对象在驱动力的表现形式
+
+
+### 1.4.2 Java层的Binder
+
+[Android-AIDL官方文档](https://developer.android.com/guide/components/aidl?hl=zh-cn#CreateAidl)
+
+AIDL中存在以下几个类 :
+
+1. `IBinder`:IBinder是一个接口，代表了**跨进程传输的能力**。只要实现了该接口，就能将这个对象进行跨进程传递，这是来自驱动底层的支持。在跨进程数据流经驱动时，驱动会识别`IBinder`类型的数据，从而自动完成不同进程Binder对象的转换(本地对象->代理对象)
+
+2. `IInterface`: IInterface代表远程Server对象具有什么能力，具体来说就是aidl文件中的提供的接口，也可以理解为 client和server的调用契约
+
+3. `Binder`:**Java层的Binder类，代表的是Binder本地对象**。继承自IBinder，因此具有跨进程能力。**跨进程时，Binder驱动会自动完成Binder和BinderProxy的转换**
+
+4. `BinderProxy`:**BinderProxy是Binder类的一个内部类，代表远程进程的Binder对象的本地代理**。继承自IBinder，因此具有跨进程能力
+
+5. `Stub`: 使用AIDL时，编译工具会生成一个**Stub的静态内部类**，这个类**继承自Binder**，说明它是Binder本地对象，同时该Stub类还实现了IInterface接口，表明它具有远程Server承诺给Client的能力。Stub是一个抽象类，具体的IInterface的相关实现需要手动完成(策略模式的体现)
+
+
+# 2. AIDL实现过程
+
+1. 首先在`src/main/aidl/包名`目录下创建`.aidl`文件，并添加如下代码
+
+		// ITest.aidl
+		package hmtdemo.hmt.com.hmtdemo.hmt;
+		
+		// Declare any non-default types here with import statements
+		
+		interface ITest {
+		     int add(int a, int b);
+		}
+
+2. 其次，通过编译工具编译，会得到一个与之前创建的`.aidl`文件对应的`.java`文件，文件生成在`build/generated/source/aidl`目录下
+
+		/*
+		 * This file is auto-generated.  DO NOT MODIFY.
+		 * Original file: C:\\Users\\renbo\\Documents\\HMT_DEMO_ANDROID\\hmt\\HMT_AUTO_DEMO\\app\\src\\main\\aidl\\hmtdemo\\hmt\\com\\hmtdemo\\hmt\\ITest.aidl
+		 */
+		package hmtdemo.hmt.com.hmtdemo.hmt;
+		// Declare any non-default types here with import statements
+		
+		public interface ITest extends android.os.IInterface {
+		    /**
+		     * Local-side IPC implementation stub class.
+		     */
+		    public static abstract class Stub extends android.os.Binder implements hmtdemo.hmt.com.hmtdemo.hmt.ITest {
+		        private static final java.lang.String DESCRIPTOR = "hmtdemo.hmt.com.hmtdemo.hmt.ITest";
+		
+		        /**
+		         * Construct the stub at attach it to the interface.
+		         */
+		        public Stub() {
+		            this.attachInterface(this, DESCRIPTOR);
+		        }
+		
+		        /**
+		         * Cast an IBinder object into an hmtdemo.hmt.com.hmtdemo.hmt.ITest interface,
+		         * generating a proxy if needed.
+		         */
+		        public static hmtdemo.hmt.com.hmtdemo.hmt.ITest asInterface(android.os.IBinder obj) {
+		            if ((obj == null)) {
+		                return null;
+		            }
+		            android.os.IInterface iin = obj.queryLocalInterface(DESCRIPTOR);
+		            if (((iin != null) && (iin instanceof hmtdemo.hmt.com.hmtdemo.hmt.ITest))) {
+		                return ((hmtdemo.hmt.com.hmtdemo.hmt.ITest) iin);
+		            }
+		            return new hmtdemo.hmt.com.hmtdemo.hmt.ITest.Stub.Proxy(obj);
+		        }
+		
+		        @Override
+		        public android.os.IBinder asBinder() {
+		            return this;
+		        }
+		
+		        @Override
+		        public boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags) throws android.os.RemoteException {
+		            switch (code) {
+		                case INTERFACE_TRANSACTION: {
+		                    reply.writeString(DESCRIPTOR);
+		                    return true;
+		                }
+		                case TRANSACTION_add: {
+		                    data.enforceInterface(DESCRIPTOR);
+		                    int _arg0;
+		                    _arg0 = data.readInt();
+		                    int _arg1;
+		                    _arg1 = data.readInt();
+		                    int _result = this.add(_arg0, _arg1);
+		                    reply.writeNoException();
+		                    reply.writeInt(_result);
+		                    return true;
+		                }
+		            }
+		            return super.onTransact(code, data, reply, flags);
+		        }
+		
+		        private static class Proxy implements hmtdemo.hmt.com.hmtdemo.hmt.ITest {
+		            private android.os.IBinder mRemote;
+		
+		            Proxy(android.os.IBinder remote) {
+		                mRemote = remote;
+		            }
+		
+		            @Override
+		            public android.os.IBinder asBinder() {
+		                return mRemote;
+		            }
+		
+		            public java.lang.String getInterfaceDescriptor() {
+		                return DESCRIPTOR;
+		            }
+		
+		            @Override
+		            public int add(int a, int b) throws android.os.RemoteException {
+		                android.os.Parcel _data = android.os.Parcel.obtain();
+		                android.os.Parcel _reply = android.os.Parcel.obtain();
+		                int _result;
+		                try {
+		                    _data.writeInterfaceToken(DESCRIPTOR);
+		                    _data.writeInt(a);
+		                    _data.writeInt(b);
+		                    mRemote.transact(Stub.TRANSACTION_add, _data, _reply, 0);
+		                    _reply.readException();
+		                    _result = _reply.readInt();
+		                } finally {
+		                    _reply.recycle();
+		                    _data.recycle();
+		                }
+		                return _result;
+		            }
+		        }
+		
+		        static final int TRANSACTION_add = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);
+		    }
+		
+		    public int add(int a, int b) throws android.os.RemoteException;
+		}
+
+3. 系统在生成这个文件之后，开发者只需要继承ICompute.Stub这个静态抽象类，实现其在IInterface中的方法，然后在Service的onBind方法中返回，即实现了AIDL
+
+		public class RemoteService extends Service {
+		    @Override
+		    public void onCreate() {
+		        super.onCreate();
+		    }
+		
+		    @Override
+		    public IBinder onBind(Intent intent) {
+		        // Return the interface
+		        return mBinder;
+		    }
+		
+		    private final ITest.Stub mBinder = new ITest.Stub() {
+		        public int add(int a,int b){
+		            return a+b;
+		        }
+		    };
+		}
+
+4. 客户端进程在绑定了另外一个进程的Service之后，会在`onServiceConnection`回调里返回一个`IBinder`对象，然后会通过Stub的`asInterface()`方法去得到一个远程的AIDL对象用来调用。
+
+		ITest mITest;
+		private ServiceConnection mConnection = new ServiceConnection() {
+
+		    public void onServiceConnected(ComponentName className, IBinder service) {
+		       mITest = ITest.Stub.asInterface(service);
+		    }
+		
+		    public void onServiceDisconnected(ComponentName className) {
+		        Log.e(TAG, "Service has unexpectedly disconnected");
+		        mIRemoteService = null;
+		    }
+		};
+
+
+- Stub类继承自Binder，说明Stub是一个Binder本地对象。实现了`ITest`(即IInterface接口) ，说明Stub携带某种客户端需要的能力(即方法add)。另外Stub类有一个内部类Proxy，这个Proxy表示的是Binder代理对象
+
+- `onServiceConnection()`方法中，传递给了我们一个`IBinder`类型的参数，这个对象是驱动给的。它可以是Binder本地对象(即Binder类型)，也可以是Binder代理对象(即BinderProxy类型)
+
+- `asInterface`方法中，会通过`onServiceConnection`返回的那个`IBinder`类型的对象 去判断当前是否存在本地对象：
+
+	如果是，说明client和server在同一个进程，那么这个IBinder就是本地对象。会将这个对象强制类型转换为Stub并返回。
+
+	如果找不到，说明client和server不在同一个进程，那么这个IBinder就是代理对象。那么会创建一个代理对象Stub.Proxy并返回
+
+        /**
+         * Cast an IBinder object into an hmtdemo.hmt.com.hmtdemo.hmt.ITest interface,
+         * generating a proxy if needed.
+         */
+        public static hmtdemo.hmt.com.hmtdemo.hmt.ITest asInterface(android.os.IBinder obj) {
+            if ((obj == null)) {
+                return null;
+            }
+            android.os.IInterface iin = obj.queryLocalInterface(DESCRIPTOR);
+            if (((iin != null) && (iin instanceof hmtdemo.hmt.com.hmtdemo.hmt.ITest))) {
+                return ((hmtdemo.hmt.com.hmtdemo.hmt.ITest) iin);
+            }
+            return new hmtdemo.hmt.com.hmtdemo.hmt.ITest.Stub.Proxy(obj);
+        }
+
+## 2.1 AIDL方法调用
+
+通过`asInterface()`方法可以获得 Stub类型或者Stub.Proxy类型的对象。
+
+- 对于Binder本地对象(转换为Stub)，在调用方法时 是直接调用在Service中Stub的实现类的方法
+
+- 对于Binder代理对象(转换为Stub.Proxy)，实现如下：
+
+		 @Override
+		            public int add(int a, int b) throws android.os.RemoteException {
+		                android.os.Parcel _data = android.os.Parcel.obtain();
+		                android.os.Parcel _reply = android.os.Parcel.obtain();
+		                int _result;
+		                try {
+		                    _data.writeInterfaceToken(DESCRIPTOR);
+		                    _data.writeInt(a);
+		                    _data.writeInt(b);
+		                    mRemote.transact(Stub.TRANSACTION_add, _data, _reply, 0);
+		                    _reply.readException();
+		                    _result = _reply.readInt();
+		                } finally {
+		                    _reply.recycle();
+		                    _data.recycle();
+		                }
+		                return _result;
+		            }
+
+	首先通过`Parcel`将数据序列化，其次调用`mRemote.transact`方法。mRemote是就是`onServiceConnection`中IBinder参数，同时如果执行到这里，说明这个之前在`asInterface()`方法中 认为IBinder就是BinderProxy(即Binder类的内部类)
+	
+	    public boolean transact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
+	        Binder.checkParcel(this, code, data, "Unreasonably large binder buffer");
+	
+	        if (mWarnOnBlocking && ((flags & FLAG_ONEWAY) == 0)) {
+	            // For now, avoid spamming the log by disabling after we've logged
+	            // about this interface at least once
+	            mWarnOnBlocking = false;
+	            Log.w(Binder.TAG, "Outgoing transactions from this process must be FLAG_ONEWAY",
+	                    new Throwable());
+	        }
+	
+	        final boolean tracingEnabled = Binder.isTracingEnabled();
+	        if (tracingEnabled) {
+	            final Throwable tr = new Throwable();
+	            Binder.getTransactionTracker().addTrace(tr);
+	            StackTraceElement stackTraceElement = tr.getStackTrace()[1];
+	            Trace.traceBegin(Trace.TRACE_TAG_ALWAYS,
+	                    stackTraceElement.getClassName() + "." + stackTraceElement.getMethodName());
+	        }
+	        try {
+	            return transactNative(code, data, reply, flags);
+	        } finally {
+	            if (tracingEnabled) {
+	                Trace.traceEnd(Trace.TRACE_TAG_ALWAYS);
+	            }
+	        }
+	    }
+
+	可以看到最终返回的时候会调用`transactNative()`这个Native方法(frameworks/base/core/jni/android_util_Binder.cpp)。经过一系列调用之后这个Native方法最终会调用到`talkWithDriver`函数，那么这时通信就会交给驱动去完成。最终该函数通过`ioctl`系统调用，Client进程陷入内核态，Client调用add方法的线程挂起等待返回。驱动完成一系列操作之后唤醒Server进程，调用Server进程本地对象的`onTransact()`函数(这一步由Server端线程池完成)。**那么就看Binder本地对象的`onTransact()`方法(即Stub中的此方法)**
+
+        @Override
+        public boolean onTransact(int code, android.os.Parcel data, android.os.Parcel reply, int flags) throws android.os.RemoteException {
+            switch (code) {
+                case INTERFACE_TRANSACTION: {
+                    reply.writeString(DESCRIPTOR);
+                    return true;
+                }
+                case TRANSACTION_add: {
+                    data.enforceInterface(DESCRIPTOR);
+                    int _arg0;
+                    _arg0 = data.readInt();
+                    int _arg1;
+                    _arg1 = data.readInt();
+					//调用具体的实现
+                    int _result = this.add(_arg0, _arg1);
+                    reply.writeNoException();
+                    reply.writeInt(_result);
+                    return true;
+                }
+            }
+            return super.onTransact(code, data, reply, flags);
+        }
+
+	**在Server进程里面，onTransact根据调用号（每个AIDL函数都有一个编号，在跨进程的时候，不会传递函数，而是传递编号指明调用哪个函数）调用相关函数**.在调用了Binder本地对象的add方法之后,这个方法将结果返回给驱动，驱动唤醒挂起的Client进程里面的线程并将结果返回，一次跨进程调用就完成了。
+
