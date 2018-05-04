@@ -3,6 +3,10 @@
 
 [Binder学习指南-weishu](http://weishu.me/2016/01/12/binder-index-for-newer/)
 
+[Binder 设计与实现](https://blog.csdn.net/universus/article/details/6211589)
+
+[Binder系列-开篇-GitYUan](http://gityuan.com/2015/10/31/binder-prepare/)
+
 **学习Binder路线：**
 
 1. 先学会熟练使用AIDL进行跨进程通信（简单来说就是远程Service）
@@ -416,4 +420,43 @@ AIDL中存在以下几个类 :
         }
 
 	**在Server进程里面，onTransact根据调用号（每个AIDL函数都有一个编号，在跨进程的时候，不会传递函数，而是传递编号指明调用哪个函数）调用相关函数**.在调用了Binder本地对象的add方法之后,这个方法将结果返回给驱动，驱动唤醒挂起的Client进程里面的线程并将结果返回，一次跨进程调用就完成了。
+
+## 2.2 AIDL总结
+
+AIDL这种通信方式是有一种固定的模式：
+
+1. 一个需要跨进程传递的对象一定继承自IBinder
+
+2. 如果是本地Binder对象，那么一定继承Binder实现IInterface
+
+3. 如果是代理Binder对象，那么久需要实现IInterface并持有IBinder引用
+
+**Proxy类和Stub类不一样。**
+
+- 俩者都既是Binder又是IInterface。
+
+- 不同点是对于Binder类的处理，Stub采用的是继承的方式(is关系)，Proxy采用的是组合的方式(has关系)。
+
+- 俩者都实现了所有的IInterface函数
+
+- 不同点是Stub使用策略模式调用的是虚函数(待子类实现)，而Proxy使用组合模式
+
+	之所以俩者采用不同的模式实现，因为Stub本身就代表一个能跨进程传输的对象，它得继承IBinder并实现transact这个函数从而得到跨进程能力(这个能力由驱动赋予)，所以Stub通过继承Binder从而实现以上所说的能力
+
+	Proxy类使用组合方式是因为它不需要知道自己具体是什么，它本身也不需要具备进程跨进程传输(即不需要继承Binder)，它只需要拥有这个能力(即保留IBinder的引用)
+
+	Proxy类和Stub类 都提供了返回IBinder的方式，就是asBinder(),前者返回所持有的IBinder的引用，后者直接返回自身this。
+
+
+## 2.3 AIDL在ActivityManagerService的体现
+
+再去翻阅系统的ActivityManagerServer的源码，就知道哪一个类是什么角色了：
+
+- IActivityManager是一个IInterface，它代表远程Service具有什么能力
+
+- ActivityManagerNative指的是Binder本地对象（类似AIDL工具生成的Stub类），这个类是抽象类，它的实现是ActivityManagerService；因此对于AMS的最终操作都会进入ActivityManagerService这个真正实现；
+
+- 同时如果仔细观察，ActivityManagerNative.java里面有一个非公开类ActivityManagerProxy, 它代表的就是Binder代理对象；是不是跟AIDL模型一模一样呢？
+
+- 那么ActivityManager是什么？他不过是一个管理类而已，可以看到真正的操作都是转发给ActivityManagerNative进而交给他的实现ActivityManagerService 完成的。
 
