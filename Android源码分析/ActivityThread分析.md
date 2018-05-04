@@ -3,6 +3,8 @@
 
 [ActivityThread源码](https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/app)
 
+[深入理解Activity启动流程](http://ju.outofmemory.cn/entry/169880)
+
 # 1. 简介
 
 android应用程序作为控制类程序，跟Java程序类似，都有一个入口，Java程序的入口是main()函数，**而Adnroid程序的入口是ActivityThread 的main()方法**
@@ -170,7 +172,7 @@ ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRe
         //省略代码
     }
 
-- 通过ActivityManager.getService()获取到一个IActivityManager对象。
+- 通过ActivityManager.getService()获取到一个代理Binder对象(IBinder),然后通过IActivityManager.Stub 进行转换(获取Stub类或者Stub内部类Proxy)。
 
 	可以通过源代码看到，getService()方法 借助Singleton类 实现了单例的懒加载
 
@@ -188,3 +190,14 @@ ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRe
 	            };
 
 	[Android-util-Singleton源码](https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/util/Singleton.java)
+
+	**通过IActivityManager 可以用来调用ActivityServiceManager的方法**
+
+## 2.6 mgr.attachApplication(mAppThread)
+
+`mAppThread`是ApplicationThread类型，该类型继承自IApplicationThread.Stub类型(即一个Binder对象)
+
+IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什么能力(即有哪些接口可供调用)。
+
+attach()方法中通过`ActivityManager.getService()`获取到了ASM的Binder代理对象，然后通过这个对象调用 ActivityManagerService的`attachApplication(mAppThread)`，mAppThread传递给ActivityManagerService 提供给AMS去调用四大组件的方法(实际上这个AMS接收到的mAppThread是一个ApplicationThreadProxy,即Binder的代理对象)
+
