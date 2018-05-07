@@ -174,7 +174,7 @@ ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRe
 
 - 通过ActivityManager.getService()获取到一个代理Binder对象(IBinder),然后通过IActivityManager.Stub 进行转换(获取Stub类或者Stub内部类Proxy)。
 
-	可以通过源代码看到，getService()方法 借助Singleton类 实现了单例的懒加载
+	**可以通过源代码看到，getService()方法 借助`Singleton`类 实现了单例的懒加载**
 
 		public static IActivityManager getService() {
 	        return IActivityManagerSingleton.get();
@@ -199,5 +199,10 @@ ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRe
 
 IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什么能力(即有哪些接口可供调用)。
 
-attach()方法中通过`ActivityManager.getService()`获取到了ASM的Binder代理对象，然后通过这个对象调用 ActivityManagerService的`attachApplication(mAppThread)`，mAppThread传递给ActivityManagerService 提供给AMS去调用四大组件的方法(实际上这个AMS接收到的mAppThread是一个ApplicationThreadProxy,即Binder的代理对象)
+`attach()`方法中通过`ActivityManager.getService()`获取到了ASM的Binder代理对象，然后通过这个对象调用 ActivityManagerService的`attachApplication(mAppThread)`，mAppThread传递给ActivityManagerService 提供给AMS去调用四大组件的方法(实际上这个AMS接收到的mAppThread是一个ApplicationThreadProxy,即Binder的代理对象)
+
+
+## 2.7 AMS.attachApplication()
+
+[启动Activity的工作过程](https://blog.csdn.net/qian520ao/article/details/78156214#bindapplication)
 
