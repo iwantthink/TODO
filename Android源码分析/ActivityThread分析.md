@@ -201,8 +201,13 @@ IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什
 
 `attach()`方法中通过`ActivityManager.getService()`获取到了ASM的Binder代理对象，然后通过这个对象调用 ActivityManagerService的`attachApplication(mAppThread)`，mAppThread传递给ActivityManagerService 提供给AMS去调用四大组件的方法(实际上这个AMS接收到的mAppThread是一个ApplicationThreadProxy,即Binder的代理对象)
 
+- 通过IActivityManager
+
 
 ## 2.7 AMS.attachApplication()
 
 [启动Activity的工作过程](https://blog.csdn.net/qian520ao/article/details/78156214#bindapplication)
 
+1. `ActivityManagerService.attachApplication` ->
+
+2. `ActivityManagerService.attachApplicationLocked` ->
