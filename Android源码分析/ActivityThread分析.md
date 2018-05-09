@@ -210,4 +210,17 @@ IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什
 
 1. `ActivityManagerService.attachApplication` ->
 
+	    @Override
+	    public final void attachApplication(IApplicationThread thread) {
+	        synchronized (this) {
+	            //获取applicationThread的进程id
+	            int callingPid = Binder.getCallingPid();
+	            final long origId = Binder.clearCallingIdentity();
+	            attachApplicationLocked(thread, callingPid);
+	            Binder.restoreCallingIdentity(origId);
+	        }
+	    }
+
+	- AMS通过传入的`IApplicationThread`类型的这个对象去通知`ActivityThread`去创建/关联和启动Activity
+
 2. `ActivityManagerService.attachApplicationLocked` ->
