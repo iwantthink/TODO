@@ -24,6 +24,8 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 `ActivityManagerService`就是负责管理Activity栈，应用程序，task等
 
+**启动Activity这个工作，无论被启动的Activity是否处于同一进程，同一应用，都是由AMS管理的**
+
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fqzbxttc06j20ln0bq74f.jpg)
 
 1. 用户在Launcher程序里点击应用图标时，会通知ActivityManagerService启动应用的入口Activity
@@ -42,7 +44,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 3. ActivityStack，该类主要管理回退栈
 
-4. ActivityRecord，每次启动一个Actvity会有一个对应的ActivityRecord对象，表示Activity的一个记录
+4. ActivityClientRecord，每次启动一个Actvity会有一个对应的ActivityRecord对象，表示Activity的一个记录
 
 5. ActivityInfo，Activity的信息，比如启动模式，taskAffinity，flag信息(这些信息在AndroidManifest.xml里声明Activity时填写)
 
