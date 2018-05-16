@@ -436,7 +436,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 	- 注释2：判断待启动的Activity所在的进程是否已经运行，已经运行的话就会调用`realStartActivityLocked`,该方法的第二个参数代表待启动的Activity的所在进程的ProcessRecord
 
-	**如果待启动的Activity所在进程尚未存在，会调用`AMS.startProcessLocked()`方法，该方法会去调用`Process.start()`方法去通过Zygote孵化应用进程 去创建应用进程，创建成功之后会调用`ActivityThread.main()` **
+	**如果待启动的Activity所在进程尚未存在，会调用`AMS.startProcessLocked()`方法，该方法会去调用`Process.start()`方法去通过Zygote孵化应用进程 去创建应用进程，创建成功之后会调用`ActivityThread.main()`,在`main()`方法中会调用`ActivityThread.attach()`,然后会走到AMS中去 **
 
 	- [具体的Zygote孵化过程](http://liuwangshu.cn/framework/applicationprocess/1.html)
 
