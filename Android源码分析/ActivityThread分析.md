@@ -524,11 +524,11 @@ IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什
 
 - `ActivityStackSupervisor`:维护终端中所有的`ActivityStack`
 
-- `realStartActivityLocked()`方法进行实际的启动工作。。**查看2.7.5**
+- `realStartActivityLocked()`方法进行实际的启动工作。。**查看3.5**
 
 ## 3.5 ActivityStackSupervisor.realStartActivityLocked()
 
-	``````
+	```省略代码```
 	app.thread.scheduleLaunchActivity(new Intent(r.intent), r.appToken,
                     System.identityHashCode(r), r.info,
                     // TODO: Have this take the merged configuration instead of separate global and
@@ -538,7 +538,7 @@ IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什
                     r.launchedFromPackage, task.voiceInteractor, app.repProcState, r.icicle,
                     r.persistentState, results, newIntents, !andResume,
                     mService.isNextTransitionForward(), profilerInfo);
-	`````
+	```省略代码``
 - **在`realStartActivityLocked（）`方法中通过`ApplicationThread`的binder代理对象调用`ApplicationThread`中的方法，然后通过`Handler`切换到`ActivityThread`所在线程去执行具体逻辑**
 
 # 4.ApplicationThread.scheduleLaunchActivity
