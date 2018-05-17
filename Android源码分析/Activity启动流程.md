@@ -36,6 +36,8 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 5. 然后ActivityManagerService通知应用进程创建入口Activity的实例，并执行它的生命周期方法。
 
+## 1.1 重要类介绍
+
 **ActivityManagerService管理Activity时，主要涉及以下几个类:**
 
 1. ActivityManagerService，它是管理activity的入口类，聚合了ProcessRecord对象和ActivityStack对象
@@ -44,7 +46,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 3. ActivityStack，该类主要管理回退栈
 
-4. ActivityClientRecord，每次启动一个Actvity会有一个对应的ActivityRecord对象，表示Activity的一个记录
+4. ActivityRecord，每次启动一个Actvity会有一个对应的ActivityRecord对象，表示Activity的一个记录.**可以查看[ActivityRecord分析]**
 
 5. ActivityInfo，Activity的信息，比如启动模式，taskAffinity，flag信息(这些信息在AndroidManifest.xml里声明Activity时填写)
 
@@ -220,16 +222,26 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 [Android深入四大组件（六）Android8.0 根Activity启动过程（前篇）](https://blog.csdn.net/itachi85/article/details/78569299)
 
-从2.1中可以看出 Instrumentation将具体的开启 交给了AMS来处理,AMS运行在`system_server`进程。
+**从2.1中可以看出 Instrumentation将具体的开启 交给了AMS来处理,AMS运行在`system_server`进程。**
 
-在Android 26 的源码中，调用关系是这样的：
+在Android 27 的源码中，调用关系是这样的：
 
 ![](http://upload-images.jianshu.io/upload_images/1417629-b9da48e2ebdaf3d6.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
-1.  AMS.startActivity -> 
 
-	startActivity和startActivityAsUser 不同点就是 后者比前者多了一个`int userID`参数，在前者中是通过`UserHandler.getCallingUserId()`获得调用者的`UserID`。**AMS会根据这个UserID来确定调用者的权限**
+### 2.2.1 AMS.startActivity 
 
-1.  AMS.startActivityAsUser -> 
+	  @Override
+	    public final int startActivity(IApplicationThread caller, String callingPackage,
+	            Intent intent, String resolvedType, IBinder resultTo, String resultWho, int requestCode,
+	            int startFlags, ProfilerInfo profilerInfo, Bundle bOptions) {
+	        return startActivityAsUser(caller, callingPackage, intent, resolvedType, resultTo,
+	                resultWho, requestCode, startFlags, profilerInfo, bOptions,
+	                UserHandle.getCallingUserId());
+	    }
+
+- startActivity和startActivityAsUser 不同点就是 后者比前者多了一个`int userID`参数，在前者中是通过`UserHandler.getCallingUserId()`获得调用者的`UserID`。**AMS会根据这个UserID来确定调用者的权限**
+
+### 2.2.2  AMS.startActivityAsUser 
 	
 	    @Override
 	    public final int startActivityAsUser(IApplicationThread caller, String callingPackage,
@@ -246,19 +258,68 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 	                "startActivityAsUser");
 	    }
 
-	需要注意的是倒数第二个参数类型为TaskRecord，代表启动的Activity所在的栈。最后一个参数`"startActivityAsUser"`代表启动的理由
+- 注释1：判断调用者进程是否被隔离，被隔离则抛出`SecurityException`
 
-2.  ActivityStarter.startActivityMayWait -> 
+- 注释2：检查调用者是否有权限，如果没有权限会抛出`SecurityException`
 
-	最终调用了`ActivityStarter.startActivityLocked`方法，`startActivityLocked`方法的参数要比`startActivityAsUser`多几个
+- **需要注意的是倒数第二个参数类型为TaskRecord，代表启动的Activity所在的栈。最后一个参数`"startActivityAsUser"`代表启动的理由**
 
-	ActivityStarter是Android7.0新加入的类，它是加载Activity的控制类，会收集所有的条件来决定如何将Intent和Flags转换为Activity，并将Activity和Task和Stack相关联。
+### 2.2.3 ActivityStarter.startActivityMayWait 
 
-3.  ActivityStarter.startActivityLocked -> 
+	final int startActivityMayWait(IApplicationThread caller, int callingUid,
+	            String callingPackage, Intent intent, String resolvedType,
+	            IVoiceInteractionSession voiceSession, IVoiceInteractor voiceInteractor,
+	            IBinder resultTo, String resultWho, int requestCode, int startFlags,
+	            ProfilerInfo profilerInfo, WaitResult outResult,
+	            Configuration globalConfig, Bundle bOptions, boolean ignoreTargetSecurity, int userId,
+	            IActivityContainer iContainer, TaskRecord inTask, String reason) {
+	         ...
+	        int res = startActivityLocked(caller, intent, ephemeralIntent, resolvedType,
+	                    aInfo, rInfo, voiceSession, voiceInteractor,
+	                    resultTo, resultWho, requestCode, callingPid,
+	                    callingUid, callingPackage, realCallingPid, realCallingUid, startFlags,
+	                    options, ignoreTargetSecurity, componentSpecified, outRecord, container,
+	                    inTask, reason);
+	         ...
+	         return res;
+	     }
+	 }
 
-	在这个方法中会判断 **启动Activiyt的理由**，如果为空会抛出异常
+- 最终调用了`ActivityStarter.startActivityLocked`方法，`startActivityLocked`方法的参数要比`startActivityAsUser`多几个
 
-4.  ActivityStarter.startActivity -> 
+- **ActivityStarter是Android7.0新加入的类，它是加载Activity的控制类，会收集所有的条件来决定如何将Intent和Flags转换为Activity，并将Activity和Task和Stack相关联。**
+
+### 2.2.4 ActivityStarter.startActivityLocked 
+
+	   int startActivityLocked(IApplicationThread caller, Intent intent, Intent ephemeralIntent,
+	            String resolvedType, ActivityInfo aInfo, ResolveInfo rInfo,
+	            IVoiceInteractionSession voiceSession, IVoiceInteractor voiceInteractor,
+	            IBinder resultTo, String resultWho, int requestCode, int callingPid, int callingUid,
+	            String callingPackage, int realCallingPid, int realCallingUid, int startFlags,
+	            ActivityOptions options, boolean ignoreTargetSecurity, boolean componentSpecified,
+	            ActivityRecord[] outActivity, ActivityStackSupervisor.ActivityContainer container,
+	            TaskRecord inTask, String reason) {
+	        //判断启动的理由不为空
+	        if (TextUtils.isEmpty(reason)) {//1
+	            throw new IllegalArgumentException("Need to specify a reason.");
+	        }
+	        mLastStartReason = reason;
+	        mLastStartActivityTimeMs = System.currentTimeMillis();
+	        mLastStartActivityRecord[0] = null;
+	        mLastStartActivityResult = startActivity(caller, intent, ephemeralIntent, resolvedType,
+	                aInfo, rInfo, voiceSession, voiceInteractor, resultTo, resultWho, requestCode,
+	                callingPid, callingUid, callingPackage, realCallingPid, realCallingUid, startFlags,
+	                options, ignoreTargetSecurity, componentSpecified, mLastStartActivityRecord,
+	                container, inTask);
+	        if (outActivity != null) {
+	            outActivity[0] = mLastStartActivityRecord[0];
+	        }
+	        return mLastStartActivityResult;
+	    }
+
+- 在这个方法中会判断 **启动Activiyt的理由**，如果为空会抛出异常
+
+### 2.2.5 ActivityStarter.startActivity 
 
 		  private int startActivity(IApplicationThread caller, Intent intent, Intent ephemeralIntent,
 		            String resolvedType, ActivityInfo aInfo, ResolveInfo rInfo,
@@ -301,14 +362,17 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		                options, inTask, outActivity);//5
 		    }
 
-	注释1：caller代表 启动Activity的进程的ApplicationThread
-	注释2：此处调用AMS的`getRecordForAppLocked`方法得到的是代表启动Activity的进程的callerApp对象，它是ProcessRecord类型的，ProcessRecord用于描述一个应用程序进程
-	注释3：ActivityRecord用于描述一个Activity，用来记录一个Activity的所有信息，在此处创建该对象，用来描述即将启动的Activity
-	注释4-5：将ActivityRecrod 赋值给outActivity数组，并作为参数传递下去
+- 注释1：caller代表 启动Activity的进程的ApplicationThread
 
-5.  ActivityStarter.startActivity ->
+- 注释2：此处调用AMS的`getRecordForAppLocked`方法得到的是代表启动Activity的进程的callerApp对象，它是ProcessRecord类型的，ProcessRecord用于描述一个应用程序进程
 
-5.  ActivityStarter.startActivityUnchecked -> 
+- 注释3：**ActivityRecord用于描述一个Activity，用来记录一个Activity的所有信息，在此处创建该对象，用来描述即将启动的Activity**
+
+- 注释4-5：将ActivityRecrod 赋值给outActivity数组，并作为参数传递下去
+
+### 2.2.6  ActivityStarter.startActivity 
+
+### 2.2.7 ActivityStarter.startActivityUnchecked 
 
 		  private int startActivityUnchecked(final ActivityRecord r, ActivityRecord sourceRecord,
 		            IVoiceInteractionSession voiceSession, IVoiceInteractor voiceInteractor,
@@ -350,11 +414,13 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		
 		}
 
-	主要处理栈管理相关的逻辑
-	注释1：启动一个新的app的Activity，Flag会设置成`FLAG_ACTIVITY_NEW_TASK`
-	注释2：`setTaskFromReuseOrCreateNewTask()`该方法内部会创建一个新的TaskRecord，TaskRecord用来描述一个Activity任务栈
+- 主要处理栈管理相关的逻辑
+	
+- 注释1：启动一个新的app的Activity，Flag会设置成`FLAG_ACTIVITY_NEW_TASK`
+	
+- 注释2：`setTaskFromReuseOrCreateNewTask()`该方法内部会创建一个新的TaskRecord，TaskRecord用来描述一个Activity任务栈
 
-7.  ActivityStackSupervisor.resumeFocusedStackTopActivityLocked ->
+### 2.2.8 ActivityStackSupervisor.resumeFocusedStackTopActivityLocked 
 
 		boolean resumeFocusedStackTopActivityLocked(
 		        ActivityStack targetStack, ActivityRecord target, ActivityOptions targetOptions) {
@@ -371,12 +437,13 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		    return false;
 		}
 	
-	注释1： 调用ActivityStack的topRunningActivityLocked方法获取待启动的Activity所在栈的栈顶的ActivityRecord(即获得是否处于停止状态)
-	注释2：如果ActivityRecord不为null，或者待启动的Activity的状态不是RESUMED状态，就会调用 注释3
-	注释3：
-	对于待启动的Activity，注释2是肯定成立的
+- 注释1： 调用ActivityStack的topRunningActivityLocked方法获取待启动的Activity所在栈的栈顶的ActivityRecord(即获得是否处于停止状态)
 
-9.  ActivityStack.resumeTopActivityUncheckedLocked -> 
+- 注释2：如果ActivityRecord不为null，或者待启动的Activity的状态不是RESUMED状态，就会调用 注释3
+
+- 注释3：对于待启动的Activity，注释2是肯定成立的
+
+### 2.2.9  ActivityStack.resumeTopActivityUncheckedLocked
 
 		  boolean resumeTopActivityUncheckedLocked(ActivityRecord prev, ActivityOptions options) {
 		        if (mStackSupervisor.inResumeTopActivity) {
@@ -393,7 +460,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		        return result;
 		    }
 
-8.  ActivityStack.resumeTopActivityInnerLocked ->
+### 2.2.10 ActivityStack.resumeTopActivityInnerLocked ->
 
 		private boolean resumeTopActivityInnerLocked(ActivityRecord prev, ActivityOptions options) {
 		      ...
@@ -403,9 +470,9 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		       return true;
 		}
 
-	- 这一块的代码非常多，但是只用关注调用了ActivityStackSupervisor的startSpecificActivityLocked方法
+- 这一块的代码非常多，但是只用关注调用了ActivityStackSupervisor的startSpecificActivityLocked方法
 
-9.  ActivityStackSupervisor.startSpecificActivityLocked ->
+### 2.2.11 ActivityStackSupervisor.startSpecificActivityLocked
 
 		void startSpecificActivityLocked(ActivityRecord r,
 		            boolean andResume, boolean checkConfig) {
@@ -432,15 +499,15 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		                "activity", r.intent.getComponent(), false, false, true);
 		    }
 
-	- 注释1：获取即将要启动的Activity的所在的应用程序进程
+- 注释1：获取即将要启动的Activity的所在的应用程序进程
 
-	- 注释2：判断待启动的Activity所在的进程是否已经运行，已经运行的话就会调用`realStartActivityLocked`,该方法的第二个参数代表待启动的Activity的所在进程的ProcessRecord
+- 注释2：判断待启动的Activity所在的进程是否已经运行，已经运行的话就会调用`realStartActivityLocked`,该方法的第二个参数代表待启动的Activity的所在进程的ProcessRecord
 
-	**如果待启动的Activity所在进程尚未存在，会调用`AMS.startProcessLocked()`方法，该方法会去调用`Process.start()`方法去通过Zygote孵化应用进程 去创建应用进程，创建成功之后会调用`ActivityThread.main()`,在`main()`方法中会调用`ActivityThread.attach()`,然后会走到AMS中去 **
+- **如果待启动的Activity所在进程尚未存在，会调用`AMS.startProcessLocked()`方法，该方法会去调用`Process.start()`方法去通过Zygote孵化应用进程 去创建应用进程，创建成功之后会调用`ActivityThread.main()`,在`main()`方法中会调用`ActivityThread.attach()`,然后会走到AMS中去 **
 
-	- [具体的Zygote孵化过程](http://liuwangshu.cn/framework/applicationprocess/1.html)
+- [具体的Zygote孵化过程](http://liuwangshu.cn/framework/applicationprocess/1.html)
 
-10.  ActivityStackSupervisor.realStartActivityLocked ->
+### 2.2.12  ActivityStackSupervisor.realStartActivityLocked 
 
 			final boolean realStartActivityLocked(ActivityRecord r, ProcessRecord app,
 			          boolean andResume, boolean checkConfig) throws RemoteException {
@@ -454,9 +521,12 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 			      return true;
 			  }
 
-	 - 这里的app.thread指的是IApplicationThread(实际类型为Binder代理对象,IApplicationThread.Stub.Proxy),它的具体实现是ActivityThread的内部类ApplicationThread(继承了IApplication.Stub)
+ - 这里的app.thread指的是IApplicationThread(实际类型为Binder代理对象,IApplicationThread.Stub.Proxy),它的具体实现是ActivityThread的内部类ApplicationThread(继承了IApplication.Stub)
 
-	- app指的是待启动Activity所在的应用程序进程，`app.thread.scheduleLaunchActivity()`指的是要在目标进程中启动Activity。
-	- 当前代码运行在system_server进程，通过IApplicationThread来和应用程序进程进行进程间通讯
+- app指的是待启动Activity所在的应用程序进程，`app.thread.scheduleLaunchActivity()`指的是要在目标进程中启动Activity。
 
-11.   ApplicationThread.scheduleLaunchActivity ->
+- 当前代码运行在system_server进程，通过IApplicationThread来和应用程序进程进行进程间通讯
+
+### 2.2.13   ApplicationThread.scheduleLaunchActivity
+
+到这一步 就是跳转到ActivityThread中去执行。**可以参考`[ActivityThread分析.md]`**
