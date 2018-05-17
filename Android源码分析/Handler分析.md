@@ -59,9 +59,9 @@ Handler,Looper,Message 都是在android.jar包下的。
         return sThreadLocal.get();
     }
 
-prepare()方法会为当前Thread创建一个Looper，然后保存到ThreadLocal中。该方法不能重复调用，否则会抛出异常
+- `prepare()`方法会为当前Thread创建一个Looper，然后保存到ThreadLocal中。该方法不能重复调用，否则会抛出异常
 
-prepareMainLooper()方法是由Android environment调用的，同样的创建了Looper并放入了ThreadLocal中
+- `prepareMainLooper()`方法是由Android environment调用的（具体的代码是 在`ActivityThread.main()`中），同样的创建了Looper并放入了ThreadLocal中
 
 ## 2.2 构造函数
 
@@ -162,7 +162,7 @@ prepareMainLooper()方法是由Android environment调用的，同样的创建了
 
 3. 调用`msg.target.dispatchMessage(msg);`去执行message,`msg.target`实际上就是Handler
 
-**注意：主线程中在AndroidThread中已经调用了Looper.loop()以及Looper.prepare()**
+**注意：主线程中在AndroidThread中已经调用了Looper.loop()以及Looper.prepareMainLooper()**
 
 # 3. Hanlder
 
