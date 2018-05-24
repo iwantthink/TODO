@@ -289,7 +289,7 @@ ActivityManager构造函数如下:
 
 # 4. Hook ClipboardService流程分析
 
-1. 操作剪切板的操作,会先获取一个ClipboardManager管理类,然后就可以通过这个管理类与远程系统Service进行通信:
+1. 操作剪切板的操作,会先获取一个`ClipboardManager`管理类,然后就可以通过这个管理类与远程系统Service进行通信(管理类将操作转交给Binder):
 
 		ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 		ClipData clipData = clipboardManager.getPrimaryClip();
@@ -298,31 +298,181 @@ ActivityManager构造函数如下:
 
 2. `Activity.getSystemService()`方法,通过前面章节的分析可以知道,会去借助`SystemServiceRegistry`类的`ServiceFetcher`接口来获取对应的系统服务的管理类(准确的来说是其子类,`CachedServiceFetcher`)
 
-3. 获取到的系统服务管理类,`ClipboardManager`.这个类会通过`ServiceManager`类 来获取IBinder对象(**同时这里有一个逻辑,优先从一个HashMap中获取IBinder对象**)
+3. 通过`ServiceFetcher`能够获取到的系统服务管理类,`ClipboardManager`
 
-4. 由于这时获取到的IBinder对象并不是真正的可调用对象,其仅具有跨进程能力,还不具备方法调用的能力,还需要通过`Binder.Stub.asInterface()`方法进行类型转换.将IBinder转换成 本地Binder对象或者是代理Binder对象.无论是Binder本地对象或者是Binder代理对象 都具备该Binder对应系统服务的能力
+	这个类会通过`ServiceManager`类 来获取IBinder对象(**同时这里有一个逻辑,优先从一个HashMap中获取IBinder对象**)
 
+4. 在`ServiceManager`中,由于这时获取到的IBinder对象并不是真正的可调用对象,其仅具有跨进程能力,还不具备方法调用的能力,还需要通过`Binder.Stub.asInterface()`方法进行类型转换.将IBinder转换成 本地Binder对象或者是代理Binder对象.无论是Binder本地对象或者是Binder代理对象 都具备该Binder对应系统服务的能力
+
+		IClipboard mService = IClipboard.Stub.asInterface(ServiceManager.getServiceOrThrow(Context.CLIPBOARD_SERVICE));
+
+
+**Hook点分析:**
 
 **在应用中调用所有的系统服务都是借助Binder远程代理对象实现的(因为不在一个进程..所以肯定是会转换成binder代理对象),那么只要为这个Binder代理对象创建一个代理对象,然后替换掉这个Binder代理对象,就可以实现Hook**
 
 
 ## 4.1 获取到需要代理的对象
 
-通过反射获取`ServiceManager`,调用`getService(String name)`即可
+通过反射调用`ServiceManager.getService(String name)`获取
 
 	IBinder b = ServiceManager.getServiceOrThrow(Context.CLIPBOARD_SERVICE)
 
-## 4.2 创建动态代理
-注意 4.1 获取到的IBinder对象只是远程Binder代理对象,还需要通过`IClipboard.Stub.asInterface()`方法进行转换之后才能真正被使用.**所以我们如何需要调用系统服务的方法 是基于这个转换之后的IBinder对象**
+**反射的话 需要注意,需要先获取到执行invoke执行方法的对象.例外: 静态方法和静态变量 在invoke时不需要传入执行对象.**
 
+**Hook代码:**
+
+	//获取ServiceManager对象,通过其成员变量sServiceManager获取
+	Class serviceManager_Class = Class.forName("android.os.ServiceManager");
+	Field sServiceManager_Field = serviceManager_Class.getDeclaredField("sServiceManager");
+	sServiceManager_Field.setAccessible(true);
+	Object sServiceManager = sServiceManager_Field.get(null);
+
+	//获取原始IBinder,通过反射执行ServiceManager.getService(String name)
+	Method getService_Method = serviceManager_Class.getDeclaredMethod("getService", String.class);
+	getService_Method.setAccessible(true);
+	//原始IBinder
+	IBinder originalClipIBinder = (IBinder) getService_Method.invoke(sServiceManager, "clipboard");
+
+## 4.2 创建动态代理
+注意 4.1 获取到的IBinder对象只是远程Binder代理对象,还需要通过`IClipboard.Stub.asInterface()`方法转换成`IClipboard.Stub.Proxy`之后才能真正被使用.**所以我们调用系统服务的方法 是基于这个转换之后的IBinder对象**
+	
+	//创建动态代理
+	IBinder mBase = Proxy.newProxyInstance(mBase.getClass().getClassLoader(),
+	                    new Class[]{IBinder.class,
+	                            IInterface.class,
+	                            Class.forName("android.content.IClipboard")},
+	                    new ProxyClipBinderProxy(mBase));
+	//动态代理的 InvocationHandler,即具体修改逻辑的地方
+	public class ProxyClipBinderProxy implements InvocationHandler {
+	
+	    private Object mBase;
+		//传入的是 Binder代理对象
+	    public ProxyClipBinderProxy(Object base) {
+	        mBase = base;
+	    }
+	
+	
+	    @Override
+	    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+	        Log.d("ProxyClipBinderProxy", "method name = " + method.getName());
+	        if (method.getName().equals("getPrimaryClip")) {
+	            ClipData data = (ClipData) method.invoke(mBase, args);
+	            ClipData.Item item = data.getItemAt(0);
+	            return new ClipData(data.getDescription().getLabel(),
+	                    new String[]{}, new ClipData.Item("you are hooked:" + item.getText().toString()));
+	        }
+	        return method.invoke(mBase, args);
+	    }
+	}
 
 ## 4.3 替换原始对象
 
 已经知道 `ServiceManager.getSystemService()`会去缓存中获取,那么只需要将代理对象 放到缓存中.**但是这里还有一个问题,ClipboardManager构造函数中,在获取到这个原始的IBinder对象之后,还需要进行`asInterface()`的转换,`asInterface()`方法判断的时候,并不会起作用(因为IBinder传入之后,创建了`Stub.Proxy`,具体执行方法的类并不是这个`Stub.Proxy`而是远程的系统服务). **
 
+	public static 表示能力的接口 asInterface(android.os.IBinder obj) {
+            if ((obj == null)) {
+                return null;
+            }
+            android.os.IInterface iin = obj.queryLocalInterface(DESCRIPTOR);
+            if (((iin != null) && (iin instanceof 表示能力的接口))) {
+                return ((表示能力的接口) iin);
+            }
+            return new 表示能力的接口.Stub.Proxy(obj);
+	}
 
-## 4.4 修改asInterface方法的逻辑
+- `queryLocalInterface()`可以作为Hook点,用来将修改后的`IClipboard.Stub.Proxy`返回..
+
+### 4.3.1 Hook原始对象-queryLocalInterface
 
 即使我们已经将动态代理对象 替换到 ServiceManager的缓存中,在通过`asInterface()`方法判断的时候,并不会起作用(因为IBinder传入之后,创建了`Stub.Proxy`,具体执行方法的类并不是这个`Stub.Proxy`而是远程的系统服务).
 
-所以需要 hook掉这个`queryLocalInterface()`这个方法,让其返回代理对象.那么每次从缓存中取出我们的代理的Binder代理对象,并执行`queryLocalInterface()`方法 都会返回我们代理对象.
+所以需要 hook掉这个`queryLocalInterface()`这个方法,让其返回代理对象.那么每次从缓存中取出我们的代理的Binder代理对象,并在`asInterface()`中执行`queryLocalInterface()`方法 都会返回我们代理对象.
+
+	//Hook queryLocalInterface,令其返回 被动态代理的Binder代理对象
+	IBinder clipProxy = (IBinder) Proxy.newProxyInstance(originalClipIBinder.getClass().getClassLoader(),
+                    new Class[]{IBinder.class}, new OriginalClipBinderProxy(originalClipIBinder));
+
+	//具体替换queryLocalInterface的地方
+	public class OriginalClipBinderProxy implements InvocationHandler {
+	
+	    /**
+	     * 转换之后的对象
+	     */
+	    private Object mBase;
+	    private Object mOriginalBase;
+	
+	    /**
+	     * @param base 转换之前的对象
+	     */
+	    public OriginalClipBinderProxy(IBinder base) {
+	        mOriginalBase = base;
+	        try {
+	            //实际上调用的得是Stub.Proxy类型,所以得通过asInterface进行类型转换
+	            //获取转换之后的IBinder
+	            Class clipboardStub_Class = Class.forName("android.content.IClipboard$Stub");
+	            Method asInterface_Method = clipboardStub_Class.getDeclaredMethod("asInterface", IBinder.class);
+	            asInterface_Method.setAccessible(true);
+	            mBase = asInterface_Method.invoke(null, base);
+	
+	
+	            //hook Stub.Proxy的方法
+	            //注意这里有三个接口
+	            mBase = Proxy.newProxyInstance(mBase.getClass().getClassLoader(),
+	                    new Class[]{IBinder.class,
+	                            IInterface.class,
+	                            Class.forName("android.content.IClipboard")},
+	                    new ProxyClipBinderProxy(mBase));
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	
+	    }
+	
+	
+	    @Override
+	    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+			//最关键的一步,Hook掉queryLocalInterface
+	        if (method.getName().equals("queryLocalInterface")) {
+	            return mBase;
+	        }
+	        return method.invoke(mOriginalBase, args);
+	    }
+	}
+
+### 4.3.2 替换对象
+
+	//获取ServiceManager对象的sCache成员变量
+	Field sCache_Field = serviceManager_Class.getDeclaredField("sCache");
+	sCache_Field.setAccessible(true);
+	HashMap<String, IBinder> sCache = (HashMap<String, IBinder>) sCache_Field.get(sServiceManager);
+
+	//将被修改过的Binder存入sCache
+	sCache.put(Context.CLIPBOARD_SERVICE, clipProxy);
+
+## 4.4 完整流程
+
+	//获取ServiceManager对象,通过其成员变量sServiceManager获取
+	Class serviceManager_Class = Class.forName("android.os.ServiceManager");
+	Field sServiceManager_Field = serviceManager_Class.getDeclaredField("sServiceManager");
+	sServiceManager_Field.setAccessible(true);
+	Object sServiceManager = sServiceManager_Field.get(null);
+	//获取原始IBinder,通过反射执行ServiceManager.getService(String name)
+	Method getService_Method = serviceManager_Class.getDeclaredMethod("getService", String.class);
+	getService_Method.setAccessible(true);
+	IBinder originalClipIBinder = (IBinder) getService_Method.invoke(sServiceManager, "clipboard");
+	//Hook queryLocalInterface,令其返回 被动态代理的Binder代理对象
+	IBinder clipProxy = (IBinder) Proxy.newProxyInstance(originalClipIBinder.getClass().getClassLoader(),
+                    new Class[]{IBinder.class}, new OriginalClipBinderProxy(originalClipIBinder));
+
+
+	//获取ServiceManager对象的sCache成员变量
+	Field sCache_Field = serviceManager_Class.getDeclaredField("sCache");
+	sCache_Field.setAccessible(true);
+	HashMap<String, IBinder> sCache = (HashMap<String, IBinder>) sCache_Field.get(sServiceManager);
+
+	//将被修改过的Binder存入sCache
+	sCache.put(Context.CLIPBOARD_SERVICE, clipProxy);
+
+
+
