@@ -66,7 +66,7 @@ Android使用的Linux内核拥有着非常多的跨进程通信机制，比如�
 
 **Bindler通信：**
 
-- 俩个运行在用户空间的进程要进行通信，需要借助内核的帮助(实际上是需要可加载内核模块)，这个运行在内核中的程序叫做**Binder驱动**，它的功能类似基站，另外打电话通信中的通信录对应Binder通信中的`ServiceManager`
+- 俩个运行在用户空间的进程要进行通信，需要借助内核的帮助(实际上是需要动态可加载内核模块)，这个运行在内核中的程序叫做**Binder驱动**，它的功能类似基站，另外打电话通信中的通信录对应Binder通信中的`ServiceManager`
 
 	![](http://7xp3xc.com1.z0.glb.clouddn.com/binder-model.png)
 
@@ -345,24 +345,24 @@ AIDL中存在以下几个类 :
 
 - 对于Binder代理对象(转换为Stub.Proxy)，实现如下：
 
-		 @Override
-		            public int add(int a, int b) throws android.os.RemoteException {
-		                android.os.Parcel _data = android.os.Parcel.obtain();
-		                android.os.Parcel _reply = android.os.Parcel.obtain();
-		                int _result;
-		                try {
-		                    _data.writeInterfaceToken(DESCRIPTOR);
-		                    _data.writeInt(a);
-		                    _data.writeInt(b);
-		                    mRemote.transact(Stub.TRANSACTION_add, _data, _reply, 0);
-		                    _reply.readException();
-		                    _result = _reply.readInt();
-		                } finally {
-		                    _reply.recycle();
-		                    _data.recycle();
-		                }
-		                return _result;
-		            }
+		@Override
+		public int add(int a, int b) throws android.os.RemoteException {
+			android.os.Parcel _data = android.os.Parcel.obtain();
+			android.os.Parcel _reply = android.os.Parcel.obtain();
+			int _result;
+			try {
+				_data.writeInterfaceToken(DESCRIPTOR);
+				_data.writeInt(a);
+				_data.writeInt(b);
+				mRemote.transact(Stub.TRANSACTION_add, _data, _reply, 0);
+				_reply.readException();
+				_result = _reply.readInt();
+			} finally {
+				_reply.recycle();
+				_data.recycle();
+			}
+			return _result;
+		}
 
 	首先通过`Parcel`将数据序列化，其次调用`mRemote.transact`方法。mRemote是就是`onServiceConnection`中IBinder参数，同时如果执行到这里，说明这个之前在`asInterface()`方法中 认为IBinder就是BinderProxy(即Binder类的内部类)
 	
