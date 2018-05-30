@@ -15,6 +15,10 @@
 
 [Android类加载器分析](http://tech.lede.com/2017/02/22/rd/android/android_classLoader/) 
 
+[类的加载机制](https://blog.csdn.net/u012152619/article/details/46964775)
+
+[【深入Java虚拟机】之四：类加载机制](https://blog.csdn.net/ns_code/article/details/17881581)
+
 **强烈建议安装chrome插件 Android SDK Search!!!**
 **使用方式：地址栏输入ad 然后按TAB**
 
@@ -26,7 +30,10 @@ ClassLoader就是类加载器，具体作用就是将class文件加载到jvm虚�
 ![](http://ac-qygvx1cc.clouddn.com/78e71017bdd24420.jpeg)
 
 ## 1.1 默认的ClassLoader
-Java提供俩种类型的类加载器：系统类加载器和自定义类加载器。**Java系统类加载器**默认分为三种ClassLoader类型:
+
+Java提供俩种类型的类加载器(以JVM的角度)：启动类加载器(使用c++实现,是虚拟机的一部分)和所有其他的类加载器(全部由Java实现,独立于JVM,全部继承自`java.lang.ClassLoader`,且都是在启动类加载器之后加载的)。
+
+**如果以Java开发人员的角度,Java类加载器**默认分为三种ClassLoader类型:
 
 - **BootStrap ClassLoader：**称为 引导类加载器，是java类加载层次中最顶层的类加载器，负责加载JDK中的核心类库，如：rt.jar,resources.jar,charsets.jar等。默认加载路径在`/JAVA_HOME/jre/lib` 目录下，也可以通过启动Java虚拟机时指定`-Xbootclasspath/a:path`选项，来改变Bootstrap ClassLoader的加载目录。  存在于Launcher中。
 
@@ -56,6 +63,7 @@ Java提供俩种类型的类加载器：系统类加载器和自定义类加载�
 
 	可以加载通过`-Djava.class.path`选项所指定的目录下的jar和Class文件
 
+	**一般情况下,这个就是程序中默认的类加载器**
 
 
  **注意：**
@@ -161,6 +169,10 @@ ClassLoader使用的双亲委托模式来搜索类，每个ClassLoader 实例都
 - 注释1处会检查类是否已经加载,如果已经加载则后面的代码不会执行，最后会返回该类。没有加载则会继续执行
 
 - 注释2处会判断如果父类加载器不为null，则调用父类加载器的loadClass()方法。如果父类加载器null，会调用注释3处的 `findBootstrapClassOrNull()`方法。这个方法内部调用了Native方法`findLoadedClass0()`,其最终会用Bootstrap ClassLoader 来查找类。如果Bootstrap ClassLoader 也没有找到该类，则会调用注释4处的`findClass()`方法继续逐级向下进行查找。
+
+## 1.4 类的加载过程
+
+
 
 #2 自定义ClassLoader
 
