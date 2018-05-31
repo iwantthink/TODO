@@ -33,7 +33,7 @@ ClassLoader就是类加载器，具体作用就是将class文件加载到jvm虚�
 
 Java提供俩种类型的类加载器(以JVM的角度)：启动类加载器(使用c++实现,是虚拟机的一部分)和所有其他的类加载器(全部由Java实现,独立于JVM,全部继承自`java.lang.ClassLoader`,且都是在启动类加载器之后加载的)。
 
-**如果以Java开发人员的角度,Java类加载器**默认分为三种ClassLoader类型:
+**如果以Java开发人员的角度,Java类加载器**可以分为三种ClassLoader类型:
 
 - **BootStrap ClassLoader：**称为 引导类加载器，是java类加载层次中最顶层的类加载器，负责加载JDK中的核心类库，如：rt.jar,resources.jar,charsets.jar等。默认加载路径在`/JAVA_HOME/jre/lib` 目录下，也可以通过启动Java虚拟机时指定`-Xbootclasspath/a:path`选项，来改变Bootstrap ClassLoader的加载目录。  存在于Launcher中。
 
