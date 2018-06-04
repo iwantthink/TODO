@@ -288,7 +288,7 @@ Android 的Dalvik/ART 虚拟机和标准 JVM 一样，也是需要加载class文
 
 ## 3.1 Android 系统ClassLoader
 
-[PathClassLoader/DexClassLoader 源码地址](https://android.googlesource.com/platform/libcore-snapshot/+/ics-mr1/dalvik/src/main/java/dalvik/system)
+[PathClassLoader/DexClassLoader 源码地址](https://android.googlesource.com/platform/libcore/+/master/dalvik/src/main/java/dalvik/system)
 
 [DexClassLoader源码地址](https://android.googlesource.com/platform/libcore/+/master/dalvik/src/main/java/dalvik/system/DexClassLoader.java)
 
