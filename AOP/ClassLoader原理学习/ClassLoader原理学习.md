@@ -445,7 +445,7 @@ ODEX相关文章：
 	- `libraryPath`：加载程序文件时需要用到的库路径。
 	- `parent`：父加载器
 
-- `private final DexPathList pathList`这个字段非常重要，BDCL继承自ClassLoader实现了许多方法都是基于这个字段，例如:findClass(),findResource(),findResources(),findLibrary()。
+- `private final DexPathList pathList`这个字段非常重要，BDCL继承自ClassLoader实现了许多方法都是基于这个字段，例如:`findClass()`,`findResource()`,`findResources()`,`findLibrary()`。
 
 	    @Override
 	    protected Class<?> findClass(String name) throws ClassNotFoundException {
@@ -470,35 +470,24 @@ ODEX相关文章：
 - [`DexPathList`](https://android.googlesource.com/platform/libcore-snapshot/+/ics-mr1/dalvik/src/main/java/dalvik/system/DexPathList.java)构造方法比较简单，接收了dexPath,libraryPath 和optimizedDirectory。并且调用`makeDexElements()`方法生成了一个`Element[] dexElements`数组,Element是DexPathList的一个嵌套类。
 
 		//DexPathList构造方法 8.0 的代码
-	    public DexPathList(ClassLoader definingContext, String dexPath,
-	            String libraryPath, File optimizedDirectory) {
-	        if (definingContext == null) {
-	            throw new NullPointerException("definingContext == null");
-	        }
-	        if (dexPath == null) {
-	            throw new NullPointerException("dexPath == null");
-	        }
-	        if (optimizedDirectory != null) {
-	            if (!optimizedDirectory.exists())  {
-	                throw new IllegalArgumentException(
-	                        "optimizedDirectory doesn't exist: "
-	                        + optimizedDirectory);
-	            }
-	            if (!(optimizedDirectory.canRead()
-	                            && optimizedDirectory.canWrite())) {
-	                throw new IllegalArgumentException(
-	                        "optimizedDirectory not readable/writable: "
-	                        + optimizedDirectory);
-	            }
-	        }
-	        this.definingContext = definingContext;
+		DexPathList(ClassLoader definingContext, 
+			String dexPath,
+            String librarySearchPath, 
+			File optimizedDirectory, 
+			boolean isTrusted) {
+			``省略一些非空判断的代码``
 	        this.dexElements =
-	            makeDexElements(splitDexPath(dexPath), optimizedDirectory);
+	            makeDexElements(splitDexPath(dexPath), optimizedDirectory,
+				suppressedExceptions, 
+				definingContext, 
+				isTrusted));
 	        this.nativeLibraryDirectories = splitLibraryPath(libraryPath);
 	    }
 
 		//Element类
+		//Element of the dex/resource path
 		static class Element {
+			//A file denoting a zip file (in case of a resource jar or a dex jar), or a directory (only when dexFile is null).
 	        public final File file;
 	        public final ZipFile zipFile;
 	        public final DexFile dexFile;
@@ -509,21 +498,9 @@ ODEX相关文章：
 	        }
 	        public URL findResource(String name) {
 	            if ((zipFile == null) || (zipFile.getEntry(name) == null)) {
-	                /*
-	                 * Either this element has no zip/jar file (first
-	                 * clause), or the zip/jar file doesn't have an entry
-	                 * for the given name (second clause).
-	                 */
 	                return null;
 	            }
 	            try {
-	                /*
-	                 * File.toURL() is compliant with RFC 1738 in
-	                 * always creating absolute path names. If we
-	                 * construct the URL by concatenating strings, we
-	                 * might end up with illegal URLs for relative
-	                 * names.
-	                 */
 	                return new URL("jar:" + file.toURL() + "!/" + name);
 	            } catch (MalformedURLException ex) {
 	                throw new RuntimeException(ex);
@@ -533,68 +510,73 @@ ODEX相关文章：
 
 ### 3.3.1 DexPathList-makeDexElements()
 
-	 private static Element[] makeDexElements(List<File> files, File optimizedDirectory,
-	            List<IOException> suppressedExceptions, ClassLoader loader) {
-	      Element[] elements = new Element[files.size()];
-	      int elementsPos = 0;
-	      /*
-	       * Open all files and load the (direct or contained) dex files up front.
-	       */
-	      for (File file : files) {
-	          if (file.isDirectory()) {
-	              // We support directories for looking up resources. Looking up resources in
-	              // directories is useful for running libcore tests.
-	              elements[elementsPos++] = new Element(file);
-	          } else if (file.isFile()) {
-	              String name = file.getName();
-	              if (name.endsWith(DEX_SUFFIX)) {
-	                  // Raw dex file (not inside a zip/jar).
-	                  try {
-	                      DexFile dex = loadDexFile(file, optimizedDirectory, loader, elements);
-	                      if (dex != null) {
-	                          elements[elementsPos++] = new Element(dex, null);
-	                      }
-	                  } catch (IOException suppressed) {
-	                      System.logE("Unable to load dex file: " + file, suppressed);
-	                      suppressedExceptions.add(suppressed);
-	                  }
-	              } else {
-	                  DexFile dex = null;
-	                  try {
-	                      dex = loadDexFile(file, optimizedDirectory, loader, elements);
-	                  } catch (IOException suppressed) {
-	                      /*
-	                       * IOException might get thrown "legitimately" by the DexFile constructor if
-	                       * the zip file turns out to be resource-only (that is, no classes.dex file
-	                       * in it).
-	                       * Let dex == null and hang on to the exception to add to the tea-leaves for
-	                       * when findClass returns null.
-	                       */
-	                      suppressedExceptions.add(suppressed);
-	                  }
-	                  if (dex == null) {
-	                      elements[elementsPos++] = new Element(file);
-	                  } else {
-	                      elements[elementsPos++] = new Element(dex, file);
-	                  }
-	              }
-	          } else {
-	              System.logW("ClassLoader referenced unknown path: " + file);
-	          }
-	      }
-	      if (elementsPos != elements.length) {
-	          elements = Arrays.copyOf(elements, elementsPos);
-	      }
-	      return elements;
-	    }
+    private static Element[] makeDexElements(List<File> files, File optimizedDirectory,
+            List<IOException> suppressedExceptions, ClassLoader loader, boolean isTrusted) {
+      Element[] elements = new Element[files.size()];
+      int elementsPos = 0;
+      /*
+       * Open all files and load the (direct or contained) dex files up front.
+       */
+      for (File file : files) {
+          if (file.isDirectory()) {
+              // We support directories for looking up resources. Looking up resources in
+              // directories is useful for running libcore tests.
+              elements[elementsPos++] = new Element(file);
+          } else if (file.isFile()) {
+              String name = file.getName();
+              DexFile dex = null;
+              if (name.endsWith(DEX_SUFFIX)) {
+                  // Raw dex file (not inside a zip/jar).
+                  try {
+                      dex = loadDexFile(file, optimizedDirectory, loader, elements);
+                      if (dex != null) {
+                          elements[elementsPos++] = new Element(dex, null);
+                      }
+                  } catch (IOException suppressed) {
+                      System.logE("Unable to load dex file: " + file, suppressed);
+                      suppressedExceptions.add(suppressed);
+                  }
+              } else {
+                  try {
+                      dex = loadDexFile(file, optimizedDirectory, loader, elements);
+                  } catch (IOException suppressed) {
+                      /*
+                       * IOException might get thrown "legitimately" by the DexFile constructor if
+                       * the zip file turns out to be resource-only (that is, no classes.dex file
+                       * in it).
+                       * Let dex == null and hang on to the exception to add to the tea-leaves for
+                       * when findClass returns null.
+                       */
+                      suppressedExceptions.add(suppressed);
+                  }
+                  if (dex == null) {
+                      elements[elementsPos++] = new Element(file);
+                  } else {
+                      elements[elementsPos++] = new Element(dex, file);
+                  }
+              }
+              if (dex != null && isTrusted) {
+                dex.setTrusted();
+              }
+          } else {
+              System.logW("ClassLoader referenced unknown path: " + file);
+          }
+      }
+      if (elementsPos != elements.length) {
+          elements = Arrays.copyOf(elements, elementsPos);
+      }
+      return elements;
+    }
 
 - **参数List<File> files**： 由 dexPath经过处理获取，进行拆分并封装成File
 
-- **参数File optimizedDirectory** ：就是优化后的dex文件
+- **参数File optimizedDirectory** ：dex文件的输出目录
 
 - **参数ArrayList<IOException> suppressedExceptions**:集合 用来收集IOException
 
-- **参数ClassLoader definingContext**:
+- **参数ClassLoader definingContext**:上下文
+
+- **参数boolean isTrusted:**
 
 - **总的功能就是将 dexPath路径中的 含有dex的文件 组装成一个Element[] 数组！**
 
