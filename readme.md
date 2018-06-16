@@ -80,7 +80,11 @@ jenkins+jacoco
 
 研究插件化
 
-- 特殊的activity启动方式。
+- ~~特殊的activity启动方式~~。
+
+- Hook AMS
+
+- Hoom PMS
 
 分析Java集合类的原理。
 
