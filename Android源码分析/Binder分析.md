@@ -26,7 +26,7 @@ Android系统基于Linux内核，存在**进程隔离**，即对每个进程来�
 
 **Linux用户空间/内核空间之间的访问**
 
-- Linux Kernel是操作系统的核心，独立于普通的应用程序，可以访问受保护的内存空间，也有访问硬件设备的所有权限
+- `Linux Kernel`是操作系统的核心，独立于普通的应用程序，可以访问受保护的内存空间，也有访问硬件设备的所有权限
 
 	对于Kernel存在一个保护机制，这个保护机制用来区分Kernel和上层的应用程序(称之为Kernel Space/User Space),即区分资源访问的权限，只能访问被许可的资源
 
@@ -53,6 +53,16 @@ Android系统基于Linux内核，存在**进程隔离**，即对每个进程来�
 ## 1.1 为什么使用Binder？
 
 Android使用的Linux内核拥有着非常多的跨进程通信机制，比如管道，System V，Socket等；为什么还需要单独搞一个Binder出来呢？**主要有两点，性能和安全**。在移动设备上，广泛地使用跨进程通信肯定对通信机制本身提出了严格的要求；Binder相对出传统的Socket方式，更加高效；另外，传统的进程通信方式对于通信双方的身份并没有做出严格的验证，只有在上层协议上进行架设；比如Socket通信ip地址是客户端手动填入的，都可以进行伪造；而Binder机制从协议本身就支持对通信双方做身份校检，因而大大提升了安全性。这个也是Android权限模型的基础。
+
+- 从IPC角度来说：Binder是Android中的一种跨进程通信方式，该通信方式在linux中没有，是Android独有；
+
+- 从Android Driver层：Binder还可以理解为一种虚拟的物理设备，它的设备驱动是/dev/binder；
+
+- 从Android Native层：Binder是创建Service Manager以及BpBinder/BBinder模型，搭建与binder驱动的桥梁；
+
+- 从Android Framework层：Binder是各种Manager（ActivityManager、WindowManager等）和相应xxxManagerService的桥梁；
+
+- 从Android APP层：Binder是客户端和服务端进行通信的媒介，当bindService的时候，服务端会返回一个包含了服务端业务调用的 Binder对象，通过这个Binder对象，客户端就可以获取服务端提供的服务或者数据，这里的服务包括普通服务和基于AIDL的服务。
 
 ## 1.2 Binder通信模型
 
