@@ -469,7 +469,7 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 
 ### 3.2.2 Numbers
 
-允许在数字中使用下划线`_` 增加数字可阅读性
+**允许在数字中使用下划线`_` 增加数字可阅读性**
 
 	long reditCardNumber = 123456_789
 	assert reditCardNumber == 123456789
@@ -494,6 +494,16 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 #### 3.2.2.1 整数
 
 - 整数类型： byte,char,short,int,long (这五种为原始类型)，java.lang.BigInteger(无限精度)
+
+		// primitive types
+		byte  b = 1
+		char  c = 2
+		short s = 3
+		int   i = 4
+		long  l = 5
+		
+		// infinite precision
+		BigInteger bi =  6
 
 - 使用`def`定义整数，变量的类型会根据类型的容量去适应这个整数值
 		
@@ -551,7 +561,15 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 		assert xInt16 == 58
 
 #### 3.2.2.2 小数
-小数类型有：float,double,Java.lang.BigDecimal
+
+**小数类型有：`float,double,Java.lang.BigDecimal`**
+
+	// primitive types
+	float  f = 1.234
+	double d = 2.345
+	
+	// infinite precision
+	BigDecimal bd =  3.456
 
 小数可以使用exponents(指数)，通过`e`或`E`来表示
 
@@ -561,18 +579,19 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 	assert 4E-2 ==      0.04
 	assert 5e-1 ==      0.5
 
-小数无法使用 二进制，八进制或十六进制表示
+**小数无法使用 二进制，八进制或十六进制表示**
 
 #### 3.2.2.3 数学运算
-byte, char, short and int 互相进行二元运算，结果都是 int
 
-long 和 (byte, char, short and int) 进行二元运算，结果都是long
+`byte, char, short` 和 `int` 互相进行二元运算，结果都是 `int`
 
-BigInteger 和任何整数类型进行计算，结果都是 BigInteger
+`long` 和 `(byte, char, short and int)` 进行二元运算，结果都是long
 
-BigDecimal 和 (byte, char, short, int and BigInteger )进行计算，结果是BigDecimal
+`BigInteger` 和任何整数类型进行计算，结果都是 `BigInteger`
 
-float, double and BigDecimal互相进行二元运算，结果是double
+`BigDecimal` 和 `(byte, char, short, int and BigInteger )`进行计算，结果是`BigDecimal`
+
+`float, double ` 和 `BigDecimal`互相进行二元运算，结果是`double`
 
 俩个BigDecimal计算结果还是 BigDecimal
 
@@ -580,7 +599,7 @@ float, double and BigDecimal互相进行二元运算，结果是double
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fm03wh0vrsj20n80f83yq.jpg)
 
-因为Groovy的运算符重载，所以运算符可以直接作用于BigInteger和BigDecimal
+**因为Groovy的运算符重载，所以运算符可以直接作用于BigInteger和BigDecimal类型的数据,而不需要通过特定的方法去操作**
 
 ##### 3.2.2.3.1 除法运算
 `/`或`/=` 这俩个运算符，只要算式中存在一个float,double那么结果就是Double类型，否则都是BigDecimal类型
@@ -633,14 +652,20 @@ true/false,可以存储到变量中。更复杂的布尔表达式可以通过逻
 Groovy中容器类有三种:
 
 - List:链表,其底层对应Java中的List接口，一般用ArrayList作为真正的实现类.**除非使用as操作符转换类型，或者显示的声明其变量类型**
+
 - Map:键-值表，**底层对应java中的LinkedHashMap**
+
 - Range:范围，是List的一种拓展
+
 - Arrays:数组，必须得指定类型
 
-使用介绍：  
+**使用介绍：  **
 
-1. List由`[]`定义，其元素可以是任何对象。变量存取可以直接通过索引存取，而且不用担心索引越界，如果索引超过当前链表长度，List会自动往该索引添加元素
+#### 3.2.4.1 List
+
+- `List`由中括号`[]`定义，其元素可以是任何对象。变量存取可以直接通过索引存取，而且不用担心索引越界，如果索引超过当前链表长度，List会自动往该索引添加元素
 		
+		//这里包含数字,字符串和布尔值
 		def aList = [1,'2',true]
 		assert aList[1]=='2'
 		assert aList[5]==null
@@ -648,77 +673,120 @@ Groovy中容器类有三种:
 		assert aList[11] ==11
 		assert aList.size == 11
 
-	- 可以通过`<<`leftshift 操作符往List末尾添加一个数据
+- 通过`list.[下标]`可以访问对应位置.列表的第一个元素下标为0,末尾元素的下标可以表示为`list.size()-1`或`-1`
 
-			def aList = [1,2,3]
-			aList<<4
-			assert aList.size() == 4
 
-	- List还可以包含其他List，构建成一个多维列表
+- 支持同时访问多个数据
 
-			def multi = [[0,1],[2,3]]
-			assert multi[1][1]==3	 
+		//访问 第二个和第四个元素
+		assert letters[1, 3] == ['b', 'd']
+		//访问 第三个到第五个元素         
+		assert letters[2..4] == ['C', 'd', 'e']
 
-2. Map由`[:]`定义，冒号左边是key，右边是value。key建议是字符串，value可以是任何对象。另外key可以用单引号或双引号包裹，也可以不包裹
+- 可以通过`<<`leftshift 操作符往List末尾添加一个数据
+
+		def aList = [1,2,3]
+		aList<<4
+		assert aList.size() == 4
+
+- List还可以包含其他List，构建成一个多维列表
+
+		def multi = [[0,1],[2,3]]
+		assert multi[1][1]==3	 
+ 
+- 通过`size()`方法获取列表大小
+
+- 通过以下方式可以转换`List`默认的实现
+
+			def arrayList = [1, 2, 3]
+			assert arrayList instanceof java.util.ArrayList
+			
+			def linkedList = [2, 3, 4] as LinkedList    
+			assert linkedList instanceof java.util.LinkedList
+			
+			LinkedList otherLinked = [3, 4, 5]          
+			assert otherLinked instanceof java.util.LinkedList
+
+#### 3.2.4.2 Map
+
+- Map由`[:]`定义，冒号左边是key，右边是value。key建议是字符串，value可以是任何对象。另外key可以用单引号或双引号包裹，也可以不包裹
   
 		def aMap = ['key1':'value1','key2':'value2']
 		aMap.keyName //取值方式1 注意这里的keyname 不是真正的key。
 		aMap.['keyName']//取值方式2
+
+- 获取不存在的key时 会返回`null`
+
 		assert aMap.yellow == null//取不存在的值会返回null
 		aMap.anotherkey = 'i am map'//添加新元素，anotherkey是key的名称
 
-	- 可以使用String或int 作为key，但是key类型为int时，取值不能直接用`.key`，而必须使用`map[key]`。另外添加新的key时，也可以是数字 但是需要用`''`包裹
+- Groovy创建的Map 实际上是`java.util.LinkedHashMap`
 
-			aMap.'3' = 2
-			assert aMap.containsKey('3')
+- 可以使用String或int 作为key，但是key类型为int时，取值不能直接用`.key`，而必须使用`map[key]`。另外添加新的key时，也可以是数字 但是需要用`''`包裹
 
-	- 如果使用一个变量的name作为key，那么会把这个name当做key，而不是这个name对应的内容.可以通过添加`()`括号来使用其对应内容当做key。
+		aMap.'3' = 2
+		assert aMap.containsKey('3')
 
-			def key  = 'hello'
-			def maps = [key:'world']
-			assert maps.containsKey('key')
-			assert !maps.containsKey('hello')
+- 如果使用一个变量的name作为key，那么会把这个name当做key，而不是这个name对应的内容.可以通过添加`()`括号来使用其对应内容当做key。
 
-			def key = 'hello'
-			def maps = [(key):'world']
-			assert maps.containsKey('hello')
-			assert !maps.containsKey('key1')
+		def key  = 'hello'
+		def maps = [key:'world']
+		assert maps.containsKey('key')
+		assert !maps.containsKey('hello')
 
-	- 通过`anotherKey= 'value'`直接添加key-value
-			def maps = ['a':1]
-			maps.anotherKey = 'b'
-			assert map.containsKey('anotherKey')
+		def key = 'hello'
+		def maps = [(key):'world']
+		assert maps.containsKey('hello')
+		assert !maps.containsKey('key1')
+
+- 通过`anotherKey= 'value'`直接添加key-value
+
+		def maps = ['a':1]
+		maps.anotherKey = 'b'
+		assert map.containsKey('anotherKey')
+
+#### 3.2.4.3 Range
 			
-3. Range类型的变量，由`begin值+俩个点+end值` 组合表示,如果不想包含最后一个值，可以在`end值`前添加一个`<`符号
+- Range类型的变量，由`begin值+俩个点+end值` 组合表示,如果不想包含最后一个值，可以在`end值`前添加一个`<`符号
+
 		def aRange = 1..5//包含1,2,3,4,5
 		def aRangeWithOutEnd = 1..<5 //包含1,2,3,4
 		aRange.from
 		aRange.to
 
-4. Groovy重用了List的表示符用来表示数组，此外为了创建数组还必须声明其类型
+#### 3.2.4.4 Arrays
+
+- Groovy重用了List的表示符用来表示数组，此外为了创建数组还必须声明其类型
 
 		String[] arrStr = ['Ananas', 'Banana', 'Kiwi']  
 		
 		assert arrStr instanceof String[]    
 		assert !(arrStr instanceof List)
+
+- 通过`as`运算符创建一个数组
 		
 		def numArr = [1, 2, 3] as int[]      
 		
 		assert numArr instanceof int[]       
 		assert numArr.size() == 3
 
-	- 可以创建多维数组
+- 可以创建多维数组
 	
 			def matrix3 = new Integer[3][3]         
 			assert matrix3.size() == 3
+
+- 可以声明一个数组同时不去指定其边界
 			
 			Integer[][] matrix2                     
 			matrix2 = [[1, 2], [3, 4]]
 			assert matrix2 instanceof Integer[][]
 
-	- Groovy 不支持Java中的数组初始化符号`String [] arr = new String[]{1,2,3}`,因为这样会被Groovy认为是闭包
+- 对数组的访问与List相同
+
+- **Groovy 不支持Java中的数组初始化符号`String [] arr = new String[]{1,2,3}`,因为这样会被Groovy认为是闭包**
 
 ### 3.2.5 闭包Closure
+
 - 闭包,是一种数据类型，是一段匿名的可执行的代码,可以接收参数并返回值给一个变量，同时Closure可以使用外部定义的变量
 
 - 语法：`{ [closureParameters->] statements   }`,中括号可选填，但是当有参数时  `->` 是必须的
@@ -1054,13 +1122,41 @@ Groovy中容器类有三种:
 - Closure.OWNER_ONLY 仅针对 owner，Closure.DELEGATE_ONLY  仅针对 delegate
 
 # 4 Groovy的表现形式
-Groovy支持class形式和script形式
+Groovy支持`class`形式和`script`形式
 
-- Groovy可以像java那样填写package 然后写类
-- 可以通过import 添加其他包下的类
+**`class`形式:**
+
+	class Main {                                    
+	    static void main(String... args) {          
+	        println 'Groovy world!'                 
+	    }
+	}
+
+**`script`形式**
+
+	println 'Groovy world!'
+
 - Groovy默认的类以及变量 默认都是public的
 
+- 可以通过`groovyc`命令将`.groovy`文件编译成`.class`文件
+
 ## 4.1什么是脚本？ 
+Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
+
+	import org.codehaus.groovy.runtime.InvokerHelper
+	class Main extends Script {                     
+	    def run() {                                 
+	        println 'Groovy world!'                 
+	    }
+	    static void main(String[] args) {           
+	        InvokerHelper.runScript(Main, args)     
+	    }
+	}
+
+- 如果一个脚本是保存在一个文件中,那么这个文件的文件名将被用来作为脚本被编译之后所生成的类名称
+
+	例如`Main.groovy`这个文件包含脚本,那么其编译之后的类名称是`Main`
+
 - groovy文件只要不是和java一样的去定义class，那就是一个脚本
 
 - 可以通过`grooyc -d classes test.groovy`将groovy文件转换成class文件,`-d path`是设置class文件的存储位置
@@ -1074,6 +1170,30 @@ Groovy支持class形式和script形式
 - 如果脚本中定义了函数，则函数会被定义在类中。
 
 ## 4.2 脚本中的变量和作用域
+
+[Integrating Groovy in a Java application](http://docs.groovy-lang.org/latest/html/documentation/guide-integrating.html#_integrating_groovy_in_a_java_application)
+
+在脚本中的变量可以用俩种形式来表示:
+
+	//形式1
+	int x = 1
+	int y = 2
+	assert x+y == 3
+	//形式2
+	x = 1
+	y = 2
+	assert x+y == 3
+
+形式1 和形式2有一些语法上的不同:
+
+1. 如果以形式1 声明变量,那么这些变量是局部变量`local variable`.编译成`.class`之后,会被放到`run()`方法之中.所以同一个脚本的其他方法都访问不到
+
+2. 如果以形式2 声明变量,这些变量会进入`script binding`.这些变量对其他的方法可见
+
+**如果希望变量称为成员变量,且不通过`Binding`这种方式,可以通过添加`@Field`注释来实现**
+
+### 4.2.1 实例
+
 例如：  
 
 	def x = "hello groovy xxx"	
@@ -1119,10 +1239,12 @@ Groovy支持class形式和script形式
 
 ## 4.3 script类型的表现形式
 - script 形式1 
+
 		//Main2.Groovy Script的一种形式 ，无需声明它
 		println "hello groovy "
 
 - Script 的另一种表现形式
+
 		//需要提供一个 run 方法 
 		import org.codehaus.groovy.runtime.InvokerHelper
 		class Main2 extends Script{
@@ -1135,6 +1257,7 @@ Groovy支持class形式和script形式
 		}
 
 ## 4.4 class类型的表现形式
+
 	class Main{
     	static void main(String... args){
         	println 'hello groovy'
@@ -1171,11 +1294,12 @@ Groovy中包名和Java中一致，用来分离代码避免产生冲突,Groovy需
 
 	package com.pkg
 
-例如使用某个包中的某个类，需要使用类的全限定名(即包名+类名)
+例如使用不在同一个包中的某个类，需要使用类的全限定名(即包名+类名).或者通过`import`关键字 导入指定包中的类
 
 ## 7.2 导包
 import 手动导入包
 
+	//MarkupBuilder 这个类位于 groovy.xml目录下
 	import groovy.xml.MarkupBuilder
 
 ## 7.3 默认导入
@@ -1191,7 +1315,7 @@ Groovy会默认导入一些包
 	import java.math.BigDecimal	
 
 ## 7.4 star import
-通过`*`通配符导入,表示导入包中所有的类
+**通过`*`通配符导入,表示导入包中所有的类**
 		
 	import groovy.xml.*
 
@@ -1226,7 +1350,7 @@ static star import 类似于常规star import 将从给定的类中导入所有�
 
 ## 7.7 导入别名
 
-静态导入和普通导入都可以使用as对包名设置别名
+静态导入和普通导入都可以使用`as`设置别名.
 
 		import static Calendar.getInstance as now
 		assert now().class == Calendar.getInstance().class
