@@ -945,17 +945,33 @@ Groovy中容器类有三种:
 		-> doSomething...//这种写法表示不能给closure传参数
 		}
 
-- Owner,delegate and this
+- `Owner,delegate and this`
+
 	- this:对应于定义Closure的闭合类
+
 	- owner:对应于定义Closure的闭合对象，这个闭合对象可以是 class也可以是Closure
+
 	- delegate:对应于第三方对象，在没有定义消息接收者时，方法会通过第三方对象调用
 
 #### 3.2.5.1 Closure中的this
 
-- 这些都是仅存在于Closure中的概念
+这些都是仅存在于Closure中的概念
 
-- this 相当于调用了getThisObject,将返回定义Closure的类
+`this`对应的是当前`Closure`所在的闭合类
+
+**this 相当于调用了getThisObject,将返回定义Closure的类**
 	
+- `Closure`定义在脚本.`this`返回的是`groovyc`编译生成的类
+
+		def cl = {
+		    println this
+		}
+		
+		cl()
+
+
+- `Closure`定义在类中.`this`返回该类
+
 		class Enclosing{
     		void run1(){
         		def getObject = { getThisObject()}
@@ -967,7 +983,7 @@ Groovy中容器类有三种:
 		def  enclosing = new Enclosing()
 		enclosing.run1()
 
-- 如果闭包在内部类中被定义，那么会返回内部类，而不是外部类
+- `Closure`在内部类中被定义，那么会返回内部类，而不是外部类
 
 		class EnclosedInInnerClass{
     		class Inner{
@@ -983,7 +999,7 @@ Groovy中容器类有三种:
 		def eiic = new EnclosedInInnerClass()
 		eiic.run()
 
-- 在嵌套Closure的情况下，将会返回外部类，而不是闭包
+- **在嵌套Closure的情况下，将会返回外部类，而不是闭包**
 
 		class NestedClosure{
     		void run(){
@@ -998,7 +1014,9 @@ Groovy中容器类有三种:
 
 
 #### 3.2.5.2 Closure中的owner
-- owner会返回一个 直接 含有当前闭包 的对象，无论它是Closure或Class
+`owner`与`this`类似,区别是`owner`会返回一个直接包含当前闭包的对象，无论它是Closure或Class
+
+- `Closure`位于类中
 
 		class EnclosingOwner{
     		void run(){
@@ -1011,6 +1029,8 @@ Groovy中容器类有三种:
 		def e1 = new EnclosingOwner()		
 		e1.run()
 
+- `Closure`位于内部类
+
 		class InnerOwnerClass{
    	 		class Inner{
         		Closure cl = {owner}
@@ -1022,6 +1042,8 @@ Groovy中容器类有三种:
 		}
 		def e2 = new InnerOwnerClass()
 		e2.run()
+
+- `Closure`位于嵌套`Closure`
 
 		class NestedClosure2{
     		void run(){
@@ -1036,6 +1058,8 @@ Groovy中容器类有三种:
 		e3.run()
 
 #### 3.2.5.3 Closure中的delegate
+`Closure`的代理可以通过`delegate`或`getDelegate()`获取.这个概念对于创建Groovy中的DSL十分重要,`delegate`默认值是`owner`的值
+
 - 默认情况下，代理被设置为owner
 
 		class Enclosing3{
@@ -1064,7 +1088,7 @@ Groovy中容器类有三种:
 		e4.run()
 
 
-- Closure的代理对象是可以设置的e
+- Closure的代理对象是可以设置的
 
 		class Jack{
     		String name
@@ -1081,7 +1105,7 @@ Groovy中容器类有三种:
 		delegateClosure.delegate = lucy
 		assert delegateClosure()=='LUCY'
 
-- Closure中，无需明确设置delegate，即可使用delegate
+- Closure中，如果没有明确使用的属性是哪个对象.默认既是`delegate`
 
 		class Ryan{
     		String name
@@ -1091,7 +1115,12 @@ Groovy中容器类有三种:
 		r2.delegate = r
 		assert r2() == 'RYAN'
 
-- delegate的委托策略是：Closure.OWNER_FIRST owner优先，delegate其次。这是默认策略
+---
+**delegate的委托策略有**：
+
+`Closure.OWNER_FIRST`,`Closure.DELEGATE_FIRST`,`Closure.OWNER_ONLY`,`Closure.DELEGATE_ONLY`,`Closure.TO_SELF`.可以通过`resolveStrategy`属性设置
+
+- `Closure.OWNER_FIRST`:默认策略,优先从`owner`中获取`property/method`,如果`owner`不存在则会从`delegate`中获取
 
 		class Ryan1{
     		String name
@@ -1115,11 +1144,14 @@ Groovy中容器类有三种:
 		ryan2.upper.delegate = ryan1
 		assert ryan2.upper()=='RYAN2'
 
-- Closure.DELEGATE_FIRST delegate优先 owner 其次
+- `Closure.DELEGATE_FIRST`: delegate优先 owner 其次
+
 		ryan2.upper.resolveStrategy = Closure.DELEGATE_FIRST
 		assert ryan2.upper()=='RYAN1'
 
-- Closure.OWNER_ONLY 仅针对 owner，Closure.DELEGATE_ONLY  仅针对 delegate
+- `Closure.OWNER_ONLY` 仅针对 owner..`Closure.DELEGATE_ONLY  `仅针对 delegate
+
+- `Closure.TO_SELF`:
 
 # 4 Groovy的表现形式
 Groovy支持`class`形式和`script`形式
@@ -1243,7 +1275,7 @@ Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
 		//Main2.Groovy Script的一种形式 ，无需声明它
 		println "hello groovy "
 
-- Script 的另一种表现形式
+- Script 的另一种表现形式(`.class`文件)
 
 		//需要提供一个 run 方法 
 		import org.codehaus.groovy.runtime.InvokerHelper
