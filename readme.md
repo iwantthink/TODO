@@ -82,7 +82,7 @@ jenkins+jacoco
 
 - ~~特殊的activity启动方式~~。
 
-- Hook AMS
+- ~~Hook AMS~~
 
 - Hoom PMS
 
@@ -91,3 +91,11 @@ jenkins+jacoco
 研究锁屏广告
 
 ~~分析ActivityThread~~
+
+Android源码学习
+
+- SystemServer
+
+- AMS启动过程
+
+- Binder原理
