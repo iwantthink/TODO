@@ -1,19 +1,28 @@
+[Gradlede 的版本库](http://services.gradle.org/distributions/)
+
+[Gradle 官网](https://gradle.org/)
+
+[Gradle DSL 教程](https://docs.gradle.org/current/dsl/)
+
+
 # Gradle学习
 - 构建，可以叫做build或make. 就是根据输入信息然后干一堆事情，然后得出几个产出物。
 
-- Gradle 就是一个构建工具，ANT->MAVEN->GRADLE
+- Gradle 就是一个构建工具，发展历史从`ANT->MAVEN->GRADLE`
 
 - Gradle 因为采用的Groovy语言，所以具备Groovy的特点DSL(Domain Specific Language)
 
 - 学习Gradle需要掌握俩个点：1是Groovy的语法，2是Gradle的使用方法
-- [Gradlede 的版本库](http://services.gradle.org/distributions/)
 
-- Gradle版本在AS中的位置：项目名\gradle\wrapper\gradle-wrapper.properties
+- Gradle版本在AS中的位置：项目名`\gradle\wrapper\gradle-wrapper.properties`
 
 
 
 ## 1.Gradle基本概念
-- build.gradle 又被称作构建脚本
+
+Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的类型
+
+- `build.gradle` 又被称作构建脚本
 
 - 每一个待编译的工程都可以成为一个Project，每一个Project在构建的时候都包含一系列的Task，例如：一个Android APK的编译可能包含：Java源码编译Task，资源编译Task，JNI编译Task，Lint检查Task，打包生成apk的Task，签名的Task
 
