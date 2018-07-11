@@ -99,3 +99,14 @@ Android源码学习
 - AMS启动过程
 
 - Binder原理
+
+
+研究埋点插件
+
+- ~~Groovy复习~~
+
+- Gradle复习
+
+- sensor开源项目研究
+
+- 编写全埋点 测试demo
