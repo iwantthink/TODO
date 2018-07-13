@@ -638,8 +638,66 @@ c++支持多维数组,声明形式如下:
 
 
 ## 15.2 指向数组的指针
+
+**数组名是一个指向数组中第一个元素的常量指针**
+
+	double balance[50];
+
+- `balance`是一个指向`&balance[0]`的指针,即数组`balance`的第一个元素的地址
+
+使用数组名作为常量指针是合法的,因此通过`*(balance+4)`是一种访问`balance[4]`数据的合法方式
+
+
 ## 15.3 传递数组给函数
+
+**c++不允许向函数传递一个完整的数组作为参数**,但是可以通过指定不带索引的数组名来传递一个指向数组的指针
+
+如果想要在函数中传递一个一维数组作为参数，必须以下面三种方式来声明函数形式参数，这三种声明方式的结果是一样的，因为每种方式都会告诉编译器将要接收一个整型指针。同样地，也可以传递一个多维数组作为形式参数
+
+方式1:
+	
+	//形式参数是一个指针
+	void myFunction(int *param)
+	{
+	.
+	.
+	.
+	}
+
+方式2:
+
+	//形式参数是一个已定义大小的数组
+	void myFunction(int param[10])
+	{
+	.
+	.
+	.
+	}
+
+方式3:
+
+	//形式参数是一个未定义大小的数组
+	void myFunction(int param[])
+	{
+	.
+	.
+	.
+	}
+
 ## 15.4 从函数返回数组
+
+C++ 不允许返回一个完整的数组作为函数的参数。但是，可以通过指定不带索引的数组名来返回一个指向数组的指针。
+
+如果想从函数返回一个
+
+	int * myFunction(){
+	.
+	.
+	.
+	}
+
+**c++不支持在函数外返回局部变量的地址,除非将局部变量定义为`static`**
+
 
 # 16. 字符串
 
@@ -689,6 +747,21 @@ c++标准库提供了`string`类类型,支持上述所有操作,还增加了其�
 
 	age address = 00AFFCC4
 
+---
+
+**C++指针概念**
+
+概念	|描述
+---|---
+C++ Null 指针|	C++ 支持空指针。NULL 指针是一个定义在标准库中的值为零的常量。
+C++ 指针的算术运算|	可以对指针进行四种算术运算：++、--、+、-
+C++ 指针 vs 数组	|指针和数组之间有着密切的关系。
+C++ 指针数组|	可以定义用来存储指针的数组。
+C++ 指向指针的指针|	C++ 允许指向指针的指针。
+C++ 传递指针给函数|	通过引用或地址传递参数，使传递的参数在调用函数中被改变。
+C++ 从函数返回指针|	C++ 允许函数返回指针到局部变量、静态变量和动态内存分配。
+
+
 ## 17.1 什么是指针?
 
 指针是一个变量,其值为另外一个变量的地址(即内存位置的直接地址).跟其他的变量或常量一样,在使用指针存储其他变量地址之前,需要对其进行声明
@@ -706,8 +779,561 @@ c++标准库提供了`string`类类型,支持上述所有操作,还增加了其�
 
 - `var-name`是指针变量的名称
 
-- `*`用来指定一个变量是指针
+- `*`用来声明一个变量是指针
 
 所有指针的值的实际数据类型，不管是整型、浮点型、字符型，还是其他的数据类型，都是一样的，**都是一个代表内存地址的长的十六进制数**。不同数据类型的指针之间唯一的不同是，指针所指向的变量或常量的数据类型不同。
 
+**指针的俩种访问方式:**
 
+	int age = 21;
+	int *p = &age;
+	cout << "*p = " << *p;
+	cout << "p = " << p;
+
+- 输出语句一:输出变量p中保存的内存地址对应的值
+
+- 输出语句二:输出变量p中保存的内存地址
+
+## 17.2 NULL指针
+
+在指针变量被声明时,如果没有确切的地址可以赋值,那么将指针变量赋值为`NULL`是一个良好的变成习惯
+
+- 赋值为`NULL`值的指针被称为空指针
+
+- `NULL`指针是一个定义在标准库中的值为零的常量
+
+		int *weight = NULL;
+		cout << "weight = " << weight << endl;
+
+		>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+		weight = 00000000
+
+在大多数的操作系统上，程序不允许访问地址为 0 的内存，因为该内存是操作系统保留的。然而，内存地址 0 有特别重要的意义，**它表明该指针不指向一个可访问的内存位置**。所以按照惯例，如果指针包含空值（零值），则假定它不指向任何东西。
+	
+
+检查空指针,可以通过`if`语句进行:
+
+	if(ptr)     // 如果 p 非空，则完成 
+	if(!ptr)    // 如果 p 为空，则完成 
+
+- 很多时候,未初始化的变量存有一些垃圾值,导致程序难以调试,**所以建议所有未使用的指针都被赋予空值**
+
+## 17.3 指针的算术运算
+
+指针即是一个用数值表示的地址.因此可以对指针执行算术运算
+
+- 支持四种运算符: `++`,`--`,`+`,`-`
+
+- **通常使用指针来替代数组,因为变量指针可以递增 ,而数组不能递增(因为数组是一个常量指针)**
+
+### 17.3.1 指针递增
+
+	const int MAX = 3;
+	
+	int main()
+	{
+		int var[MAX] = {1,2,3};
+		//指针指向数组的内存地址
+		//通过var 或 &var 都可以直接获取到内存地址(首个元素的地址)
+		int *pr = var;
+		//默认的pr 指向 数组第一个元素的地址
+		cout << "pr = " << pr << endl;
+		cout << "pr = " << *pr << endl;
+	
+	
+		for (int i = 0; i < MAX; i++)
+		{
+			cout << "var [ "<< i << " ] address = " << pr <<endl;
+			cout << "var [ "<< i << " ] value = " << *pr <<endl;
+			//指针递增
+			pr++;
+		}
+		//实际上已经超出范围
+		cout << "last =" << pr<<endl;
+		cout << "last value  =" << *pr<<endl;
+	
+		system("pause");
+		return 0;
+	}
+
+	>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	pr = 009AFCBC
+	pr = 1
+	var [ 0 ] address = 009AFCBC
+	var [ 0 ] value = 1
+	var [ 1 ] address = 009AFCC0
+	var [ 1 ] value = 2
+	var [ 2 ] address = 009AFCC4
+	var [ 2 ] value = 3
+	last =009AFCC8
+	last value  =-858993460
+
+### 17.3.2 指针递减
+
+	const int MAX = 3;
+	
+	int main()
+	{
+		int var[MAX] = {1,2,3};
+	
+		//指针指向数组的内存地址
+		int *pr = &var[MAX-1];
+		//默认的pr 指向 数组第一个元素的地址
+		cout << "pr = " << pr << endl;
+		cout << "pr = " << *pr << endl;
+	
+	
+		for (int i = MAX-1; i >= 0; i--)
+		{
+			cout << "var [ "<< i << " ] address = " << pr <<endl;
+			cout << "var [ "<< i << " ] value = " << *pr <<endl;
+			//指针递增
+			pr--;
+		}
+		//实际上已经超出范围
+		cout << "last =" << pr<<endl;
+		cout << "last value  =" << *pr<<endl;
+	
+		system("pause");
+		return 0;
+	}
+	>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	pr = 006FFD18
+	pr = 3
+	var [ 2 ] address = 006FFD18
+	var [ 2 ] value = 3
+	var [ 1 ] address = 006FFD14
+	var [ 1 ] value = 2
+	var [ 0 ] address = 006FFD10
+	var [ 0 ] value = 1
+	last =006FFD0C
+	last value  =-858993460
+
+### 17.3.3 指针比较
+
+
+**指针可以用关系运算符进行比较**,例如`==`,`<`,`>`.如果`p1,p2`指向俩个相关的变量,比如同一数组中的不同元素,则可以对其进行大小比较
+
+
+## 17.4 指针vs数组
+
+指针和数组在很多情况下可以互换.例如,一个指向数组开头的指针,可以通过指针的递增来访问数组
+
+	int main ()
+	{
+	   int  var[MAX] = {10, 100, 200};
+	
+	   for (int i = 0; i < MAX; i++)
+	   {
+	      *var = i;    // 这是正确的语法
+					   // 访问内存地址对应的值
+	      var++;       // 这是不正确的
+	   }
+	   return 0;
+	}
+
+- 将指针运算符`*`应用到`var`是正确的,但是修改`var`的值是非法的.因为`var`是一个指向数组开头的常量,不能做左值
+
+- 由于一个数组名对应一个指针常量,只要不改变数组的值,仍然可以用指针形式的表达式
+		
+		//将var[2]赋值为500
+		*(var + 2) = 500;
+		//上面的语句是有效的,因为var未改变
+
+## 17.5 指针数组
+
+指针数组 就是一个数组存储指向`int`或`char`或其他数据类型的指针
+
+	int *ptr[MAX] //定义了一个数组 指向 `int`数据类型的指针
+
+- 这里`ptr`声明为了一个数组,由MAX个整数指针组成.每一个`ptr`中的元素都是一个指向int值的指针
+
+下面是一个指针数组示例:
+
+	const int MAX = 3;
+	
+	int main ()
+	{
+	   int  var[MAX] = {10, 100, 200};
+	   int *ptr[MAX];
+	
+	   for (int i = 0; i < MAX; i++)
+	   {
+	      ptr[i] = &var[i]; // 赋值为整数的地址
+	   }
+	   for (int i = 0; i < MAX; i++)
+	   {
+	      cout << "Value of var[" << i << "] = ";
+	      cout << *ptr[i] << endl;
+	   }
+	   return 0;
+	}
+
+	>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+	Value of var[0] = 10
+	Value of var[1] = 100
+	Value of var[2] = 200
+	//如果将*ptr[i]改成ptr[i]
+	Value of var[0] = 006FF86C
+	Value of var[1] = 006FF870
+	Value of var[2] = 006FF874 
+
+
+下面是一个指针数组示例:
+
+	//const char *names[MAX] = {
+	//	"Zara Ali",
+	//	"Hina Ali",
+	//	"Nuha Ali"
+	//};
+
+	const char *name_one = "Zara Ali";
+	const char *name_two = "Hina Ali";
+	const char *name_three = "Nuha Ali";
+
+	const char *names[MAX] = {name_one,name_two,name_three};
+
+	//输出的是指针的地址,但是会被转换成对应的值
+	cout << names[0] << endl;
+
+## 17.6 指向指针的指针(多级间接寻址)
+
+指向指针的指针是一种多级间接寻址的形式,或者可以成为一个指针链.
+
+通常,一个指针包含一个变量的内存地址.当定义一个指向指针的指针时,第一个指针包含了第二个指针的内存地址,第二个指针指向包含实际值的内存地址
+
+指向指针的指针必须按照如下声明,即在变量名前放置俩个星号
+
+	int **var;//定义了一个指向int类型指针的指针
+
+当一个目标值被一个指针间接指向另外一个指针时,**访问这个值需要使用俩个星号运算符**
+
+	   int  var;
+	   int  *ptr;
+	   int  **pptr;
+	
+	   var = 3000;
+	
+	   // 获取 var 的地址
+	   ptr = &var;
+	
+	   // 使用运算符 & 获取 ptr 的地址
+	   pptr = &ptr;
+	
+	   // 使用 pptr 获取值
+	   cout << "Value of var :" << var << endl;
+	   cout << "Value available at *ptr :" << *ptr << endl;
+	   cout << "Value available at **pptr :" << **pptr << endl;
+	
+	   return 0;
+
+	>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+	Value of var = 3000
+	Value available at *ptr = 3000
+	Value available at **pptr = 3000
+
+## 17.7 传递指针给函数
+
+c++允许将指针传递给函数,但是需要声明函数参数为指针类型
+
+	using namespace std;
+	void getSeconds(unsigned long *par);
+	
+	int main ()
+	{
+	   unsigned long sec;
+	
+	
+	   getSeconds( &sec );
+	
+	   // 输出实际值
+	   cout << "Number of seconds :" << sec << endl;
+	
+	   return 0;
+	}
+	
+	void getSeconds(unsigned long *par)
+	{
+	   // 获取当前的秒数
+	   *par = time( NULL );
+	   return;
+	}
+
+**能接受指针作为参数的函数,也能接受数组作为参数**
+	
+	// 函数声明
+	double getAverage(int *arr, int size);
+	
+	int main ()
+	{
+	   // 带有 5 个元素的整型数组
+	   int balance[5] = {1000, 2, 3, 17, 50};
+	   double avg;
+	
+	   // 传递一个指向数组的指针作为参数
+	   avg = getAverage( balance, 5 ) ;
+	
+	   // 输出返回值
+	   cout << "Average value is: " << avg << endl; 
+	
+	   return 0;
+	}
+	
+	double getAverage(int *arr, int size)
+	{
+	  int    i, sum = 0;       
+	  double avg;          
+	
+	  for (i = 0; i < size; ++i)
+	  {
+	    sum += arr[i];
+	   }
+	
+	  avg = double(sum) / size;
+	
+	  return avg;
+	}
+
+## 17.8 从函数返回指针
+
+返回指针的函数可以按照如下形式定义:
+
+	int * myFunction()
+	{
+	.
+	.
+	.
+	}
+
+示例:
+
+	// 要生成和返回随机数的函数
+	int * getRandom( )
+	{
+	  static int  r[10];
+	
+	  // 设置种子
+	  srand( (unsigned)time( NULL ) );
+	  for (int i = 0; i < 10; ++i)
+	  {
+	    r[i] = rand();
+	    cout << r[i] << endl;
+	  }
+	
+	  return r;
+	}
+	
+	// 要调用上面定义函数的主函数
+	int main ()
+	{
+	   // 一个指向整数的指针
+	   int *p;
+	
+	   p = getRandom();
+	   for ( int i = 0; i < 10; i++ )
+	   {
+	       cout << "*(p + " << i << ") : ";
+			//注意不能改变指针的值
+	       cout << *(p + i) << endl;
+	   }
+	
+	   return 0;
+	}
+
+# 18. 引用
+
+引用变量是一个别名,即它是某个已存在变量的另一个名字
+
+**一旦把引用初始化为某个变量,就可以使用该引用名称或变量名称来指向变量**
+
+**引用通常用于函数参数列表和函数返回值**
+
+概念|	描述
+---|---
+把引用作为参数|	C++ 支持把引用作为参数传给函数，这比传一般的参数更安全。
+把引用作为返回值|	可以从 C++ 函数中返回引用，就像返回其他数据类型一样。
+
+
+## 18.1 引用vs指针
+
+引用和指针 有三个主要的不同:
+
+1. 不存在空引用,引用必须连接到一块合法的内存
+
+2. 一旦引用被初始化为一个对象,就不能被指向到另外一个对象. 指针可以在任何时候指向到另外一个对象
+
+3. 引用必须在创建时被初始化.指针可以在任何时间被初始化
+
+
+## 18.2 创建引用
+
+变量名称 是 变量附属在内存位置中的标签, 那么引用可以被当做是变量附属在内存位置中的第二个标签
+
+- 因此,访问变量的的内容 有俩种方式:1.原始变量名称  2. 引用
+
+
+**语法:**
+
+	type& value_name = xx;
+
+**示例:**
+
+
+	int main ()
+	{
+	   // 声明简单的变量
+	   int    i;
+	   double d;
+	
+	   // 声明引用变量
+	   int&    r = i;
+	   double& s = d;
+	
+	   i = 5;
+	   cout << "Value of i : " << i << endl;
+	   cout << "Value of i reference : " << r  << endl;
+	
+	   d = 11.7;
+	   cout << "Value of d : " << d << endl;
+	   cout << "Value of d reference : " << s  << endl;
+	
+	   return 0;
+	}
+	>>>>>>>>>>>>>>>>>>>>>>>
+
+	Value of i : 5
+	Value of i reference : 5
+	Value of d : 11.7
+	Value of d reference : 11.7
+
+
+## 18.3 把引用作为参数
+
+**定义方式:**
+
+	void function(type& x,type& y)
+	{
+		......
+	}
+
+**示例:**
+
+	int main(){
+	int a = 200;
+	int b = 100;
+	swap(a,b); 
+	cout << "a = " << a << endl;
+	cout << "b = " << b << endl;
+	}
+
+	void swap(int& x,int& y){
+	int temp;
+	temp = x;
+	x = y;
+	y = temp;
+	}
+
+## 18.4 把引用作为返回值
+
+通过使用引用来替代指针,能够使c++程序更容易阅读和维护
+
+c++函数可以返回一个引用,方式和返回一个指针类似
+
+**当函数返回一个引用时,则返回一个指向返回值的隐式指针**..这样,函数就可以放在赋值语句的左边
+
+
+	double vals[] = {10.1, 12.6, 33.1, 24.1, 50.0};
+	
+	double& setValues( int i )
+	{
+	  return vals[i];   // 返回第 i 个元素的引用
+	}
+	
+	// 要调用上面定义函数的主函数
+	int main ()
+	{
+	
+	   cout << "改变前的值" << endl;
+	   for ( int i = 0; i < 5; i++ )
+	   {
+	       cout << "vals[" << i << "] = ";
+	       cout << vals[i] << endl;
+	   }
+	
+	   setValues(1) = 20.23; // 改变第 2 个元素
+	   setValues(3) = 70.8;  // 改变第 4 个元素
+	
+	   cout << "改变后的值" << endl;
+	   for ( int i = 0; i < 5; i++ )
+	   {
+	       cout << "vals[" << i << "] = ";
+	       cout << vals[i] << endl;
+	   }
+	   return 0;
+	}
+
+	》》》》》》》》》》》》》》》》》》》》》》》》》》
+
+	改变前的值
+	vals[0] = 10.1
+	vals[1] = 12.6
+	vals[2] = 33.1
+	vals[3] = 24.1
+	vals[4] = 50
+	改变后的值
+	vals[0] = 10.1
+	vals[1] = 20.23
+	vals[2] = 33.1
+	vals[3] = 70.8
+	vals[4] = 50
+
+**当返回一个引用时,要注意被引用的对象不能超出作用域.所以返回一个对局部变量的引用是不合法的,但是可以返回一个对静态变量的引用**
+
+
+
+# 19. 日期&时间
+
+c++标准库没有提供日期类型,其继承了c语言中用于日期和时间操作的结构和函数.**为了使用日期和时间相关的函数和结构,需要在c++程序中引用头文件**
+
+有四个与时间相关的类型:
+
+	clock_t , time_t, size_t , tm
+
+- 前三者都能将系统时间和日期表示成某种整数
+
+- 结构类型 `tm` 把日期和时间以 C 结构的形式保存
+
+		struct tm {
+		  int tm_sec;   // 秒，正常范围从 0 到 59，但允许至 61
+		  int tm_min;   // 分，范围从 0 到 59
+		  int tm_hour;  // 小时，范围从 0 到 23
+		  int tm_mday;  // 一月中的第几天，范围从 1 到 31
+		  int tm_mon;   // 月，范围从 0 到 11
+		  int tm_year;  // 自 1900 年起的年数
+		  int tm_wday;  // 一周中的第几天，范围从 0 到 6，从星期日算起
+		  int tm_yday;  // 一年中的第几天，范围从 0 到 365，从 1 月 1 日算起
+		  int tm_isdst; // 夏令时
+		}
+
+
+c++关于日期和时间的重要函数,所有这些函数都是c++标准库的组成部分,可以在c++标准库中查看一下各种函数的细节
+
+
+序号 |	函数 & 描述
+---|---
+1	|`time_t time(time_t *time);`该函数返回系统的当前日历时间，自 1970 年 1 月 1 日以来经过的秒数。如果系统没有时间，则返回 `.1`。
+2	|`char *ctime(const time_t *time);`该返回一个表示当地时间的字符串指针，字符串形式 day month year hours: minutes: seconds year\n\0。
+3	|`struct tm *localtime(const time_t *time);`该函数返回一个指向表示本地时间的 tm 结构的指针。
+4	|`clock_t clock(void);`该函数返回程序执行起（一般为程序的开头），处理器时钟所使用的时间。如果时间不可用，则返回 .1。
+5	|`char * asctime ( const struct tm * time );`该函数返回一个指向字符串的指针，字符串包含了 time 所指向结构中存储的信息，返回形式为：day month date hours:minutes:seconds year\n\0。
+6	|`struct tm *gmtime(const time_t *time);`该函数返回一个指向 time 的指针，time 为 tm 结构，用协调世界时（UTC）也被称为格林尼治标准时间（GMT）表示。
+7	|`time_t mktime(struct tm *time);`该函数返回日历时间，相当于 time 所指向结构中存储的时间。
+8	|`double difftime ( time_t time2, time_t time1 );`该函数返回 time1 和 time2 之间相差的秒数。
+9	|`size_t strftime();`该函数可用于格式化日期和时间为指定的格式。
+
+
+## 19.1 当前时间和日期
+
+获取当前系统的日期和时间,包括本地时间和协调世界时(UTC)
