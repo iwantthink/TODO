@@ -1333,7 +1333,221 @@ c++关于日期和时间的重要函数,所有这些函数都是c++标准库的�
 8	|`double difftime ( time_t time2, time_t time1 );`该函数返回 time1 和 time2 之间相差的秒数。
 9	|`size_t strftime();`该函数可用于格式化日期和时间为指定的格式。
 
+- 这里的很多函数已经被建议用其他的函数替换
+
 
 ## 19.1 当前时间和日期
 
 获取当前系统的日期和时间,包括本地时间和协调世界时(UTC)
+
+	// 基于当前系统的当前日期/时间
+	time_t now = time(NULL);
+
+	char str[26];
+	ctime_s(str, sizeof str, &now);
+	printf("%s = ", str);
+
+# 20. 基本的输入和输出
+
+`C++`标准库已经提供了**输入/输出**的功能
+
+- `c++`的`I/O`发生在流中,流是字节序列
+
+- 如果字节流从设备(键盘,磁盘驱动器,网络连接等)流向内存,**这叫做输入操作**
+
+- 如果字节流从内存流向设备,**这叫做输出操作**
+
+**好的编程实践告诉我们，使用 cerr 流来显示错误消息，而其他的日志消息则使用 clog 流来输出。**
+
+## 20.1 库的头文件
+
+
+头文件	|函数和描述
+---|---
+`<iostream> `|	该文件定义了 `cin、cout、cerr 和 clog `对象，分别对应于标准输入流、标准输出流、非缓冲标准错误流和缓冲标准错误流。
+`<iomanip>` |	该文件通过所谓的参数化的流操纵器（比如 setw 和 setprecision）来声明对执行标准化 I/O 有用的服务。
+`<fstream>`	|该文件为用户控制的文件处理声明服务。我们将在文件和流的相关章节讨论它的细节。
+
+
+### 20.1.1 标准输出流(cout)
+
+预定义的对象`cout`是`ostream`类的一个实例
+
+`cout`对象"连接"到标准输出设备,通常是显示屏
+
+**`cout`是与流插入符`<<`结合使用的**
+
+- c++编译器根据输出变量的数据类型,选择合适的流插入运算符来显示值.`<<`运算符被重载来输出内置类型(整型,浮点型,double型)的数据项
+
+- **流插入运算符`<<`可以在一个语句中多次使用,`endl`用于在行末添加换行符**
+
+	cout << "Q is a girl "<< endl;
+
+
+### 20.1.2 标准输入流(cin)
+
+预定义的对象`cin`是`istream`类的一个实例.
+
+`cin`对象附属到标准输入设备,通常是键盘
+
+`cin`与流提取运算符`>>`结合使用
+
+- C++ 编译器根据要输入值的数据类型，选择合适的流提取运算符来提取值，并把它存储在给定的变量中
+
+- 流提取运算符 >> 在一个语句中可以多次使用，如果要求输入多个数据
+
+		俩个表达式等价
+		cin >> name >> age;
+		>>>>>>>>>>>>>>>>>>>>>>>
+		cin >> name;
+		cin >> age;
+
+### 20.1.3 标准错误流(cerr)
+
+预定义的对象 `cerr` 是 `ostream `类的一个实例。
+
+`cerr` 对象附属到标准错误设备，通常也是显示屏，但是 cerr 对象是非缓冲的，且每个流插入到 cerr 都会立即输出。
+
+`cerr` 也是与流插入运算符 `<<` 结合使用的，如下所示：
+
+### 20.1.4 标准日志流(clog)
+
+预定义的对象 `clog` 是 `ostream` 类的一个实例。
+
+`clog` 对象附属到标准错误设备，通常也是显示屏，但是 clog 对象是缓冲的。这意味着每个流插入到 `clog` 都会先存储在缓冲在，直到缓冲填满或者缓冲区刷新时才会输出。
+
+`clog `也是与流插入运算符` << `结合使用的
+
+# 21. 数据结构
+
+c++ 数组允许定义可存储相同类型数据项的变量,但是**结构**是`c++`中另外一种用户自定义的可用的数据类型,允许存储不同类型的数据项
+
+## 21.1 定义结构
+
+为了定义结构,必须使用`struct`语句.`struct`语句定义了一个包含多个成员的新的数据类型,`struct`语句的格式如下:
+
+
+	struct [structure tag]
+	{
+	   member definition;
+	   member definition;
+	   ...
+	   member definition;
+	} [one or more structure variables];
+
+- `structure tag`是可选的
+
+- 每个`member definition`是标准的变量定义.比如`int i`或`float f`
+
+- 在最后一个分号之前,可以指定一个或多个结构变量,这是可选的
+
+
+	struct Books
+	{
+	   char  title[50];
+	   char  author[50];
+	   char  subject[100];
+	   int   book_id;
+	}book;
+
+
+## 21.2 访问结构成员
+
+使用成员访问符`(.)`来访问结构的成员
+
+- 成员访问运算符是结构变量名称和待访问的结构成员之间的 一个句号
+
+可以使用`struct`关键字来定义结构类型的变量
+
+
+	struct Student
+	{
+		int age;
+		char name[50];
+	};
+	
+	
+	int main()
+	{
+		struct Student stu;
+	
+		stu.age = 11;
+		strcpy_s(stu.name, "ryan");
+	
+		cout << "stu.age = " << stu.age << endl;
+		cout << "stu.name = " << stu.name << endl;
+	
+		system("pause");
+		return 0;
+	}
+	
+## 21.3 结构作为函数参数
+
+结构可以作为函数参数,传参方式与其他类型的变量或指针类似
+
+	int main(){
+	
+	   printStu( stu );
+	
+	}
+	
+	void printStu( struct Student stu )
+	{
+	   cout << "stu name : " << stu.name <<endl;
+
+	}
+
+## 21.4 指向结构的指针
+
+定义指向结构的指针,方式与定义指向其他类型变量的指针相似
+
+	struct Student *struct_pointer;
+
+定义好了指针之后,就可以在指针变量中存储结构变量的内存地址
+
+	struct_pointer = &stu;
+
+**为了使用指向结构的指针 来访问结构的成员,必须使用`->`运算符**
+
+	struct_pointer -> name
+
+示例:
+
+	int main(){
+	
+	   printStu( &stu );
+	
+	}
+	
+	void printStu( struct Student*stu )
+	{
+	   cout << "stu name : " << stu->name <<endl;
+
+	}
+
+
+## 21.5 typedef关键字
+
+通过`typedef`可以实现一种更为简单的定义结构方式
+
+	typedef struct
+	{
+	   char  title[50];
+	   char  author[50];
+	   char  subject[100];
+	   int   book_id;
+	}Books;
+
+	Books Book1, Book2;
+
+- 为创建的类型取一个"别名",接着就可以直接使用`Books`来定义变量,而不需要`struct`
+
+**可以使用 typedef 关键字来定义非结构类型，如下所示：**
+
+	typedef long int *pint32;
+	
+	pint32 x, y, z;
+
+- x,y,z都是指向长整型`long int`的指针
+
+
