@@ -1,5 +1,7 @@
 # JNI字符串与数组
 
+[JNI完全指南(五)——字符串与数组](https://www.zybuluo.com/cxm-2016/note/566597#%E4%BA%94%E5%AD%97%E7%AC%A6%E4%B8%B2%E4%B8%8E%E6%95%B0%E7%BB%84)
+
 # 1. Java字符串
 
 ## 1.1 新建Java字符串
@@ -118,11 +120,18 @@
 
 # 2. Java数组
 
-
-
 ## 2.1 获取数组长度
 
 	jsize GetArrayLength(JNIEnv *env, jarray array);
+
+
+示例：
+
+	extern "C"
+	JNIEXPORT void JNICALL
+	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
+	    int len=env->GetArrayLength(array);
+	}
 
 ## 2.2 新建对象数组
 
@@ -155,9 +164,33 @@
 
 - `index`：位置索引
 
-存在异常
+**存在异常**
 
 `ArrayIndexOutOfBoundsException`
+
+**示例1**:
+
+	extern "C"
+	JNIEXPORT void JNICALL
+	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
+	    int len=env->GetArrayLength(array);
+	    for(int i=0;i<len;i++)
+	    {
+	        jobject item=env->GetObjectArrayElement(array,i);
+	    }
+	}
+
+**示例2**:
+	
+	extern "C"
+	JNIEXPORT void JNICALL
+	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
+	    int len=env->GetArrayLength(array);
+	    for(int i=0;i<len;i++)
+	    {
+	        jstring item=(jstring)env->GetObjectArrayElement(array,i);
+	    }
+	}
 
 
 ## 2.4 设置对象数组元素
@@ -176,6 +209,17 @@
 - `ArrayIndexOutOfBoundsException`
 
 - `ArrayStoreException`：传入的值与数组类型不一致
+
+
+	
+示例3:	 
+	
+	extern "C"
+	JNIEXPORT void JNICALL
+	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
+	    jobject obj;
+	    env->SetObjectArrayElement(array,1,obj);
+	}
 
 ## 2.5 基本数据类型数组
 
@@ -301,110 +345,3 @@ SetDoubleArrayRegion	|jdoubleArray	|jdouble
 	  (*env)->ReleasePrimitiveArrayCritical(env, arr2, a2, 0);
 	  (*env)->ReleasePrimitiveArrayCritical(env, arr1, a1, 0);
 
-
-
-
-
-
-## 4.2 JNI数组相关的函数
-
-### 4.2.1 获取JNI基本类型数组元素
-
-**`Get<Type>ArrayElements`函数用来获取基本类型`JNI`数组的元素 **
-
-- 这里面的`<Type>`需要被替换成实际的类型，比如`GetIntArrayElements，GetLongArrayElements`等
-
-
-
-
-### 4.2.2 获取JNI基本类型数组的子数组
-
-**`Get<Type>ArrayRegion`函数用来获取JNI数组的子数组**
-
-- 这里面的`<Type>`需要被替换成实际的类型，比如`GetIntArrayRegion，GetLongArrayRegion`等
-
-示例:
-
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jintArray array) {
-	    jint *subArray=new jint;
-	    env->GetIntArrayRegion(array,0,3,subArray);
-	}
-
-
-### 4.2.3  设置JNI基本类型数组的子数组
-
-`Set<Type>ArrayRegion`函数用来获取JNI基本类型数组的子数组
-
-- 这里面的`<Type>`需要被替换成实际的类型，比如`SetIntArrayRegion，SetLongArrayRegion`等
-
-示例:
-
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jintArray array) {
-	    jint *subArray=new jint;
-	    env->GetIntArrayRegion(array,0,3,subArray);
-	    env->SetIntArrayRegion(array,0,3,subArray);
-	}
-
-
-### 4.2.4 JNI对象数组
-
-`GetObjectArrayElement`函数用来获取JNI对象数组元素
-
-`SetObjectArrayElement`函数用来设置JNI对象数组元素
-
-
-示例1:
-
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
-	    int len=env->GetArrayLength(array);
-	    for(int i=0;i<len;i++)
-	    {
-	        jobject item=env->GetObjectArrayElement(array,i);
-	    }
-	}
-
-示例2:
-	
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
-	    int len=env->GetArrayLength(array);
-	    for(int i=0;i<len;i++)
-	    {
-	        jstring item=(jstring)env->GetObjectArrayElement(array,i);
-	    }
-	}
-	
-示例3:	 
-	
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
-	    jobject obj;
-	    env->SetObjectArrayElement(array,1,obj);
-	}
-
-
-### 4.2.5 获取JNI数组的长度
-
-`GetArrayLength`用来获取数组的长度
-
-示例：
-
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobjectArray array) {
-	    int len=env->GetArrayLength(array);
-	}
-	 
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jintArray array) {
-	    int len=env->GetArrayLength(array);
-	}
