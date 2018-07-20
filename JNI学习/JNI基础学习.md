@@ -139,136 +139,9 @@ AS通过`cmake`命令生成so库
 - 第二个参数是链接我们用`find_library`函数定义的查找的依赖库的名字log-lib，**语法就是${依赖的库的名字}**
 
 
-# 4. JNI函数详解
-
-## 4.1 JNI字符串相关的函数
-
-### 4.1.1 C/C++字符串转JNI字符串
-
-`NewString`函数用来生成`Unicode` JNI字符串
-
-`NewStringUTF`函数用来生成`UTF-8` JNI字符串
 
 
-### 4.1.2 JNI字符串转C/C++字符串
-
-`GetStringChars`函数用来从jstring获取Unicode C/C++字符串
-
-`GetStringUTFChars`函数用来从jstring获取UTF-8 C/C++字符串
-
-**示例:**
-
-    const char *str=env->GetStringUTFChars(jstr,NULL);
-    const jchar *jchar2=env->GetStringChars(jstr,NULL);
-
-### 4.1.3 释放JNI字符串
-
-`ReleaseStringChars`函数用来释放Unicode C/C++字符串
-
-`ReleaseStringUTFChars`函数用来释放UTF-8 C/C++字符串
-
-### 4.1.4 JNI字符串截取
-
-`GetStringRegion`函数用来截取Unicode JNI字符串
-
-`GetStringUTFRegion`函数用来截取UTF-8 JNI字符串
-
-### 4.1.5 获取JNI字符串的长度
-
-`GetStringLength`用来获取Unicode JNI字符串的长度
-
-`GetStringUTFLength`函数用来获取UTF-8 JNI字符串的长度
-
-**示例**:
-
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_stringFromJNI(JNIEnv* env, jobject thiz,jstring jstr) {
-	    char *str="helloboy";
-	    jstring jstr2=env->NewStringUTF(str);
-	
-	    const jchar *jchar2=env->GetStringChars(jstr,NULL);
-	    size_t len=env->GetStringLength(jstr);
-	    jstring jstr3=env->NewString(jchar2,len);
-	}
-
-	
-
-## 4.3 JNI NIO缓冲区相关的函数
-
-使用NIO缓冲区可以在Java和JNI代码中共享大数据，性能比传递数组要快很多，当Java和JNI需要传递大数据时，**推荐使用NIO缓冲区的方式来传递**。
-
-- `NewDirectByteBuffer`函数用来创建NIO缓冲区
-
-- `GetDirectBufferAddress`函数用来获取NIO缓冲区的内容
-
-- `GetDirectBufferCapacity`函数用来获取NIO缓冲区的大小
-
-
-示例:
-
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz) {
-	    const char *data="hello world";
-	    int len=strlen(data);
-	    jobject obj=env->NewDirectByteBuffer((void*)data,len);
-	    long capicity=env->GetDirectBufferCapacity(obj);
-	    char *data2=(char*)env->GetDirectBufferAddress(obj);
-	}
-
-## 4.4 JNI访问Java类的方法和字段
-
-
-
-
-## 4.7 JNI线程同步相关的函数
-
-**JNI可以使用Java对象进行线程同步**
-
-- `MonitorEnter`函数用来锁定Java对象
-
-- `MonitorExit`函数用来释放Java对象锁
-
-
-示例:
-
-	//Java代码
-	public native void test(new Object());
-
-	//JNI代码
-	extern "C"
-	JNIEXPORT void JNICALL
-	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz,jobject obj) {
-	    env->MonitorEnter(obj);
-	    //do something
-	    env->MonitorExit(obj);
-	}
-
-
-
-
-# 5. Java代码和JNI代码通信
-
-
-## 5.1 Java通过JNI接口调用`C/C++`方法
-
-1. 需要在Java代码中声明`Native`方法原型
-
-		public native void callJNI(String msg);
-
-2. 在`C/C++`代码中声明JNI方法原型
-
-		extern "C"
-		JNIEXPORT void JNICALL
-		Java_com_ryan_applistbyso_MainActivity_test(
-		        JNIEnv *env,
-		        jobject thiz) {
-			//TODO
-		}
-
-
-## 5.2 JNI函数的原型
+# 3. JNI函数的原型
 
 	[extern "C"]
 	JNIEXPORT 函数返回值 JNICALL 
@@ -315,7 +188,7 @@ AS通过`cmake`命令生成so库
 - JNI函数的普通参数:即Java方法中传入的参数
 
 
-# 6. 静态JNI方法和实例JNI方法区别
+# 4. 静态JNI方法和实例JNI方法区别
 
 	Java代码：
 	
