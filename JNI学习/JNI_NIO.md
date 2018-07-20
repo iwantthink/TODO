@@ -9,6 +9,23 @@ JDK/JRE 1.4时提供了新的IO访问方式，取代了之前效率不高的BIO�
 - **NIO的特色之一便是直接地址访问，这种绕过JVM直接操作内存的方式极大地提高了程序的运行效率。**
 
 
+使用NIO缓冲区可以在Java和JNI代码中共享大数据，性能比传递数组要快很多，当Java和JNI需要传递大数据时，**推荐使用NIO缓冲区的方式来传递**。
+
+
+
+示例:
+
+	extern "C"
+	JNIEXPORT void JNICALL
+	Java_com_ryan_applistbyso_MainActivity_test(JNIEnv* env, jobject thiz) {
+	    const char *data="hello world";
+	    int len=strlen(data);
+	    jobject obj=env->NewDirectByteBuffer((void*)data,len);
+	    long capicity=env->GetDirectBufferCapacity(obj);
+	    char *data2=(char*)env->GetDirectBufferAddress(obj);
+	}
+
+
 
 # 1. 新建直接字节缓冲区
 
