@@ -11,7 +11,7 @@
 
 	jmethodID FromReflectedMethod(JNIEnv *env, jobject method);
 
-- `method`：`java.lang.reflect.Method`或者`java.lang.reflect.Constructor`对象。通过1.3得到。
+- `method`：`java.lang.reflect.Method`或者`java.lang.reflect.Constructor`对象。通过3得到。
 
 
 # 2. 将一个Field对象转换为属性ID
@@ -19,7 +19,7 @@
 
 	jfieldID FromReflectedField(JNIEnv *env, jobject field);
 
-- `field`：`java.lang.reflect.Field`对象，通过1.4得到。
+- `field`：`java.lang.reflect.Field`对象，通过4得到。
 
 
 # 3. 反射得到Method对象
