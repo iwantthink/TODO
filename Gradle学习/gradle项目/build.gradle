@@ -40,48 +40,48 @@ dependencies {
 // 	}
 // }
 
-task ryana{
-	doLast{
-		println 'ryan AAAA'
-	}
-}
+// task ryana{
+// 	doLast{
+// 		println 'ryan AAAA'
+// 	}
+// }
 
-task ryanb{
-	doLast{
-		println 'ryan BBBB'
-	}
-}
+// task ryanb{
+// 	doLast{
+// 		println 'ryan BBBB'
+// 	}
+// }
 
-ryana.shouldRunAfter(ryanb)
-ryanb.mustRunAfter(ryana)
+// ryana.shouldRunAfter(ryanb)
+// ryanb.mustRunAfter(ryana)
 
 
-task compile{
-	doLast{
-		println 'compile-0-'
-	}
-}
+// task compile{
+// 	doLast{
+// 		println 'compile-0-'
+// 	}
+// }
 
-task compileTest(dependsOn:compile){
-	doLast{
-		println 'compile test'
-	}
-}
+// task compileTest(dependsOn:compile){
+// 	doLast{
+// 		println 'compile test'
+// 	}
+// }
 
-task test (dependsOn:[compile,compileTest]){
-	doLast{
-		println 'test'
-	}
-}
+// task test (dependsOn:[compile,compileTest]){
+// 	doLast{
+// 		println 'test'
+// 	}
+// }
 
-task dist(dependsOn:[compile,test]){
-	description = 'i am dist'
-	group = 'dist'
+// task dist(dependsOn:[compile,test]){
+// 	description = 'i am dist'
+// 	group = 'dist'
 
-	doLast{
-		pirntln 'dist'
-	}
-}
+// 	doLast{
+// 		pirntln 'dist'
+// 	}
+// }
 
 //可以通过-x 来排除指定的 任务
 //gradle compileTest -x compile
@@ -281,12 +281,12 @@ task dist(dependsOn:[compile,test]){
 
 
 //build.gradle  可以从 gradle.properties 中获取数据。。。
-task printProperties{
-	doLast{
-		println "userName = $userName"
-		println "age = $age"
-	}
-}
+// task printProperties{
+// 	doLast{
+// 		println "userName = $userName"
+// 		println "age = $age"
+// 	}
+// }
 
 
 
