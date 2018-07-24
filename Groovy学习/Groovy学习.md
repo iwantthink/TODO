@@ -1,4 +1,5 @@
 # Groovy介绍
+
 - Groovy是一种动态语言，运行于JVM。定义：Groovy是在java平台上的，具有像Python,Ruby和smalltalk 语言特性的灵活动态语言
 
 - Groovy类似于脚本(shell)的存在，执行Groovy脚本时，Groovy会先将其编译为java类字节码，然后通过JVM 执行这个java类
@@ -33,7 +34,9 @@
 - groovy.util.*
 
 ## 1.2 Multi-methods
-在Groovy中，在运行时才决定哪个方法被执行，这被称为Multi-methods 或 runtime dispatch，这意味着方法将在运行时根据参数类型被选择。在Java中，方法在编译时期根据声明的类型进行选择。
+在Groovy中，在运行时才决定哪个方法被执行，这被称为Multi-methods 或 runtime dispatch，这意味着方法将在运行时根据参数类型被选择。
+
+- **在Java中，方法在编译时期根据声明的类型进行选择**。
 
 **举个栗子**，如下代码可以在java或groovy中执行，但是结果会不同：
 
@@ -51,7 +54,7 @@
 - 在Groovy环境下 `assertEquals(1, result);`，这是因为Groovy中，当方法被调用时会在运行时期决定，实际调用方法的参数是String类型。
 
 ## 1.3 Array initializers
-在Groovy中,`{.....}`被保留用作closures
+**在Groovy中,`{.....}`被保留用作closures**
 
 以下的语法无法用来创建数组：
 
@@ -62,22 +65,22 @@
 	int [] array = [1,2,3,4]
 
 ## 1.4 Package scope visibility
-在Java中，字段上省略修饰符会将该字段修饰成包私有字段
+在Java中，字段上省略修饰符会将该字段修饰成**包私有字段**
 
 	class Person {
 	    String name
 	}
 
-在Groovy中，上述语法行为会创建一个属性，也就是说被声明为一个私有字段，并且会提供关联的getter和setter方法
+在Groovy中，上述语法行为会创建一个属性，也就是说被声明为一个私有字段，并且会提供关联的`getter`和`setter`方法
 
-可以通过`@packageScope`创建包专用字段
+可以通过`@packageScope`创建**包专用字段**
 
 	class Person {
 	    @PackageScope String name
 	}
 
 ## 1.5 ARM blocks
-Java 中的ARM(Automatic Resource Management)block 在Groovy中并不支持。Groovy中用依赖于closures的方法实现同样的效果.
+Java 中的`ARM(Automatic Resource Management)block `在Groovy中并不支持。Groovy中用依赖于closures的方法实现同样的效果.
 
 	Path file = Paths.get("/path/to/file");
 	Charset charset = Charset.forName("UTF-8");
@@ -90,6 +93,10 @@ Java 中的ARM(Automatic Resource Management)block 在Groovy中并不支持。Gr
 	} catch (IOException e) {
 	    e.printStackTrace();
 	}
+
+- 在这个例子中,数据流会在try块执行完毕后被自动关闭,**前提是:这些可关闭的资源必须实现`java.lang.AutoCloseable`接口**
+
+- ARM是从`Java 7 build 105 `版本开始,Java 7 的编译器和运行环境支持新的`try-with-resources`语句,称为ARM block(Automatic Resource Management),自动资源管理 
 
 Groovy实现方式：
 
@@ -106,9 +113,11 @@ Groovy实现方式：
 	}
 
 ## 1.6 Inner classes
+
 匿名内部类和嵌套类遵循Java规则，but you should not take out the Java Language Spec and keep shaking the head about things that are different. The implementation done looks much like what we do for groovy.lang.Closure, with some benefits and some differences. Accessing private fields and methods for example can become a problem, but on the other hand local variables don’t have to be final.
 
 ### 1.6.1 Static inner classes
+
 静态内部类的例子：
 
 	class A {
@@ -136,6 +145,7 @@ Groovy实现方式：
 	assert called.await(10, TimeUnit.SECONDS)
 
 ### 1.6.3 Creating Instances of Non-Static Inner Classes
+
 Java实现方式：
 
 	public class Y {
@@ -174,7 +184,7 @@ Groovy不支持这种语法，但是提供了closures:
 	list.each { println it } // or list.each(this.&println)
 
 ## 1.8 GStrings
-被双引号包括的字符串会被认为是GString类型，如果GString带有$符号，可以会造成编译错误或生成不同的值。
+被双引号包括的字符串会被认为是`GString`类型，如果`GString`带有`$`符号，可以会造成编译错误或生成不同的值。
 
 正常情况下，如果一个API声明了参数类型为GString和String，俩者会被自动转换。注意Java API中接收的对象类型。
 
@@ -187,9 +197,9 @@ Groovy中被单引号包括的字符用来表示String,被双引号包括的字�
 
 Groovy中当字段被声明为`char`类型，会自动转换单个字符的String类型字符串为`char`类型。
 
-	char a='a'
+	char a ='a'
 
-当调用一个参数为`char`类型的方法时，需要明确地转换类型 或 确保参数已经提前被转换了类型。
+**当调用一个参数为`char`类型的方法时，需要明确地转换类型 或 确保参数已经提前被转换了类型。**
 
 	assert Character.digit(a, 16)==10 : 'But Groovy does boxing'
 	assert Character.digit((char) 'a', 16)==10
@@ -216,7 +226,7 @@ Groovy支持俩种转换风格(直接添加`(char)`或添加 `as char`),俩种�
 	assert 'cx'.asType(char) == 'c'
 
 ## 1.10 Primitives and wrappers
-Groovy使用对象处理一切事物，会自动包装原始类型。Because of this, it does not follow Java’s behavior of widening taking priority over boxing. Here’s an example using int
+Groovy使用对象处理一切事物，**会自动包装原始类型**。Because of this, it does not follow Java’s behavior of widening taking priority over boxing. Here’s an example using int
 
 	int i
 	m(i)
@@ -234,7 +244,7 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 - m方法2，是Groovy会调用的,因为原始类型引用使用了其包装类
 
 ## 1.11 Behaviour of ==
-在Java中`==`意味着对象的引用类型相同，`equals`判断字符串的值是否相同。 在Groovy中`==`翻译为`a.compareTo(b)==0`,相当于`equals`方法
+在Java中`==`意味着对象的引用类型相同，`equals`判断字符串的值是否相同。 **在Groovy中`==`翻译为`a.compareTo(b)==0`,相当于`equals`方法**
 
 如果要确定对象的引用是否相同，可以使用 `is`。[Groovy==和equals](http://blog.csdn.net/hivon/article/details/2291559)
 
@@ -255,11 +265,13 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 
 - **建议使用API 之前先去查看文档**
 
-- groovyConsole(open GroovyConsole),ctrl+w(clear output window),ctrl+r(run groovy code)
+- `groovyConsole`(打开Groovy控制台)
+	- `ctrl+w`(clear output window)
+	- `ctrl+r`(run groovy code)
 
 - Groovy注解标记和Java一样,支持`//` 单行注释,`/*content*/`多行注释 和GroovyDoc评论`/**content*/`(GroovyDoc评论可以添加@param,@return等)
 
-- shebang line:UNIX系统支持的一种特殊单元注释，用于指明脚本的运行环境，这样就可以直接在终端中使用`xxx.groovy`运行，而不用像`groovy xxx.groovy`
+- `shebang line`:UNIX系统支持的一种特殊单元注释，用于指明脚本的运行环境，这样就可以直接在终端中使用`xxx.groovy`运行，而不用像`groovy xxx.groovy`
 		
 		#!/usr/bin/env groovy
 		println "Hello from the shebang line"
@@ -270,41 +282,46 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 
 	- 对于键盘上不存在的符号，可以使用unicode转义序列:`\+u+4个十六进制数字`
 
-- Groovy可以不用分号`;` 结尾
+- **Groovy可以不用分号`;` 结尾**
 
-- Groovy**支持动态类型**,即定义变量的时候可以不指定其具体类型（也可以指定具体类型)
+- Groovy**支持动态类型**,即定义变量的时候可以不指定其具体类型（当然也可以指定具体类型)
 
 - Groovy中定义变量可以使用关键词 **def**.但是实际上def 也不是必须的！只是为了代码清晰，建议还是加上**def**
 
 
-- 函数定义时,参数的类型也可以不指定，例如:
+- **函数定义时,参数的类型也可以不指定**，例如:
+
 		String func(arg1,arg2){
 			....etc
 		}
 
 - Groovy中函数的返回值也可以是无类型的，**但是无类型的函数必须用def声明,或者用viod声明**,例如：
+
 		def nonReturnTypeFunc(){
 			"last code" //最后一句代码,返回类型为String
 		}
 
-- Groovy的函数里,可以不使用return 来设置函数返回值.如果不使用return语句，函数里最后一句代码的执行结果被设置成返回值 . 当然如果指定了返回值类型，就必须返回指定的类型
+- **Groovy的函数里,可以不使用`return `来设置函数返回值**.如果不使用return语句，函数里最后一句代码的执行结果被设置成返回值 . 当然如果指定了返回值类型，就必须返回指定的类型
 
 - 如果指定了函数的返回类型,则可以不必加def关键词来定义函数
+
 		String getName(){
 			return 'jack'
 		}
 
-- Groovy中的函数在调用的时候，可以不添加括号。虽然可以不添加括号，但是Groovy经常会将 属性 和函数调用混淆
+- **Groovy中的函数在调用的时候，可以不添加括号**。虽然可以不添加括号，但是Groovy经常会将 属性 和函数调用混淆
 
 		println('test')<==>println 'test'
 	    
-- getName()如果不添加括号,Groovy会认为getName是一个变量
+- `getName()`如果不添加括号,Groovy会认为`getName`是一个变量
 
 		def getName(){'ryan'}
 	
 - 根据Groovy的原则，如果一个类中有名为xxyyzz这样的属性（其实就是成员变量），Groovy会自动为它添加getXxyyzz和setXxyyzz两个函数，用于获取和设置xxyyzz属性值。  
-注意，get和set后第一个字母是大写的  
-所以，当你看到Range中有getFrom和getTo这两个函数时候，就得知道潜规则下，Range有from和to这两个属性。当然，由于它们不可以被外界设置，所以没有公开setFrom和setTo函数。
+
+	注意，get和set后第一个字母是大写的  
+
+	所以，当你看到Range中有getFrom和getTo这两个函数时候，就得知道潜规则下，Range有from和to这两个属性。当然，由于它们不可以被外界设置，所以没有公开setFrom和setTo函数。
 
 - 指定类型的方式：   
 
@@ -318,7 +335,7 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 
 - 如果抛出异常，会使用脚本被转换之前的 行号 而不是生成的代码的行号
 
-- 引用标识符，Groovy在dotted expression 后面可以使用引号标识符，例如map.a 可以表示为map.'a'或map."a".同时引号中可以包含Java中不支持的空格，减号`-`。
+- 引用标识符，Groovy在`dotted expression` 后面可以使用引号标识符，例如`map.a` 可以表示为`map.'a'`或`map."a"`.同时引号中可以包含Java中不支持的空格，减号`-`。
 		
 		def map = [:]
 		
@@ -354,7 +371,9 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 
 ### 3.1.2 双引号`"content"`
 
-- 双引号字符串如果没有插值表达式，那么其类型是String,否则类型是GString。GString调用toString()方法之后 其类型就是String
+- **双引号字符串如果没有插值表达式，那么其类型是String,否则类型是GString**。
+
+	- GString调用`toString()`方法之后 其类型就是String
 
 - 如果字符串中有`$`或`${}`占位符，会对 $表达式 先求值，当Gstring调用`toString()`时，占位符表达式的值会被计算出来。
 
@@ -363,9 +382,9 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 		assert str == 'i am ryan'
 		def str2 = "i am ${1>2?'boy':'girl'}"
 
-- 占位符`${ }`之内允许添加任意表达式，其返回值根据最后一句
+- 占位符`${ }`之内允许添加任意表达式，**其返回值根据最后一句**
 
-- 当占位符中包含一个箭头时`${->}`,该表达式实际是一个闭包表达式，可以将其视为一个前缀为`$`的闭包,另外`${->}`比纯粹的`${}`有一个优势，就是lazy evalution
+- 当占位符中包含一个箭头时`${->}`,该表达式实际是一个闭包表达式，可以将其视为一个前缀为`$`的闭包,另外`${->}`比纯粹的`${}`有一个优势，就是`lazy evalution`
 
 		def number1 = 123.456	
 		def eagerGstring = "value = ${number1}"
@@ -376,15 +395,16 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 		assert eagerGstring == "value = 123.456"
 		assert lazyGstring == "value = 2"
 
-- Gstring中，使用闭包表达式时，不允许有多个参数
+	- Gstring中，**使用闭包表达式时，不允许有多个参数**
 
-- 期望一个String类型的参数时，传入一个Gstring类型的参数，Groovy会自动调用toString()
+- 期望一个String类型的参数时，传入一个Gstring类型的参数，Groovy会自动调用`toString()`
+
 		def number = 1
 		def msg = "hello ${number1}"
 		assert msg instanceof GString
 		assert getString(msg1) instanceof String
 
-- GString 和String的hashCode()不同，所以尽量避免使用GString作为Map的key
+- GString 和String的`hashCode()`不同，所以尽量避免使用GString作为Map的key
 
 		def param = 'abc'
 		assert "hello $param".hashCode()!="hello abc".hashCode()
@@ -392,22 +412,24 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 		assert msg.hashCode()!="hello abc".hashCode()
 
 ### 3.1.3 三重引号 ` ```content ```  `
-内容支持随意换行,类似于双引号字符串，不支持插值，区别是支持多行，并且在三重双引号中，**单引号和双引号 不需要转义**
 
-	def multieLine = ``` begin  
+内容支持随意换行,类似于双引号字符串，**不支持插值**，区别是支持多行，并且在三重双引号中，**单引号和双引号 不需要转义**
+
+	def multieLine = ''' begin  
 	line1  
 	line2  
-	end ```
+	end '''
 
 ### 3.1.4 斜线字符串
-- 适用于定义正则表达式和patterns,**不需要转义反斜线（允许不转义的带上反斜线），但是正斜线需要转义**
+
+适用于定义正则表达式和patterns,**不需要转义反斜线（允许不转义的带上反斜线），但是正斜线需要转义**
 
 	def slashy = /\.*hello*./
 	assert slashy == '\\.*hello*.'
 
 - 斜线字符串支持多行形式
 
-- 斜线字符串支持占位符`$`或`${}`
+- **斜线字符串支持占位符**`$`或`${}`
 
 - 一个内容为空的斜线字符串，Groovy会认为这是一个注解标志
 
@@ -451,8 +473,11 @@ Groovy使用对象处理一切事物，会自动包装原始类型。Because of 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fm02ms78yxj20ko0a4wei.jpg)
 
 ## 3.2 数据类型
+
 - java中的基本类型
+
 - Groovy中的容器类
+
 - 闭包
 
 ### 3.2.1 Characters
@@ -474,91 +499,94 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 	long reditCardNumber = 123456_789
 	assert reditCardNumber == 123456789
 
-作为动态语言，Groovy世界中的所有事物都是对象。所以，int，boolean这些Java中的基本数据类型，在Groovy代码中其实对应的是它们的包装数据类型。比如int对应为Integer，boolean对应为Boolean。
+作为动态语言，**Groovy世界中的所有事物都是对象**。所以，int，boolean这些Java中的基本数据类型，在Groovy代码中其实对应的是它们的包装数据类型。比如int对应为Integer，boolean对应为Boolean。
 
 	def int x = 1
 	println x.getClass().getCanonicalName()//java.lang.Integer
 
 可以通过添加后缀，指定数字的类型
 
+数字类型|后缀
+---|---
+BigInteger|`G` or `g`
+Long | `L` or `l`
+Integer | `I` or `i`
+BigDecimal | `G` or `g`
+Double | `D` or `d`
+Float| `F` or `f`
+
 	// 可以通过添加后缀 指定数字类型
-	// BigInteger G or g
-	// Long L or l
-	//Integer I or i
-	//BigDecimal G or g
-	//Double D or d
-	//Float F or f
 	assert 1i.class == Integer
 	assert 1i.class != Long
 
 #### 3.2.2.1 整数
 
-- 整数类型： byte,char,short,int,long (这五种为原始类型)，java.lang.BigInteger(无限精度)
+整数类型： `byte,char,short,int,long` (这五种为原始类型)，`java.lang.BigInteger`(无限精度)
 
-		// primitive types
-		byte  b = 1
-		char  c = 2
-		short s = 3
-		int   i = 4
-		long  l = 5
+	// primitive types
+	byte  b = 1
+	char  c = 2
+	short s = 3
+	int   i = 4
+	long  l = 5
 		
-		// infinite precision
-		BigInteger bi =  6
+	// infinite precision
+	BigInteger bi =  6
 
-- 使用`def`定义整数，变量的类型会根据类型的容量去适应这个整数值
+使用`def`定义整数，变量的类型会根据类型的容量去适应这个整数值
 		
-		def a = 1
-		assert a instanceof Integer
+	def a = 1
+	assert a instanceof Integer
 
-		// Integer.MAX_VALUE
-		def b = 2147483647
-		assert b instanceof Integer
+	// Integer.MAX_VALUE
+	def b = 2147483647
+	assert b instanceof Integer
 
-		// Integer.MAX_VALUE + 1
-		def c = 2147483648
-		assert c instanceof Long
+	// Integer.MAX_VALUE + 1
+	def c = 2147483648
+	assert c instanceof Long
 
-		// Long.MAX_VALUE
-		def d = 9223372036854775807
-		assert d instanceof Long
+	// Long.MAX_VALUE
+	def d = 9223372036854775807
+	assert d instanceof Long
 
-		// Long.MAX_VALUE + 1
-		def e = 9223372036854775808
-		assert e instanceof BigInteger
+	// Long.MAX_VALUE + 1
+	def e = 9223372036854775808
+	assert e instanceof BigInteger
 
-		//负数
-		def na = -1
-		assert na instanceof Integer
+	//负数
+	def na = -1
+	assert na instanceof Integer
 
-		// Integer.MIN_VALUE
-		def nb = -2147483648
-		assert nb instanceof Integer
+	// Integer.MIN_VALUE
+	def nb = -2147483648
+	assert nb instanceof Integer
 
-		// Integer.MIN_VALUE - 1
-		def nc = -2147483649
-		assert nc instanceof Long
+	// Integer.MIN_VALUE - 1
+	def nc = -2147483649
+	assert nc instanceof Long
 
-		// Long.MIN_VALUE
-		def nd = -9223372036854775808
-		assert nd instanceof Long
+	// Long.MIN_VALUE
+	def nd = -9223372036854775808
+	assert nd instanceof Long
 
-		// Long.MIN_VALUE - 1
-		def ne = -9223372036854775809
-		assert ne instanceof BigInteger
+	// Long.MIN_VALUE - 1
+	def ne = -9223372036854775809
+	assert ne instanceof BigInteger
 
-- 定义二进制，八进制，十六进制
+定义二进制，八进制，十六进制
 
-		//二进制   0b 前缀
-		int xInt2 = 0b11
-		assert xInt2 == 3
+	//二进制   0b 前缀
+	int xInt2 = 0b11
+	assert xInt2 == 3
 
-		//八进制 0前缀 后面跟八进制数字
-		int xInt8 = 077
-		assert xInt8 == 63
+	//八进制 0前缀 后面跟八进制数字
+	int xInt8 = 077
+	assert xInt8 == 63
 
-		//十六进制 0x 前缀
-		int xInt16 = 0x3a
-		assert xInt16 == 58
+	//十六进制 0x 前缀
+	int xInt16 = 0x3a
+	assert xInt16 == 58
 
 #### 3.2.2.2 小数
 
@@ -583,7 +611,7 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 
 #### 3.2.2.3 数学运算
 
-`byte, char, short` 和 `int` 互相进行二元运算，结果都是 `int`
+**`byte, char, short` 和 `int` 互相进行二元运算，结果都是 `int`**
 
 `long` 和 `(byte, char, short and int)` 进行二元运算，结果都是long
 
@@ -602,6 +630,7 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 **因为Groovy的运算符重载，所以运算符可以直接作用于BigInteger和BigDecimal类型的数据,而不需要通过特定的方法去操作**
 
 ##### 3.2.2.3.1 除法运算
+
 `/`或`/=` 这俩个运算符，只要算式中存在一个float,double那么结果就是Double类型，否则都是BigDecimal类型
 
 	 assert (4/3).class == BigDecimal
@@ -642,22 +671,24 @@ Groovy并没有明确的字符类型值，但是可以通过如下方式指定�
 			assert 10l ** 100 instanceof BigInteger
 
 ##### 3.2.3 布尔型
-true/false,可以存储到变量中。更复杂的布尔表达式可以通过逻辑运算符表示。
+
+`true/false`,可以存储到变量中。更复杂的布尔表达式可以通过逻辑运算符表示。
 
 	def myBooleanVariable = true
 	boolean untypedBooleanVar = false
 	booleanField = true
 
 ### 3.2.4 容器类
+
 Groovy中容器类有三种:
 
-- List:链表,其底层对应Java中的List接口，一般用ArrayList作为真正的实现类.**除非使用as操作符转换类型，或者显示的声明其变量类型**
+- `List`:链表,其底层对应Java中的List接口，一般用ArrayList作为真正的实现类.**除非使用as操作符转换类型，或者显示的声明其变量类型**
 
-- Map:键-值表，**底层对应java中的LinkedHashMap**
+- `Map`:键-值表，**底层对应java中的LinkedHashMap**
 
-- Range:范围，是List的一种拓展
+- `Range`:范围，是List的一种拓展
 
-- Arrays:数组，必须得指定类型
+- `Arrays`:数组，必须得指定类型
 
 **使用介绍：  **
 
@@ -673,8 +704,7 @@ Groovy中容器类有三种:
 		assert aList[11] ==11
 		assert aList.size == 11
 
-- 通过`list.[下标]`可以访问对应位置.列表的第一个元素下标为0,末尾元素的下标可以表示为`list.size()-1`或`-1`
-
+- 通过`list.[下标]`可以访问对应位置.列表的第一个元素下标为`0`,末尾元素的下标可以表示为`list.size()-1`或`-1`
 
 - 支持同时访问多个数据
 
@@ -747,21 +777,26 @@ Groovy中容器类有三种:
 
 #### 3.2.4.3 Range
 			
-- Range类型的变量，由`begin值+俩个点+end值` 组合表示,如果不想包含最后一个值，可以在`end值`前添加一个`<`符号
+Range类型的变量，由`begin值+俩个点+end值` 组合表示,如果不想包含最后一个值，可以在`end值`前添加一个`<`符号
 
-		def aRange = 1..5//包含1,2,3,4,5
-		def aRangeWithOutEnd = 1..<5 //包含1,2,3,4
-		aRange.from
-		aRange.to
+	def aRange = 1..5//包含1,2,3,4,5
+	def aRangeWithOutEnd = 1..<5 //包含1,2,3,4
+	aRange.from
+	aRange.to
+
+	def r = 1..5
+	println r.class
+	>>>>>>>>>>>>
+	class groovy.lang.IntRange
 
 #### 3.2.4.4 Arrays
 
-- Groovy重用了List的表示符用来表示数组，此外为了创建数组还必须声明其类型
+Groovy重用了List的表示符用来表示数组，此外为了创建数组还必须声明其类型
 
-		String[] arrStr = ['Ananas', 'Banana', 'Kiwi']  
+	String[] arrStr = ['Ananas', 'Banana', 'Kiwi']  
 		
-		assert arrStr instanceof String[]    
-		assert !(arrStr instanceof List)
+	assert arrStr instanceof String[]    
+	assert !(arrStr instanceof List)
 
 - 通过`as`运算符创建一个数组
 		
@@ -827,7 +862,7 @@ Groovy中容器类有三种:
 		def vargsFunc2 = {String [] args -> args.join('') }
 		assert vargsFunc2('1','2','3')=='123'
 
-- Closure中如果除了 可变参数外 还要有参数，那么可变参数需要放到最后
+- Closure中如果除了 可变参数外 还要有参数，**那么可变参数需要放到最后**
 
 		def vargsFunc3 = {int i,String... args
 			->
@@ -918,7 +953,7 @@ Groovy中容器类有三种:
 		assert factorial(3)    == 1 * 2 * 3
 		assert factorial(1000) // == 402387260.. plus another 2560 digits
 
-- 闭包的使用跟它的上下文有很大的关系，在使用之前尽量去查询API文档了解上下文语义！
+- **闭包的使用跟它的上下文有很大的关系，在使用之前尽量去查询API文档了解上下文语义！**
 
 
 
@@ -955,7 +990,7 @@ Groovy中容器类有三种:
 
 #### 3.2.5.1 Closure中的this
 
-这些都是仅存在于Closure中的概念
+**这些都是仅存在于Closure中的概念**
 
 `this`对应的是当前`Closure`所在的闭合类
 
@@ -1014,7 +1049,7 @@ Groovy中容器类有三种:
 
 
 #### 3.2.5.2 Closure中的owner
-`owner`与`this`类似,区别是`owner`会返回一个直接包含当前闭包的对象，无论它是Closure或Class
+`owner`与`this`类似,**区别是`owner`会返回一个直接包含当前闭包的对象，仅限`Closure`或`Class`**
 
 - `Closure`位于类中
 
@@ -1058,7 +1093,10 @@ Groovy中容器类有三种:
 		e3.run()
 
 #### 3.2.5.3 Closure中的delegate
-`Closure`的代理可以通过`delegate`或`getDelegate()`获取.这个概念对于创建Groovy中的DSL十分重要,`delegate`默认值是`owner`的值
+
+`Closure`的代理可以通过`delegate`或`getDelegate()`获取.这个概念对于创建Groovy中的DSL十分重要
+
+- **`delegate`默认值是`owner`的值**
 
 - 默认情况下，代理被设置为owner
 
@@ -1105,7 +1143,7 @@ Groovy中容器类有三种:
 		delegateClosure.delegate = lucy
 		assert delegateClosure()=='LUCY'
 
-- Closure中，如果没有明确使用的属性是哪个对象.默认既是`delegate`
+- Closure中，**如果没有明确使用的属性是哪个对象**.默认既是`delegate`
 
 		class Ryan{
     		String name
@@ -1154,6 +1192,7 @@ Groovy中容器类有三种:
 - `Closure.TO_SELF`:
 
 # 4 Groovy的表现形式
+
 Groovy支持`class`形式和`script`形式
 
 **`class`形式:**
@@ -1168,22 +1207,41 @@ Groovy支持`class`形式和`script`形式
 
 	println 'Groovy world!'
 
-- Groovy默认的类以及变量 默认都是public的
+- **Groovy默认的类以及变量 默认都是`public`的**
 
 - 可以通过`groovyc`命令将`.groovy`文件编译成`.class`文件
 
 ## 4.1什么是脚本？ 
+
 Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
 
-	import org.codehaus.groovy.runtime.InvokerHelper
-	class Main extends Script {                     
-	    def run() {                                 
-	        println 'Groovy world!'                 
-	    }
-	    static void main(String[] args) {           
-	        InvokerHelper.runScript(Main, args)     
-	    }
+	import groovy.lang.Binding;
+	import groovy.lang.Script;
+	import org.codehaus.groovy.runtime.InvokerHelper;
+	import org.codehaus.groovy.runtime.callsite.CallSite;
+	
+	public class sample
+	  extends Script
+	{
+	  public sample() {}
+	  
+	  public sample(Binding context)
+	  {
+	    super(context);
+	  }
+	  
+	  public static void main(String... args)
+	  {
+	    CallSite[] arrayOfCallSite = $getCallSiteArray();
+	    arrayOfCallSite[0].call(InvokerHelper.class, sample.class, args);
+	  }
+	  
+	  public Object run()
+	  {
+	    CallSite[] arrayOfCallSite = $getCallSiteArray();int i = 1;return Integer.valueOf(i);return null;
+	  }
 	}
+
 
 - 如果一个脚本是保存在一个文件中,那么这个文件的文件名将被用来作为脚本被编译之后所生成的类名称
 
@@ -1218,7 +1276,7 @@ Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
 
 形式1 和形式2有一些语法上的不同:
 
-1. 如果以形式1 声明变量,那么这些变量是局部变量`local variable`.编译成`.class`之后,会被放到`run()`方法之中.所以同一个脚本的其他方法都访问不到
+1. 如果以形式1 声明变量,那么这些变量是**局部变量**`local variable`.编译成`.class`之后,会被放到`run()`方法之中.所以同一个脚本的其他方法都访问不到
 
 2. 如果以形式2 声明变量,这些变量会进入`script binding`.这些变量对其他的方法可见
 
@@ -1232,7 +1290,7 @@ Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
 	def y = 'hello groovy yyy'
 	def z = 1234565
 	def printx(){
-   	 println x
+   	 	println x
     	println y
     	println z
 	}
