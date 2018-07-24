@@ -11,13 +11,17 @@
 
 # 重要提示
 
-从gradle-plugin 3.0.0 开始，Google 将Android的一些库放到自己的Google()仓库里了。地址如下：
+从`gradle-plugin 3.0.0` 开始，Google 将Android的一些库放到自己的Google()仓库里了。地址如下：
 
 https://dl.google.com/dl/android/maven2/index.html
 
 但是Google()并没有提供文件遍历功能，所以无法直接访问路径去下载。但是实际上源码还是在那个路径下放着，所以只需要输入待下载文件的完整的路径即可下载。
 
 例如：需要下载`gradle-3.0.0-sources.jar` ,只需要将完整的路径输入即可，https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/3.0.0/gradle-3.0.0-sources.jar
+
+**下载完源文件之后放入指定gradle目录下,即可在`Android Studio中`查看对应的源码**
+
+- gradle目录可以通过AS 得知...
 
 # 简介
 从`com.android.tools.build:gradle:1.5.0-beta1`开始，gradle插件包含了一个`Transform`接口，允许第三方插件在class文件转成dex文件之前操作编译好的class文件，这个API目标就是简化class文件的自定义操作而不用对Task进行处理
@@ -53,7 +57,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 ## 1.1 使用方式
 
-要使用Transform 必须得先添加 依赖`compile 'com.android.tools.build:gradle-api:2.3.3'`或者`compile 'com.android.tools.build:gradle:2.3.0'`。因为当我们通过调用`android.registerTransform()`方法添加`Transform`，所使用的`android`的类型实际上是`AppExtension`,而这相关类存在于`gradle-api-xxx.jar`包中，**另外：这个包就是 gradle-plugin包**。
+要使用Transform 必须得先添加 依赖`compile 'com.android.tools.build:gradle-api:2.3.3'`。因为当我们通过调用`android.registerTransform()`方法添加`Transform`，所使用的`android`的类型实际上是`AppExtension`,而这相关类存在于`gradle-api-xxx.jar`包中，**另外：这个包就是 gradle-plugin包**。
 
 - 这里有个区别就是 `Com.android.tools.build.gradle Api`和`Com.android.tools.build.gradle`,前者是APIs to customize Android Gradle Builds
 ， 后者是Gradle plug-in to build Android applications. 前者只添加一个`gradle-api`jar包，后者会添加 很多个jar包例如`dex`,`builder`之类的。**但是要注意后者包含前者！**
@@ -65,17 +69,16 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 2. [gradle-api 在Maven库中的版本](https://mvnrepository.com/artifact/com.android.tools.build/gradle-api)
 
 
-
 ## 1.2 与旧版本的区别
 
 - [TransformManager](https://android.googlesource.com/platform/tools/base/+/gradle_2.0.0/build-system/gradle-core/src/main/groovy/com/android/build/gradle/internal/pipeline/TransformManager.java)
 
-编译运行一下module，查看gradle console 可以看到没有了`preDex`Task,多了一些transform开头的Task。
+编译运行一下module，查看`gradle console `可以看到没有了`preDex`Task,多了一些transform开头的Task。
 
 ## 1.3 TransformManager介绍
 ### 1.3.1 getTaskNamePrefix
 
-gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理所有的Trasnsform子类，里面有一个方法`getTaskNamePrefix`,在这个方法中可以**获取Task的前缀**，以`transform`开头，之后根据输入类型，即`ContentType`,将输入类型添加到名称中.`ContentType`之间使用`And`连接，拼接完成之后加上`With`，之后紧跟这个Transform的Name,name是在getName()方法中重写返回
+`gradle plugin`的源码中有一个叫`TransformManager`的类，这个类管理所有的Trasnsform子类，里面有一个方法`getTaskNamePrefix`,在这个方法中可以**获取Task的前缀**，以`transform`开头，之后根据输入类型，即`ContentType`,将输入类型添加到名称中.`ContentType`之间使用`And`连接，拼接完成之后加上`With`，之后紧跟这个Transform的Name,name是在自定义`Transform`的`getName()`方法中重写返回
 
 - `ContentType`代表这个Transform的输入文件类型，类型主要有俩种：1.`Classes`，2.`Resources` 。
 
@@ -85,21 +88,23 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 		    private static String getTaskNamePrefix(@NonNull Transform transform) {
 		        StringBuilder sb = new StringBuilder(100);
 		        sb.append("transform");
-		
+				//遍历所有输入类型
 		        Iterator<ContentType> iterator = transform.getInputTypes().iterator();
 		        // there's always at least one
+				//将类型名称转成 首字母大写的形式添加到 transform名称中
 		        sb.append(capitalize(iterator.next().name().toLowerCase(Locale.getDefault())));
+				//如果有不止一种类型,那么将所有的类型都添加到transform名称中
 		        while (iterator.hasNext()) {
 		            sb.append("And").append(capitalize(
 		                    iterator.next().name().toLowerCase(Locale.getDefault())));
 		        }
-		
+				//将 重写的getName()方法 返回的transform名称 添加到transform名称中
 		        sb.append("With").append(capitalize(transform.getName())).append("For");
 		
 		        return sb.toString();
 		    }
 
-- ContentType是一个接口，有一个默认的枚举类的实现类，**里面定义了俩种文件，一种是Class文件，另一种就是资源文件**
+- `ContentType`是一个接口，有一个默认的枚举类的实现类，**里面定义了俩种文件，一种是Class文件，另一种就是资源文件**
 
 源码如下：
 
@@ -146,7 +151,7 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
     }
 
 
-- `Scrope`是另一个枚举类，可以翻译为 作用域，`Scrope`和`ContentType`一起组成输出产物的目录结构，可以看到`app-build-intermediates-transforms-dex`就是由这俩个值组合产生的。具体`Scrope`的作用可以看注释
+- `Scrope`是另一个枚举类，可以翻译为 **作用域**，`Scrope`和`ContentType`一起组成输出产物的目录结构，可以看到`app-build-intermediates-transforms-dex`就是由这俩个值组合产生的。具体`Scrope`的作用可以看注释
 	
 	    /**
 	     * Definition of a scope.
@@ -247,7 +252,7 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 	        return TransformManager.CONTENT_JARS;
 	    }
 
-	- TransformManger.CONTENT_JARS，其实就是之前说的`CotnentType`那个枚举类被一个类似set的集合保存。这一段的意思就是：`Proguard`这个Transform存在俩种输入文件，一种是class文件(含jar)，另一种是资源文件，这个Task是做混淆用的，class文件就是`ProguardTransform`依赖的上一个Transform的输出产物，而资源文件可以是混淆时使用的配置文件。
+	- `TransformManger.CONTENT_JARS`，其实就是之前说的`CotnentType`那个枚举类被一个类似set的集合保存。这一段的意思就是：`Proguard`这个Transform存在俩种输入文件，一种是class文件(含jar)，另一种是资源文件，这个Task是做混淆用的，class文件就是`ProguardTransform`依赖的上一个Transform的输出产物，而资源文件可以是混淆时使用的配置文件。
 
 			public static final Set<ContentType> CONTENT_JARS = ImmutableSet.<ContentType>of(CLASSES, RESOURCES);
 				
@@ -255,7 +260,7 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 
 			transformClassesAndResourcesWithProguardForDebug
 	
-	- For后面跟的是buildType+productFlavor，比如QihooDebug，XiaomiRelease，Debug，Release。
+	- For后面跟的是`buildType+productFlavor`，比如QihooDebug，XiaomiRelease，Debug，Release。
 
 ### 1.3.3 输出产物的目录生成规则
 
@@ -291,7 +296,7 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 5. 这个`ProguardTransform`的输出产物，会作为下一个依赖它的`Transform`的输入产物
 
 ### 1.3.4 输出输入的关系
-在没有开启混淆的情况下,ProguardTransform的下一个Transform是DexTransform。 
+在没有开启混淆的情况下,`ProguardTransform的`下一个Transform是`DexTransform`。 
 
 下面分俩种情况,debug 模式 不开启混淆，release 开启混淆,然后打印输入和输出文件情况：
 
@@ -346,6 +351,8 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 
 ### 1.3.5 自定义Transform
 [Android-Plugin-DSL-Reference](https://google.github.io/android-gradle-dsl/current/index.html)
+
+
 - **有一个很重要的规则，在编写groovy文件的时候一定要记得写包名，另外一些包一定记得import,~~~Android studio 如果你只是复制代码进文件，不会自动添加。。。必须重写一遍。。。 可能是需要设置~~~**
 
 1. 在插件的apply方法中注册一个Transform
@@ -425,6 +432,7 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 		            }
 		
 	- inputJar输入路径如下：
+
 			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\11c54790ff4ad70dd516e92b124412031e233308\output\jars\classes.jar
 			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\cdb003da677181616841cbde22313188da74858c\output\jars\classes.jar
 			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\6542b9eeb85d9a97bff471a595a332ea1f76cf29\output\jars\classes.jar
@@ -438,6 +446,7 @@ gradle plugin的源码中有一个叫`TransformManager`的类，这个类管理�
 			log: MyTransform jarinput path = C:\Users\renbo\.android\build-cache\1847cb314b40784e3716b3be490b8e694e5e9f42\output\jars\classes.jar
 
 	- directoryInput输入路径如下：
+
 			log: MyTransform directoryInput path = E:\github\CustomizePluginDemo\app\build\intermediates\classes\apple\release
 
 	- 通过调用` transformInput.directoryInputs`会返回输入的文件夹的集合，通常是`.class`文件的文件夹
