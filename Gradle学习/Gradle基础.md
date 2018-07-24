@@ -152,7 +152,7 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 
 
 #### 1.2.2 Gradle编程模型
-- Gradle Build Language Reference ：[Gradle-DSL-Reference](https://docs.gradle.org/current/dsl/)
+- Gradle Build Language Reference ：[Gradle各种模型的介绍](https://docs.gradle.org/current/dsl/)
 
 - Gradle基于Groovy，Groovy基于java。所以Gradle执行的时候和Groovy一样，会把脚本转换成Java对象。
 
@@ -180,7 +180,9 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 
 - User Home Dir:gradle配置的目录,存储了一些配置文件,以及编译过程中的缓存文件，生成的类文件，编译过程中依赖的插件等
 
-- **gradle对象 默认是Settings和Project的成员变量.**
+- **Gradle对象 默认是Settings和Project的成员变量.**
+
+- Gradle对象是根据`init.gradle`生成的
 
 ##### 1.2.2.2 Project对象
 - 每个`build.gradle`文件会转换成一个Project对象.
@@ -196,6 +198,7 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 
 
 - **通常Project需要执行的内容：**
+
 	1. 加载插件
 
 	通过Project的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
@@ -211,26 +214,28 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 	
 	3. 设置属性
 
-		- 如果是单个脚本，则不需要考虑属性的跨脚本使用。但是Gradle往往包含不止一个build.gradle文件！例如,build.gradle,settings.gralde 和自定义的build.gradle.**Gradle提供了一种名为extra property的方法**
+		- 如果是单个脚本，则不需要考虑属性的跨脚本使用。但是Gradle往往包含不止一个`build.gradle`文件！例如,`build.gradle`,`settings.gralde` 和自定义的`build.gradle`.**Gradle提供了一种名为`extra property`的方法**
 
-		- **extra property是额外属性的意思**，在第一次定义该属性的时候需要通过ext前缀来标示它是一个额外的属性。定义好之后，后面的存取就不需要ext前缀了。**ext属性支持Project和Gradle对象即Project和Gradle对象都可以设置ext属性**
+		- **`extra property`是额外属性的意思**，在第一次定义该属性的时候需要通过`ext`前缀来标示它是一个额外的属性。定义好之后，后面的存取就不需要ext前缀了。**ext属性支持Project和Gradle对象即Project和Gradle对象都可以设置ext属性**
 
-		- 属性值可以从local.properties中读取
+		- 属性值可以从`local.properties`中读取
+
 				Properties p = new Properties()
 				File pF = new File(rootDir.getAbsolutePath()+'/local.properties')
 				properties.load(pF.newDataInputStream())
 
-		- **可以直接获取ext前缀，表明操作的是外置属性**.定义属性或设置属性时需要ext前缀。读取时就不需要ext前缀了
+		- **可以直接获取`ext`前缀，表明操作的是外置属性**.定义属性或设置属性时需要ext前缀。读取时就不需要ext前缀了
 
 				gradle.ext.api = p.getProperty('sdk.api')
 				println gradle.api 
 
-		除了`ext.xxx=value`这种定义方式之外，还可以使用`ext{}`这种书写方式。**ext{}不是ext函数传入Closure，但是ext{}中的{}的确是Closure**
+		除了`ext.xxx=value`这种定义方式之外，还可以使用`ext{}`这种书写方式。**ext{}不是ext函数传入Closure，但是ext{}中的{}的确是`Closure`**
+
 				ext{
 					    getVersionNameAdvanced = this.&getVersionNameAdvanced  
 				}
 
-		- **加载utils.gradle的Project对象**和**utils.gradle对象本身所代表的Script对象**的关系。
+		- **加载`utils.gradle`的Project对象**和**`utils.gradle`对象本身所代表的Script对象**的关系。
 
 			- 当一个Project apply一个gradle文件时，这个gradle文件会转换成一个Script对象
 
@@ -240,22 +245,33 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 
 			- **delegate作用**：当Script中操作一些不是Script自己定义的变量或函数时，gradle会到Script的delegate对象去找，看看有没有定义这些变量或函数
 
-		- utils.gradle对应的project就是加载utils.gradle的project
+		- `utils.gradle`对应的project就是加载`utils.gradle`的project
 
 		- utils中的ext 就是对应project的ext。
+
+#### 1.2.2.4 Lifecycle
+>There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
+
+- Create a **Settings instance** for the build.
+
+- Evaluate the settings.gradle script, if present, against the Settings object to configure it.
+
+- Use the configured Settings object to create the hierarchy of Project instances.
+
+- Finally, evaluate each Project by executing its build.gradle file, if present, against the project. The projects are evaluated in breadth-wise order, such that a project is evaluated before its child projects. This order can be overridden by calling Project.evaluationDependsOnChildren() or by adding an explicit evaluation dependency using Project.evaluationDependsOn(java.lang.String).
 
 
 
 #### 1.2.3 Task介绍
 >Task 是Gradle中的一种数据类型，代表了一些要执行或todo的工作。不同插件可以添加不同的Task。每一个Task都需要和一个Project关联
 
-- 一个Task包含若干Action.所以Task提供了doFirst和doLast俩个函数 方便开发者使用，这俩个函数分别是用于最先执行的和最后执行的action。**Action就是一个闭包**
+- 一个Task包含若干Action.所以Task提供了`doFirst`和`doLast`俩个函数 方便开发者使用，这俩个函数分别是用于最先执行的和最后执行的action。**Action就是一个闭包**
 
 - Task创建的时候可以指定Type，通过`type:typeName`表达。作用就是告诉Gradle，该Task是从哪个基类Task 派生。 则新建的Task也具有基类Task的功能。例如：`task mTask(type:Copy)`，mTask也是一个Copy Task
 
 -  **`task mTask{configure closure}`。花括号代表一个Closure，会在Gradle创建这个Task之后返回给用户之前，先执行这个Closure的内容,这个Closure可以被当做一个配置项的存在，去做一些配置，例如设置分组，添加描述等**
 
--  task mTask<<{xxx},意思是把closure作为一个action添加到Task的action队列，并且最后才去执行它(`<<`符号是doLast的代表)
+-  `task mTask<<{xxx}`,意思是把closure作为一个action添加到Task的action队列，并且最后才去执行它(`<<`符号是doLast的代表)
 
 - doLast的快捷键`<<`,会在Gradle5.0中遗弃
 
@@ -273,7 +289,7 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 ##### 1.2.3.1 定义Task
 - Task是和Project关联的，所以要利用Project的task函数来创建一个Task  
 
-- 在创建task时，通常可以传入一个Closure,**这个Closure是用来配置task的，会在task返回之前执行。**
+- 在创建task时，通常可以传入一个`Closure`,**这个Closure是用来配置task的，会在task返回之前执行。**
 
 		task myTask  <==myTask是新建Task的名字  
 		
@@ -309,6 +325,9 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 			from 'xxx'
 			into 'yyy'
 		}
+	
+		// 实际上是通过TaskContainer创建
+		TaskContainer getTasks();
 		
 
 ##### 1.2.3.2 Task依赖
@@ -317,7 +336,7 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 		task funcX()
 		task funcY(dependsOn:funcX)		
 
-- Lazy DependsOn task依赖task时可以在task定义之前
+- **`Lazy DependsOn` task依赖task时可以在task定义之前**
 
 		task funcX(dependsOn:funcY)<<{
 		}
@@ -450,7 +469,8 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 	}
 
 ##### 1.2.3.8 覆盖任务
-可以通过`overwrite`覆盖任务，如果不添加`overwrite`,会抛出一个异常，表示任务已经存在
+
+可以通过`overwrite`覆盖任务，如果任务已经存在且不添加`overwrite`,会抛出一个异常，表示任务已经存在
 
 	task taskA<<{
 		println 'hello'
@@ -482,13 +502,6 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 
 		taskA.enabled = false
 
-#### 1.2.4 Lifecycle
->There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
-
-- Create a Settings instance for the build.
-- Evaluate the settings.gradle script, if present, against the Settings object to configure it.
-- Use the configured Settings object to create the hierarchy of Project instances.
-- Finally, evaluate each Project by executing its build.gradle file, if present, against the project. The projects are evaluated in breadth-wise order, such that a project is evaluated before its child projects. This order can be overridden by calling Project.evaluationDependsOnChildren() or by adding an explicit evaluation dependency using Project.evaluationDependsOn(java.lang.String).
 
 ### 1.3 项目结构
 
@@ -509,6 +522,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
                    	└── etc.
 
 ### 1.4 Gradle Wrapper
+
 Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle版本会被下载下来 并使用，避免了开发者去下载不同版本的gradle，解决兼容性！
 
 	 myapp/
@@ -532,10 +546,12 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 ### 1.5 基本构建命令
 - gradle projects 
+
 	**查看工程信息**,直接查看setting.gradle也可以得到结果
 
 - gradle tasks
 	**获取所有有分组的可运行task**
+
 	- 查看指定Project的任务，`gradlew project-path:tasks`,project-path 是目录名，这是在根目录的情况。如果已经在某个Project的目录下了 ，则不需要指定
 
 			gradlew hmt_sdk:tasks
@@ -582,9 +598,11 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
        	└── build.gradle
 
 - **setting.gradle **
+
 	这个 setting 文件定义了哪些module 应该被加入到编译过程，对于单个module 的项目可以不用需要这个文件，但是对于 multimodule 的项目我们就需要这个文件，否则gradle 不知道要加载哪些项目。这个文件的代码在初始化阶段就会被执行。
 
 - **根目录的build.gradle**
+
 	顶层的build.gradle文件的配置最终会被应用到所有项目中。它典型的配置如下：
 		buildscript {
     		repositories {
@@ -603,6 +621,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 		}
 
 	- **buildscript**:定义了Adnroid编译工具的类路径.repositories中，jCenter是一个仓库
+
 	- **allprojects**:定义的属性会被应用到所有的module中，但是为了保证每个项目的独立性，我们一般不会在这里操作太多共有的东西
 
 
