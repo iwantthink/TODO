@@ -671,7 +671,7 @@ ASM API暴露出在编译类中的Java类型，例如 `interal names`和`type de
 
 在编译过的类中，方法代码以一系列字节码指令形式存储。为了生成和转换类，需要了解这些指令以及其工作原理。本节提供了足以开始编写简单的类生成器和转换器指令的概览。如果想了解更完整的定义，应该去阅读java虚拟机规范。
 
-### 3.1.1. Execution model 
+### 2.1.1. Execution model 
 
 - **堆是堆（heap），栈是栈（stack）,堆栈就是栈** 
 - **Frame(又称StackFrame/帧栈，方法栈)**
@@ -704,7 +704,7 @@ Java代码在线程中执行，每个线程都有自己的由`frame`（帧）组
 
 - 本地变量和操作数栈中的每个`slot`都可以保存除了`long和double`以外的java值(long 和double 需要俩个slot)。这使得本地变量的管理变得复杂，例如 i的th次方中的参数不一定需要存储在 局部变量i中。 举个栗子：调用`Math.max(1L,2L)`,创建了一个存放在前俩个slot的本地变量1L 和 一个存放在后俩个slot 的本地变量
 
-### 3.1.2. Bytecode instructions (字节码指令)
+### 2.1.2. Bytecode instructions (字节码指令)
 
 字节码指令是由 指令标识和固定数量参数 组成的操作码。
 
@@ -747,7 +747,7 @@ Java代码在线程中执行，每个线程都有自己的由`frame`（帧）组
 
 	- `Return`（返回）xRETURN 和 RETURN指令被用于终止函数的执行，返回相关值给函数调用者。RETURN对应于 return void, xRETURN用于返回其他值。
 
-### 3.1.3. Examples 
+### 2.1.3. Examples 
 
 查看一下基本例子，了解字节码具体工作流程，以下是一个bean类：
 
@@ -762,16 +762,24 @@ Java代码在线程中执行，每个线程都有自己的由`frame`（帧）组
         }
     }
 
-get方法对应的字节码指令是:
+`getF()`方法对应的字节码指令是:
 
 	ALOAD 0
 	GETFIELD pkg/Bean f I
 	IRETURN
-- 第一个指令是读取局部变量位置0的值，这个值会在这个方法调用frame 创建过程中被初始化，并将值push到操作数栈。
-- 第二个指令从栈中弹出第一个指令的值也就是`this`，并push这个对象的f字段也就是`this.f`。
-- 第三个指令是从栈中弹出值，并返回给调用者
 
-set方法对应的字节码指令是：
+- 第一个指令是读取本地变量(`local variable`)位置0的值，这个值会在这个方法调用frame 创建过程中被初始化，并将该值push到操作数栈。
+
+- 第二个指令从栈中弹出第一个指令的值也就是`this`，并push这个对象的f字段也就是`this.f`。
+
+- 第三个指令是从栈中取出值，并返回给调用者
+
+- 该方法在执行帧栈(execution frame)中的状态
+
+	![](http://ww1.sinaimg.cn/large/6ab93b35gy1ftn3x7dskjj208y02v744.jpg)
+
+
+**`setF`方法对应的字节码指令是：**
 
 	ALOAD 0
 	ILOAD 1
@@ -779,17 +787,28 @@ set方法对应的字节码指令是：
 	RETURN
 
 - 第一个指令将`this`push到操作数栈
+
 - 第二个指令将位置1的局部变量push到操作数栈，其值在该方法调用frame创建过程中被初始化并赋值
+
 - 第三个指令弹出 前俩个指令入栈的值，并将int值类型的f字段存储在引用对象中也就是`this.f`
+
 - 第四个指令,隐含在源代码中，但是在字节码中是强制的，它会破坏当前执行frame，并返回给它的调用者。
+
+- 该方法在指针帧栈中的状态
+
+	![Successive frame states for the setF method: a) initial state, b) after ALOAD 0, c) after ILOAD 1 and d) after PUTFIELD](http://ww1.sinaimg.cn/large/6ab93b35gy1ftn432pprnj20b003i3ye.jpg)
+
 
 这个bean类有一个默认的公共构造函数，由编译器生成。这个默认生成的构造函数`Bean() { super(); }`。他对应的字节码指令是：
 
 	ALOAD 0
 	INVOKESPECIAL java/lang/Object <init> ()V
 	RETURN
+
 - 第一个指令用于加载`this`到操作数栈
+
 - 第二个指令弹出`this`这个值，并调用对象类中定义的`<init>`方法，也就是`super()`(即调用父类的构造函数) 。在源码和字节码中，构造函数的命名方式不同，在字节码中，总是被命名为`<init>`,而在源码中，它们有定义它们类的名称。
+
 - 第三条指令用于返回给调用者，
 
 
@@ -821,9 +840,13 @@ set方法对应的字节码指令是：
 		RETURN
 
 - 第一个指令用于加载局部变量位置1的值到操作数栈上,即`f`
+
 - 第二个指令`IFLT`将`f`弹出,并与0进行比较，如果小于0 则跳转到名字为`label`的标签处，否则就继续执行下一个指令
+
 - 第三到第五个指令 与set方法的指令相同
+
 - 第六个指令`GOTO`，表示无条件的跳转到`end`标签 处的指令,`end`标签处的是返回指令
+
 - `label`标签处的指令
 	- 第一条，`NEW`指令创建了一个异常对象，并将其push到了操作数栈
 	- 第二条,`DUP`指令在操作数栈上复制了这个值
@@ -831,9 +854,9 @@ set方法对应的字节码指令是：
 	- 第四条，调用了构造函数
 	- 第五条，`ATHROW`指令，pop出了在操作数栈中剩余的异常值，将其作为一个异常抛出(因此执行流程将不会继续执行指令)
 
-### 3.1.4. Exception handlers 
+### 2.1.4. Exception handlers 
 
-并没有catch对应的字节码指令，不过函数会和一系列exception handler(异常处理代码)相关联。当抛出指定的异常时对应的handler代码就会执行。因此exception handler就和try catch代码块类似。
+并没有捕获异常对应的字节码指令，不过函数会和一系列exception handler(异常处理代码)相关联。当抛出指定的异常时对应的handler代码就会执行。因此exception handler就和try catch代码块类似。
 
     public static void sleep(long d) {
         try {
@@ -856,7 +879,7 @@ set方法对应的字节码指令是：
 
 - `try `和 `catch` 标签之间的代码对应try 代码块，`catch`标签之后的代码对应catch代码块。`TRYCATCHBLOCK `指定了一个异常处理器 覆盖范围从 try标签到catch标签.在`catch`中处理`InterruptedException`及其子类的异常，这意味着，如果在try catch 之间任何地方抛出这个异常，都会将异常push到空栈上，并执行catch标签
 
-### 3.1.5. Frames（帧）
+### 2.1.5. Frames（帧）
 Java6及以上版本编译的class文件，包含一系列stack map frames来加速jvm对class的校验。它们甚至在运行前就能告知jvm某个frame的符号表及操作栈的详细信息。为此，可以为frame中的每一个指令创建一个frame来查看其运行时的状态
 
 	//运行前的state frame     对应的指令
@@ -891,10 +914,14 @@ Java6及以上版本编译的class文件，包含一系列stack map frames来加
 	F_SAME
 	        RETURN
 
-## 3.2. Interfaces and components 
-### 3.2.1. Presentation 
+## 2.2. Interfaces and components 
+### 2.2.1. Presentation 
 
 ASM中的 生成和转换 方法字节码的API 是基于一个 抽象类`MethodVisitor`，它是通过`ClassVisitor`的`visitMethod`方法返回的。
+
+- 这意味着,对于非抽象方法来说,必须优先访问注释和属性(如果有的话),然后再去访问方法的字节码
+
+`MethodVisitor`方法:
 
     abstract class MethodVisitor { // public accessors ommited
         MethodVisitor(int api);
@@ -943,7 +970,7 @@ ASM中的 生成和转换 方法字节码的API 是基于一个 抽象类`Method
 
 ---
 
-`ClassVisitor`和`MethodVisitor`可以一起使用以生成一个完整的类
+**`ClassVisitor`和`MethodVisitor`可以一起使用以生成一个完整的类**
 
 	ClassVisitor cv = ...;
 	cv.visit(...);
@@ -981,31 +1008,45 @@ ASM中的 生成和转换 方法字节码的API 是基于一个 抽象类`Method
 		cv.visitEnd();
 
 ---
+
 ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`method`
+
 - `ClassReader`类用来解析编译过的类中的`method`内容，并调用通过`accept`方法接收的CV对象返回的`MethodVisitor`中的指定方法
+
 - `ClassWriter`的`visitMethod`方法返回一个`MethodVisitor`接口的实现类，该接口以二进制形式直接构建字节码形式的方法。
+
 - `MethodVisitor`将收到的方法调用都委托给另外一个`MethodVisitor`实例。可以被看做事件过滤器.
 
 ---
-- **ClassWriter 选项**
+**ClassWriter 选项**
 
-	计算stack map frames 比较困难，必须先计算出所有的frames，然后再找到对应跳转的目标frame或无条件跳转的frame，最后压缩这些剩余frames。计算一个方法的 局部变量和操作数栈的大小也是不容易的，**所以如果希望ASM 自动计算，就需要在创建`ClassWriter`时指定要自动计算的内容**
-	
-	使用下面的选项是方便的，但是会损耗性能。
+- 计算stack map frames 比较困难，必须先计算出所有的frames，然后再找到对应跳转的目标frame或无条件跳转的frame，最后压缩这些剩余frames。计算一个方法的 局部变量和操作数栈的大小也是不容易的
 
-	- 对于`new ClassWriter(0)`，没有东西是自动计算的，必须手动计算frames，局部变量，操作数栈的大小。
+	**所以如果希望ASM 自动计算，就需要在创建`ClassWriter`时指定要自动计算的内容**
 	
-	- 对于`new ClassWriter(ClassWriter.COMPUTE_MAXS)`,会自动计算本地变量和操作数栈的大小。必须手动调用`visitMaxs`(可以使用任意参数，参数会被忽略并重新计算)。在`COMPUTE_MAXS`这种情况下，还必须手动计算frames
-	
-	- 对于`new ClassWriter(ClassWriter.COMPUTE_FRAMES)`,会自动计算所有的值。可以不必调用`visitFrame`,但是仍然需要调用`visitMaxs`(参数将被忽略和重新计算)。  
-	
-- **注意：**如果手动计算frames，可以让CW 类执行压缩步骤
-- **注意：**为了自动计算frames，有时还需要手动计算俩个类的共同父类。默认情况下CW在`getCommonSuperClass`方法计算，通过反射API和将俩个类加载到jvm。** 如果生成几个互相引用的类，那么被引用的类可能还未生成，所以就需要重写`getCommonSuperClass`方法去解决这个问题。
-**
+**使用下面的选项是方便的，但是会损耗性能。**
 
-### 3.2.2. Generating methods 
+- 对于`new ClassWriter(0)`，没有东西是自动计算的，必须手动计算frames，局部变量，操作数栈的大小。
+	
+- 对于`new ClassWriter(ClassWriter.COMPUTE_MAXS)`,会自动计算本地变量和操作数栈的大小。仍然必须手动调用`visitMaxs()`(可以使用任意参数，参数会被忽略并重新计算)。在`COMPUTE_MAXS`这种情况下，还必须手动计算frames
+	
+- 对于`new ClassWriter(ClassWriter.COMPUTE_FRAMES)`,会自动计算所有的值。可以不必调用`visitFrame`,但是仍然需要调用`visitMaxs`(参数将被忽略和重新计算)。  
 
-例子：3.1.3中的getF方法，mv是MethodVisitor
+
+使用这些选项可以带来便利,但是也会损耗性能.
+
+- `COMPUTE_MAXS`选项会使得`ClassWriter`运行效率降低10%
+
+- `COMPUTE_FRAMES`选项会有20%的性能损耗 
+	
+**注意：**如果手动计算frames，可以让CW 类协助执行压缩步骤
+
+**注意：**为了自动计算frames，有时还需要手动计算俩个类的共同父类。默认情况下CW在`getCommonSuperClass`方法计算，通过反射API和将俩个类加载到jvm。** 如果生成几个互相引用的类，那么被引用的类可能还未生成，所以就需要重写`getCommonSuperClass`方法去解决这个问题。
+
+
+### 2.2.2. Generating methods 
+
+例子：2.1.3中的getF方法，mv是MethodVisitor
 
 	mv.visitCode();
 	mv.visitVarInsn(ALOAD, 0);
@@ -1019,8 +1060,11 @@ ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`meth
 	IRETURN
 
 - `visitCode`，调用启动了字节码生成
-- `visitVarInsn`,`visitFieldInsn`,`visitInsn`,生成了这个方法的三个指令
-- `visitMaxs`，这个调用必须在所有指令完成之后，它被用于定义该方法的执行框架中局部变量和操作数栈的大小
+
+- `visitVarInsn`,`visitFieldInsn`,`visitInsn`,生成了这个方法的三个指令(可以看到字节码和ASM API之间的映射十分简单)
+
+- `visitMaxs`，这个调用必须在所有指令完成之后，它被用于定义该方法的执行框架中本地变量和操作数栈的大小
+
 - `visitEnd`,这个调用用来结束方法的生成
 
 ---
@@ -1076,11 +1120,15 @@ ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`meth
 
 可以看到visitCode和visitEnd之间，每个指令和ASM的方法调用都是一一对应的(除了标签的声明和构造)
 
-### 3.2.3. Transforming methods
-通过修改method adapter 中的方法调用。`MethodVisitor`类提供了基本实现，除了转发它接收到的所有方法调用之外不会做任何事。
+### 2.2.3. Transforming methods
+
+通过一个`method adapter`来转发它接收到的方法调用,并进行一些修改。可以通过修改参数来更改指令,例如通过不转发收到的调用来删除指令,或者是在已接收的调用之间插入调用来增加新的指令
+
+`MethodVisitor`类提供了基本实现，除了转发它接收到的所有方法调用之外不会做任何事。
 
 
 举例：删除方法中的NOP命令
+
 	//Method adapter
 	public class RemoveNopAdapter extends MethodVisitor {
 		public RemoveNopAdapter(MethodVisitor mv) {
@@ -1095,7 +1143,7 @@ ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`meth
 		}
 	}
 
-	//method adapter 可以被用在如下地方
+**`method adapter` 可以被用在一个`class adapter`中**
 
 	public class RemoveNopClassAdapter extends ClassVisitor {
 		public RemoveNopClassAdapter(ClassVisitor cv) {
@@ -1113,10 +1161,10 @@ ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`meth
 		}
 	}
 
-class adapter 只是封装了一个method adapter
+`class adapter `只是构建并返回了一个新的`method adapter`
 
 ---
-构建一个method adapter chain 可以和class adapter chain 不同，每个方法都可以有不同的method adapter chain。 例如class adapter 可以只在 方法中删除 NOPs 而不是在构造函数中。
+构建一个`method adapter chain` 可以和`class adapter chain` 不同，每个方法都可以有不同的`method adapter chain`。 例如class adapter 可以只在 方法中删除 NOPs 而不是在构造函数中。
 
 	...
 	mv = cv.visitMethod(access, name, desc, signature, exceptions);
@@ -1136,8 +1184,10 @@ class adapter chain 可以是线性的同时，method adapter chain可以是有�
 	}
 
 
-### 3.2.4. Stateless transformations（无状态转换）
-- 假如要测量一个程序中所有类耗费的时间。首先需要为每个类添加一个static timer字段，然后需要将每个类的每个方法的执行时间都添加到timer字段。
+### 2.2.4. Stateless transformations（无状态转换）
+
+假如要测量一个程序中所有类耗费的时间。首先需要为每个类添加一个`static timer`字段，然后需要将每个类的每个方法的执行时间都添加到timer字段。
+
 源码的实现形式如下：
 	
 		//变换前
@@ -1157,38 +1207,68 @@ class adapter chain 可以是线性的同时，method adapter chain可以是有�
 			}
 		}
 
-- 为了了解ASM如何实现这一功能，可以编译这俩个类，并使用`TraceClassVisitor`输出这俩个版本的类(TCV可以使用默认Texifier后端 或 使用ASMifier)。选择默认后端，输出内容中 粗体部分为不同点
+为了了解ASM如何实现这一功能，可以编译这俩个类，并使用`TraceClassVisitor`输出这俩个版本的类(TCV可以使用默认Texifier后端 或 使用ASMifier)。选择默认后端，输出内容中 粗体部分为不同点
 
-	**GETSTATIC C.timer : J
-	INVOKESTATIC java/lang/System.currentTimeMillis()J
-	LSUB
-	PUTSTATIC C.timer : J**
-	LDC 100
-	**INVOKESTATIC java/lang/Thread.sleep(J)V
-	GETSTATIC C.timer : J
-	INVOKESTATIC java/lang/System.currentTimeMillis()J
-	LADD
-	PUTSTATIC C.timer : J**
-	RETURN
-	MAXSTACK = 4
-	MAXLOCALS = 1
+	  // access flags 0x1
+	  public m() : void throws Exception 
+	   L0
+	    LINENUMBER 5 L0
+	    LDC 100
+	    INVOKESTATIC Thread.sleep (long) : void
+	   L1
+	    LINENUMBER 6 L1
+	    RETURN
+	   L2
+	    LOCALVARIABLE this Sample L0 L2 0
+	    MAXSTACK = 2
+	    MAXLOCALS = 1
 
+
+	  // access flags 0x1
+	  public m() : void throws Exception 
+	   L0
+	    LINENUMBER 7 L0
+	    GETSTATIC Sample.timer : long
+	    INVOKESTATIC System.currentTimeMillis () : long
+	    LSUB
+	    PUTSTATIC Sample.timer : long
+	   L1
+	    LINENUMBER 8 L1
+	    LDC 100
+	    INVOKESTATIC Thread.sleep (long) : void
+	   L2
+	    LINENUMBER 9 L2
+	    GETSTATIC Sample.timer : long
+	    INVOKESTATIC System.currentTimeMillis () : long
+	    LADD
+	    PUTSTATIC Sample.timer : long
+	   L3
+	    LINENUMBER 10 L3
+	    RETURN
+	   L4
+	    LOCALVARIABLE this Sample L0 L4 0
+	    MAXSTACK = 4
+	    MAXLOCALS = 1
 
 ---
 
-**可以看到，必须在返回指令之前 往方法开始位置添加 4条指令，往返回指令之前添加4条指令 。另外还需要更新操作数栈的大小。
-**
-- 方法开始的代码是通过`visitCode`，因此可以在method adapter 中重写这个方法以添加前四个指令。
+**可以看到，必须`Thread.sleep()`指令之前 往方法开始位置添加 4条指令，往返回指令之前添加另外4条指令 。另外还需要更新操作数栈的大小。**
 
-		public void visitCode() {
-			mv.visitCode();
-			mv.visitFieldInsn(GETSTATIC, owner, "timer", "J");
-			mv.visitMethodInsn(INVOKESTATIC, "java/lang/System","currentTimeMillis", "()J");
-			mv.visitInsn(LSUB);
-			mv.visitFieldInsn(PUTSTATIC, owner, "timer", "J");
-		}
+**方法开始的代码是通过`visitCode`，因此可以在`method adapter` 中重写`visitCode`,并添加前四个指令。**
 
-- owner必须在被转换时设置类名称。接下来要实现在`RETURN`或者`xRETURN`或`ATHROW` 会终止方法执行的指令 之前添加剩余的四条指令。 这些指令没有任何参数..所以通过`visitInsn`方法访问。 所以可以重写这个方法以添加剩余的四条命令
+	public void visitCode() {
+		mv.visitCode();
+		mv.visitFieldInsn(GETSTATIC, owner, "timer", "J");
+		mv.visitMethodInsn(INVOKESTATIC, "java/lang/System","currentTimeMillis", "()J");
+		mv.visitInsn(LSUB);
+		mv.visitFieldInsn(PUTSTATIC, owner, "timer", "J");
+	}
+
+- `owner`必须设置为正在被转换的类的全限定名。
+
+接下来要实现在`RETURN`或者`xRETURN`,`ATHROW` 等会终止方法执行的指令 之前添加剩余的四条指令。
+
+这些指令没有任何参数..所以可以通过`visitInsn`方法访问,通过重写这个方法以添加剩余的四条命令
 
 		public void visitInsn(int opcode) {
 			if ((opcode >= IRETURN && opcode <= RETURN) || opcode == ATHROW) {
@@ -1200,15 +1280,17 @@ class adapter chain 可以是线性的同时，method adapter chain可以是有�
 			mv.visitInsn(opcode);
 		}
 
-- 最后，需要更新操作数栈的最大值。之前被添加的指令中有俩个`long`类型的值，因此在操作数栈上需要添加4个slot。 在方法开始时添加四个指令，因为操作数栈在初始化时为空，所以可以知道 操作数栈添加四个指令需要大小为4的栈。然后插入的代码 并不会改变栈的状态(栈pop 多少 就会push多少)。因此，如果原始代码需要大小为 s，则转换方式需要的最大栈大小为max(4,s)。
+最后，必须要更新操作数栈的最大值。之前被添加的指令中有俩个`long`类型的值，因此在操作数栈上需要添加4个slot。 在方法开始时添加四个指令，因为操作数栈在初始化时为空，所以可以知道 操作数栈添加四个指令需要大小为4的栈。然后插入的代码 并不会改变栈的状态(栈pop 多少 就会push多少)。因此，如果原始代码需要大小为 s，则转换方式需要的最大栈大小为max(4,s)。
 - 但是在`RETURN`指令之前，并不知道操作栈大小，只知道它小于或者等于s，所以在返回指令之前添加代码 可能需要一个大小为4+s的操作数栈。所以必须重写`visitMaxs`
 
-		public void visitMaxs(int maxStack, int maxLocals) {
-			mv.visitMaxs(maxStack + 4, maxLocals);
-		}
-- 使用`COMPUTE_MAXS`也可以实现，但是手动更新maxStack也很简单。
+	public void visitMaxs(int maxStack, int maxLocals) {
+		mv.visitMaxs(maxStack + 4, maxLocals);
+	}
+
+- 使用`COMPUTE_MAXS`也可以实现,并且能够返回最优值而不是最差情况下的值.但是这种简单情况下,手动更新maxStack也很简单。
 
 - 在这次转换中`stack map frames`需不需要进行改变。最初的代码和转换后的都没有包含frames。
+
 - 有没有情况是frames 必须更新的？答案是没有，因为 1)插入的代码没有改变操作栈 2)插入的代码不包含`jump`指令，3) 原始代码的流程控制图没有被修改
 
 ---
@@ -1290,13 +1372,21 @@ class adapter chain 可以是线性的同时，method adapter chain可以是有�
 
 	- class adapter 用来实例化method adapter(除了构造函数),添加timer 字段，并存储了类名称。
 
-### 3.2.5. Statefull transformations 
+### 2.2.5. Statefull transformations (有状态转换)
 
-- 更复杂的转换需要记住之前的指令的状态。考虑一个转换情况，删除 `ICONST_0 IADD `序列，其空作用是添加0 。只有当最后一次访问的指令是 ` ICONST_0 `时，才需要删除`IADD`指令。这就需要在method adapter中存储状态，因此这种转换被称为 完全状态转换。
+前面一小节中,所进行的转换是局部的,不依赖其他指令的
 
-- 当访问到一条指令为 `ICONST_0`时，只有当下一个指令是`IADD`时，它才会被删除。问题是如何知道下一条指令？解决方案就是将这个决定推迟到 下一个指令，如果俩个指令符合条件，就删除俩个指令， 否则就分别发出俩个指令。
+- 在开始时被添加的代码总是相同的,在返回指令之前被添加的代码也都是相同的
 
-- 为了完成删除或替换某些指令，可以添加一个`MethodVisitor`的子类，其`visitXXX`方法调用一个公共的`VisitInsn`
+	**这种转换被称为 无状态转换**
+
+更复杂的转换需要记住当前指令之前的一些指令的状态。考虑一个转换情况，删除 `ICONST_0 IADD `序列，其空作用是添加0 。只有当最后一次访问的指令是 ` ICONST_0 `时，才需要删除`IADD`指令。
+
+- **这就需要在`method adapter`中存储状态，因此这种转换被称为 完全状态转换。**
+
+当访问到一条指令为 `ICONST_0`时，只有当下一个指令是`IADD`时，它才会被删除。问题是如何知道下一条指令？解决方案就是将这个决定推迟到 下一个指令，如果俩个指令符合条件，就删除俩个指令， 否则就分别发出俩个指令。
+
+为了完成删除或替换某些指令，可以添加一个`MethodVisitor`的子类，其`visitXXX`方法调用一个公共的`VisitInsn`
 
 	public abstract class PatternMethodAdapter extends MethodVisitor {
 	    protected final static int SEEN_NOTHING = 0;
@@ -1323,7 +1413,7 @@ class adapter chain 可以是线性的同时，method adapter chain可以是有�
 	    protected abstract void visitInsn();
 	}
 
-	上面的抽象类，可以按如下实现方式去实现：
+上面的抽象类，可以按如下实现方式去实现：
 
 		public class RemoveAddZeroAdapter extends PatternMethodAdapter {
 		    private static int SEEN_ICONST_0 = 1;
@@ -1357,15 +1447,188 @@ class adapter chain 可以是线性的同时，method adapter chain可以是有�
 		    }
 		}
 
-	- `visitInsn(int opcode)`首先测试序列是否被检测到。在这种情况下，会重新初始化state的值并返回，这就产生了删除序列的效果。
-	- 然后会判断如果这次命令不是`IADD`，而上次时`ICONST_0`,则会将`ICONST_0`指令发出
-	- 如果当前指令是`ICONST_0` 会记住这个状态 并返回，以推迟这个指令的决定
-	- 其他情况下，指令会被转发给 传入的mv
+- `visitInsn(int opcode)`首先测试序列是否被检测到。在这种情况下，会重新初始化state的值并返回，这就产生了删除序列的效果。
 
-### 3.2.6 Labels and frames
+- 然后会判断如果这次命令不是`IADD`，而上次时`ICONST_0`,则会将`ICONST_0`指令发出
 
-##3.3. Tools 
-###3.3.1. Basic tools 
-###3.3.2. AnalyzerAdapter 
-###3.3.3. LocalVariablesSorter
-###3.3.4. AdviceAdapter 
+- 如果当前指令是`ICONST_0` 会记住这个状态 并返回，以推迟这个指令的决定
+
+- 其他情况下，指令会被转发给 传入的mv
+
+### 2.2.6 Labels and frames
+
+之前几节已经看到,标签和帧会在相关指令之前被访问,换句话说,它们和指令同时被访问(但是它们本身不是指令).这实际上给监测指令序列的转换带来优势
+
+如果我们删除的指令是跳转指令的目标,会发生什么?
+
+- 假如某个指令可能跳转到`ICONST_0`,这意味着有一个标签指定了这个指令
+
+
+## 2.3. Tools 
+
+`org.objectweb.asm.commons`包下面提供了一些预定义的`method adapter`,这些对于自定义适配器会有帮助
+
+这一小节将介绍其中的三个,并结合2.2.4小节的`AddTimerAdapter`示例一起使用,同时会展示如何通过使用这些工具来简化方法的生成和转换
+
+### 2.3.1. Basic tools 
+
+1.3 中定义的工具也可以在这里被一起使用
+
+#### 2.3.1.1 Type
+
+许多的字节码指令,例如`xLOAD`,`xADD`或者`xRETURN`都依赖于他们所应用的类型
+
+`Type`类提供了一个`getOpcode()`方法来为这些指令获取给定类型对应的操作码.这个方法int类型的操作码作为参数,并返回调用它的类型的操作码
+
+
+    /**
+     * Returns a JVM instruction opcode adapted to this Java type. This method
+     * must not be used for method types.
+     * 
+     * @param opcode
+     *            a JVM instruction opcode. This opcode must be one of ILOAD,
+     *            ISTORE, IALOAD, IASTORE, IADD, ISUB, IMUL, IDIV, IREM, INEG,
+     *            ISHL, ISHR, IUSHR, IAND, IOR, IXOR and IRETURN.
+     * @return an opcode that is similar to the given opcode, but adapted to
+     *         this Java type. For example, if this type is <tt>float</tt> and
+     *         <tt>opcode</tt> is IRETURN, this method returns FRETURN.
+     */
+    public int getOpcode(final int opcode) {
+        if (opcode == Opcodes.IALOAD || opcode == Opcodes.IASTORE) {
+            // the offset for IALOAD or IASTORE is in byte 1 of 'off' for
+            // primitive types (buf == null)
+            return opcode + (buf == null ? (off & 0xFF00) >> 8 : 4);
+        } else {
+            // the offset for other instructions is in byte 2 of 'off' for
+            // primitive types (buf == null)
+            return opcode + (buf == null ? (off & 0xFF0000) >> 16 : 4);
+        }
+    }
+
+举个栗子:
+
+	Type.FLOAT_TYPE.getOpcode(IMUL) 
+	>>>>>>>>>>>>
+	FMUL
+
+#### 2.3.1.2 TraceClassVisitor
+这个类在之前的章节中已经介绍过,会打印它所访问的类的文本表示,包括它们的方法的文本表示
+
+因此它可以被用来去追踪在转换链中任意一点的 内容的生成和转换
+
+举例:
+
+	java -classpath asm.jar:asm-util.jar \ org.objectweb.asm.util.TraceClassVisitor \ java.lang.Void
+
+	//将打印出如下内容
+	
+	// class version 49.0 (49)
+	// access flags 49
+	public final class java/lang/Void {
+	// access flags 25
+	// signature Ljava/lang/Class<Ljava/lang/Void;>;
+	// declaration: java.lang.Class<java.lang.Void> public final static Ljava/lang/Class; TYPE
+	// access flags 2 private <init>()V
+	ALOAD 0
+	INVOKESPECIAL java/lang/Object.<init> ()V RETURN
+	MAXSTACK = 1
+	MAXLOCALS = 1
+	// access flags 8 static <clinit>()V
+	LDC "void"
+	INVOKESTATIC java/lang/Class.getPrimitiveClass (...)... PUTSTATIC java/lang/Void.TYPE : Ljava/lang/Class; RETURN
+	MAXSTACK = 1
+	MAXLOCALS = 0
+	}
+
+	
+	public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+		MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
+		
+		if (debug && mv != null && ...) { // if this method must be traced 
+			Printer p = new Textifier(ASM4) {
+				@Override public void visitMethodEnd() { 
+					print(aPrintWriter ); // print it after it has been visited
+				}
+			};
+		mv = new TraceMethodVisitor(mv, p);
+		}
+		return new MyMethodAdapter (mv);
+	}
+
+#### 2.3.1.3 CheckClassAdapter
+
+这个类也在之前的章节中被介绍过,可以用来检查`ClassVisitor`的方法是否被按照正确的顺序和正确的参数被调用.
+
+这个类同样适用于`MethodVisitor`.因此可以使用它来检查`MethodVisitor API`是否在转换链中的任意位置被正确调用.和`TraceMethodVisitor`一样,可以仅用`MethodVisitor`来检查单个方法而不是所有的方法
+	
+	public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+		MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
+		if (debug && mv != null && ...) { // if this method must be checked
+			mv = new CheckMethodAdapter(mv);
+		}
+		return new MyMethodAdapter (mv);
+	}
+
+- 这段代码检查了`MyMethodAdapter`是否正确的使用了`MethodVisitor API`.但是,这个适配器并不会检查字节码是否正确(例如,它不会监测到`ISTORE 1 ALOAD 1`是否有效)
+
+	实际上,如果使用另外一种构造函数去构造`CheckMethodAdapter`,并在`visitMaxs`中提供有效的`maxStack`和`maxLocal`参数
+
+
+#### 2.3.1.4 ASMifier
+
+这个类同样在之前章节中出现过,也适用于方法
+
+可以使用他来了解如何使用ASM生成一些编译后的代码(只需要用Java编写源代码,然后使用javac进行编译,最后使用ASMifier来访问字节码),将会得到 `ASM API` 形式的字节码 
+
+
+### 2.3.2. AnalyzerAdapter 
+
+该方法适配器根据在`visitFrame`中被访问的帧计算每个指令之前的堆栈映射帧。
+
+
+
+
+### 2.3.3. LocalVariablesSorter
+
+该方法适配器按方法中出现的顺序对方法中使用的局部变量进行重新编号。
+
+
+### 2.3.4. AdviceAdapter 
+
+该方法适配器是一个抽象类,可以用于在方法的开头或任何`RETURN,ATHROW`指令之前插入代码
+
+它的主要优势是 **适用于构造函数**,其不仅能在构造函数的开头调用,而且够在调用了父构造函数之后插入代码.**实际上,这个适配器的大部分代码都用于检测这个父类构造函数**
+
+在2.2.4章节的`AddTimerAdapter`示例 并没有用到构造函数,就是这个原因
+
+通过继承`AdviceAdapter`这个方法适配器,可以改造构造函数(注意，`AdviceAdapter`从`LocalVariablesSorter`继承，因此我们也可以轻松地使用一个本地变量)
+
+
+	class AddTimerMethodAdapter6 extends AdviceAdapter {
+		
+		public AddTimerMethodAdapter6(int access, String name, String desc, MethodVisitor mv) {
+			super(ASM4, mv, access, name, desc);
+		}
+	
+		@Override protected void onMethodEnter() { 
+		
+			mv.visitFieldInsn(GETSTATIC, owner, "timer", "J");
+			
+			mv.visitMethodInsn(INVOKESTATIC, "java/lang/System","currentTimeMillis", "()J"); mv.visitInsn(LSUB);
+			
+			mv.visitFieldInsn(PUTSTATIC, owner, "timer", "J");
+		}
+	
+		@Override protected void onMethodExit(int opcode) { 
+		
+			mv.visitFieldInsn(GETSTATIC, owner, "timer", "J"); 
+			
+			mv.visitMethodInsn(INVOKESTATIC, "java/lang/System","currentTimeMillis", "()J"); mv.visitInsn(LADD);
+			
+			mv.visitFieldInsn(PUTSTATIC, owner, "timer", "J");
+		}
+	
+		@Override public void visitMaxs(int maxStack, int maxLocals) { 
+			super.visitMaxs(maxStack + 4, maxLocals);
+		}
+	}
