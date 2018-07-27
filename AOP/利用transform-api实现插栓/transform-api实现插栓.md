@@ -9,6 +9,8 @@
 
 [Transform-Api 官方文档](http://tools.android.com/tech-docs/new-build-system/transform-api)
 
+[如何理解 Transform API](https://www.jianshu.com/p/37df81365edf)
+
 # 重要提示
 
 从`gradle-plugin 3.0.0` 开始，Google 将Android的一些库放到自己的Google()仓库里了。地址如下：
@@ -24,9 +26,10 @@ https://dl.google.com/dl/android/maven2/index.html
 - gradle目录可以通过AS 得知...
 
 # 简介
-从`com.android.tools.build:gradle:1.5.0-beta1`开始，gradle插件包含了一个`Transform`接口，允许第三方插件在class文件转成dex文件之前操作编译好的class文件，这个API目标就是简化class文件的自定义操作而不用对Task进行处理
 
->Starting with 1.5.0-beta1, the Gradle plugin includes a Transform API allowing 3rd party plugins to manipulate compiled class files before they are converted to dex files.
+从`com.android.tools.build:gradle:1.5.0-beta1`开始，gradle插件包含了一个`Transform`接口，**允许第三方插件在class文件转成dex文件之前操作编译好的class文件**，这个API目标就是简化class文件的自定义操作而不用对Task进行处理. 目前 `jarMerge`、`proguard`、`multi-dex`、`Instant-Run` 都已经换成 Transform 实现。
+
+> Starting with 1.5.0-beta1, the Gradle plugin includes a Transform API allowing 3rd party plugins to manipulate compiled class files before they are converted to dex files.
 (The API existed in 1.4.0-beta2 but it's been completely revamped in 1.5.0-beta1)
 
 >The goal of this API is to simplify injecting custom class manipulations without having to deal with tasks, and to offer more flexibility on what is manipulated. The internal code processing (jacoco, progard, multi-dex) have all moved to this new mechanism already in 1.5.0-beta1.
@@ -44,10 +47,14 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 
 # 1.Transform
-- 该API 是1.4.0-beta2之后出现的，使用前应该修改`com.android.tools.build:gradle:xxxx`和gradle文件夹下的`distributionUrl`地址
 
+`Transform API` 是`1.4.0-beta2`之后出现的，使用前应该修改`com.android.tools.build:gradle:xxxx`和gradle文件夹下的`distributionUrl`地址
 
-**使用方式**：
+- gradle插件和gradle 的版本 有一个对应关系,可以查看官方文档
+
+## 1.1 使用方式
+
+**注册Transform的接口**：
 
 	AppExtension.registerTransform(Transform transform,Object....dependencies)
 
@@ -55,9 +62,11 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 - 第二个参数代表手动可以添加的依赖
 
-## 1.1 使用方式
+要开发`Transform` 必须得先添加 依赖`compile 'com.android.tools.build:gradle-api:x.x.x'`。
 
-要使用Transform 必须得先添加 依赖`compile 'com.android.tools.build:gradle-api:2.3.3'`。因为当我们通过调用`android.registerTransform()`方法添加`Transform`，所使用的`android`的类型实际上是`AppExtension`,而这相关类存在于`gradle-api-xxx.jar`包中，**另外：这个包就是 gradle-plugin包**。
+- 当通过调用`android.registerTransform()`方法添加`Transform`，所使用的`android`的类型实际上是`AppExtension`,而这相关类存在于`gradle-x.x.x.jar`包中
+
+	**这个jar包就是 gradle-plugin包 ,也就是在AS项目的根目录下的`build.gradle`中`dependencies`脚本块中添加的`com.android.tools.build:gradle:3.0.0`**。
 
 - 这里有个区别就是 `Com.android.tools.build.gradle Api`和`Com.android.tools.build.gradle`,前者是APIs to customize Android Gradle Builds
 ， 后者是Gradle plug-in to build Android applications. 前者只添加一个`gradle-api`jar包，后者会添加 很多个jar包例如`dex`,`builder`之类的。**但是要注意后者包含前者！**
@@ -75,83 +84,15 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 编译运行一下module，查看`gradle console `可以看到没有了`preDex`Task,多了一些transform开头的Task。
 
-## 1.3 TransformManager介绍
-### 1.3.1 getTaskNamePrefix
+## 1.3 重要接口简介
 
-`gradle plugin`的源码中有一个叫`TransformManager`的类，这个类管理所有的Trasnsform子类，里面有一个方法`getTaskNamePrefix`,在这个方法中可以**获取Task的前缀**，以`transform`开头，之后根据输入类型，即`ContentType`,将输入类型添加到名称中.`ContentType`之间使用`And`连接，拼接完成之后加上`With`，之后紧跟这个Transform的Name,name是在自定义`Transform`的`getName()`方法中重写返回
+### 1.3.1  Scopes
 
-- `ContentType`代表这个Transform的输入文件类型，类型主要有俩种：1.`Classes`，2.`Resources` 。
+`Scope`是另一个枚举类，可以理解为 **trasnform的作用域**
 
-源码如下： 
+`Scope`和`ContentType`一起组成输出产物的目录结构，可以看到`app-build-intermediates-transforms-dex`就是由这俩个值组合产生的。
 
-		@NonNull
-		    private static String getTaskNamePrefix(@NonNull Transform transform) {
-		        StringBuilder sb = new StringBuilder(100);
-		        sb.append("transform");
-				//遍历所有输入类型
-		        Iterator<ContentType> iterator = transform.getInputTypes().iterator();
-		        // there's always at least one
-				//将类型名称转成 首字母大写的形式添加到 transform名称中
-		        sb.append(capitalize(iterator.next().name().toLowerCase(Locale.getDefault())));
-				//如果有不止一种类型,那么将所有的类型都添加到transform名称中
-		        while (iterator.hasNext()) {
-		            sb.append("And").append(capitalize(
-		                    iterator.next().name().toLowerCase(Locale.getDefault())));
-		        }
-				//将 重写的getName()方法 返回的transform名称 添加到transform名称中
-		        sb.append("With").append(capitalize(transform.getName())).append("For");
-		
-		        return sb.toString();
-		    }
-
-- `ContentType`是一个接口，有一个默认的枚举类的实现类，**里面定义了俩种文件，一种是Class文件，另一种就是资源文件**
-
-源码如下：
-
-    /**
-     * A content type that is requested through the transform API.
-     */
-    interface ContentType {
-
-        /**
-         * Content type name, readable by humans.
-         * @return the string content type name
-         */
-        String name();
-
-        /**
-         * A unique value for a content type.
-         */
-        int getValue();
-    }
-
-    /**
-     * The type of of the content.
-     */
-    enum DefaultContentType implements ContentType {
-        /**
-         * The content is compiled Java code. This can be in a Jar file or in a folder. If
-         * in a folder, it is expected to in sub-folders matching package names.
-         */
-        CLASSES(0x01),
-
-        /** The content is standard Java resources. */
-        RESOURCES(0x02);
-
-        private final int value;
-
-        DefaultContentType(int value) {
-            this.value = value;
-        }
-
-        @Override
-        public int getValue() {
-            return value;
-        }
-    }
-
-
-- `Scrope`是另一个枚举类，可以翻译为 **作用域**，`Scrope`和`ContentType`一起组成输出产物的目录结构，可以看到`app-build-intermediates-transforms-dex`就是由这俩个值组合产生的。具体`Scrope`的作用可以看注释
+**`Scrope`源码:**
 	
 	    /**
 	     * Definition of a scope.
@@ -217,9 +158,105 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	        }
 	    }
 
+type|	Des
+---|---
+PROJECT|	只处理当前项目
+SUB_PROJECTS|	只处理子项目
+PROJECT_LOCAL_DEPS|	只处理当前项目的本地依赖,例如jar, aar
+EXTERNAL_LIBRARIES|	只处理外部的依赖库
+PROVIDED_ONLY|	只处理本地或远程以provided形式引入的依赖库
+TESTED_CODE|	测试代码
+
+### 1.3.2 ContentType
+
+`ContentType`是一个接口，有一个默认的枚举类的实现类，**里面定义了俩种文件，一种是Class文件，另一种就是资源文件**
+
+**`ContentType`代表这个Transform的输入文件类型，类型主要有俩种：**
+
+1. `Classes`:表示处理编译后的字节码,可能是jar包也可能是目录
+
+2. `Resources` :表示处理标准的java资源
+
+源码如下：
+
+    /**
+     * A content type that is requested through the transform API.
+     */
+    interface ContentType {
+
+        /**
+         * Content type name, readable by humans.
+         * @return the string content type name
+         */
+        String name();
+
+        /**
+         * A unique value for a content type.
+         */
+        int getValue();
+    }
+
+    /**
+     * The type of of the content.
+     */
+    enum DefaultContentType implements ContentType {
+        /**
+         * The content is compiled Java code. This can be in a Jar file or in a folder. If
+         * in a folder, it is expected to in sub-folders matching package names.
+         */
+        CLASSES(0x01),
+
+        /** The content is standard Java resources. */
+        RESOURCES(0x02);
+
+        private final int value;
+
+        DefaultContentType(int value) {
+            this.value = value;
+        }
+
+        @Override
+        public int getValue() {
+            return value;
+        }
+    }
 
 
-### 1.3.2 getName()
+### 1.3.3 getTaskNamePrefix
+
+源码如下： 
+
+		//低版本的gradle-plugin中的实现,高版本使用了Java新特性编写代码,但是具体实现的功能不变
+		@NonNull
+		    private static String getTaskNamePrefix(@NonNull Transform transform) {
+		        StringBuilder sb = new StringBuilder(100);
+		        sb.append("transform");
+				//遍历所有输入类型
+		        Iterator<ContentType> iterator = transform.getInputTypes().iterator();
+		        // there's always at least one
+				//将类型名称转成 首字母大写的形式添加到 transform名称中
+		        sb.append(capitalize(iterator.next().name().toLowerCase(Locale.getDefault())));
+				//如果有不止一种类型,那么将所有的类型都添加到transform名称中
+		        while (iterator.hasNext()) {
+		            sb.append("And").append(capitalize(
+		                    iterator.next().name().toLowerCase(Locale.getDefault())));
+		        }
+				//将 重写的getName()方法 返回的transform名称 添加到transform名称中
+		        sb.append("With").append(capitalize(transform.getName())).append("For");
+		
+		        return sb.toString();
+		    }
+
+`getTaskNamePrefix`方法中可以**获取Task的前缀**，以`transform`开头，之后根据输入类型，即`ContentType`,将输入类型添加到名称中.`ContentType`之间使用`And`连接，拼接完成之后加上`With`，之后紧跟这个Transform的Name
+
+- **name是在自定义`Transform`的`getName()`方法中重写返回**
+
+
+### 1.3.4 isIncremental
+
+`isIncremental `: 当前 Transform 是否支持增量编译
+
+### 1.3.5 自定义Transform的getName()
 
 
     /**
@@ -231,7 +268,39 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
     @NonNull
     public abstract String getName();
 
-#### 1.3.2.1 举例
+### 1.3.6 TransformManager
+
+`TransformManager`类管理所有的`Transform`
+
+
+Transform的工作流程:
+
+![](https://user-gold-cdn.xitu.io/2017/7/26/5f572be9bef8d9bbc92efb99afe67b9f?imageslim)
+
+- `Transform` 将输入进行处理,然后写入到指定的目录作为下一个`Transform`的输入
+
+- 获取输出路径的API
+
+		destDir = transformInvocation.outputProvider.getContentLocation(dirInput.name, dirInput.contentTypes, dirInput.scopes, Format.DIRECTORY)
+
+**TransformManager的源码中存在如下代码:**
+
+    public <T extends Transform> Optional<AndroidTask<TransformTask>> addTransform(TaskFactory taskFactory, TransformVariantScope scope, T transform, ConfigActionCallback<T> callback) {
+                ...
+                this.transforms.add(transform);
+                AndroidTask task1 = this.taskRegistry.create(taskFactory, new ConfigAction(scope.getFullVariantName(), taskName, transform, inputStreams, referencedStreams, outputStream, this.recorder, callback));
+                ...
+                return Optional.ofNullable(task1);
+            }
+        }
+    }
+
+- `addTransform`中 会将`Transform`包装成一个`AndroidTask` 对象
+
+	**所以可以将一个`Transform`理解成为一个`Task`!**
+
+
+### 1.3.7 举例
 
 
 1. As目录`app/build/intermediates/transforms`，这个目录下 有一个`proguard`目录，是Transform `ProguardTransform`产生的，在源码中可以找到其实现了`getName`方法，返回了`proguard`.这个`getName()`方法返回的值就创建了`proguard`这个目录
@@ -262,7 +331,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	
 	- For后面跟的是`buildType+productFlavor`，比如QihooDebug，XiaomiRelease，Debug，Release。
 
-### 1.3.3 输出产物的目录生成规则
+## 1.4 输出产物的目录生成规则
 
 1. 输出产物的目录指的是`/proguard/release/0.jar`
 
@@ -295,7 +364,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 5. 这个`ProguardTransform`的输出产物，会作为下一个依赖它的`Transform`的输入产物
 
-### 1.3.4 输出输入的关系
+## 1.5 输出输入的关系
 在没有开启混淆的情况下,`ProguardTransform的`下一个Transform是`DexTransform`。 
 
 下面分俩种情况,debug 模式 不开启混淆，release 开启混淆,然后打印输入和输出文件情况：
@@ -349,7 +418,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 **开启混淆其实也是类似的做法，只是把`ProguardTransform`换成了`DexTransform`**
 
 
-### 1.3.5 自定义Transform
+# 2.  自定义Transform
 [Android-Plugin-DSL-Reference](https://google.github.io/android-gradle-dsl/current/index.html)
 
 
@@ -464,7 +533,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 4. 最后只用在TODO的地方对需要修改的文件 进行ASM操作即可，记得先删除，再保存回`dest`中
 
 
-### 1.3.6 定义扩展
+## 2.1 定义扩展
 创建`extensions`，包含`includePkg`,`excludeClass`,`mappingDir`。`includePkg`表示什么包名下的类会被修改，`excludeClass`可以指定哪些类名被排除在外，`oldDir`表示mapping文件的地址，用在混淆操作时(其实是想用这个参数作为指定补丁包的类所在的地址)
 
 定义：  
@@ -491,7 +560,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 - TODO这里有一个待验证的行为,就是如果对Application的子类进行字节码修改。。可能会报出来一个`ClassNotFound`..
 
-### 1.3.7 从manifest文件找到application
+## 2.2 从manifest文件找到application
 
 
 	def processManifestTask = project.tasks.findByName("process${buildAndFlavor}Manifest")
@@ -509,11 +578,12 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
         return null;
     }
 
-### 1.3.8 文件对比-hash值
+## 2.3 文件对比-hash值
 举个栗子：
 例如1.0的版本，已经打包发布，这时候 最好将每个class文件的`hash`值保存下来。 这样进行热修复 打补丁时， 我们在修改完对应 .java文件之后，在编译过程 执行到`MyTransform`的时候，与`1.0`版本保存下来的`hash`值 进行对比。。就可以知道哪些类是需要打进补丁包内的！
 
-### 1.3.9 字节码注入操作
+## 2.4 字节码注入操作
+
 - 在`1.3.5`当中，已经得知`transform()`方法 可以获取到输入文件，只需要在TODO的地方进行操作即可
 
 - groovy提供了及其方便的遍历的 函数`traverse`,具体使用去看groovy文档接口
@@ -579,7 +649,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 	- 在这一步当中，还可以做文件`hash`值校验，更新(输出新的hash值到文件，以备下次校验)
 
-### 1.3.10 拷贝mapping文件
+## 2.5 拷贝mapping文件
 - mapping文件就是混淆的对应规则。。如果下一次打补丁包，有可能会需要进行混淆,那么就需要应用mapping文件。。 那这个混淆规则 就必须得保持一致！
 
 - mapping文件是混淆完成后输出的,因此需要hook掉混淆的task，在task完成的时候输出文件！
@@ -640,7 +710,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 
 
-### 1.3.11 获取productFlavorsBuildTypes
+## 2.6 获取productFlavorsBuildTypes
 - `AppExtension`中有一个方法`applicationVariants`
 
 	    project.extensions.getByType(AppExtension).applicationVariants.findAll {
@@ -680,7 +750,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	        return composedList
 	    }
 
-### 1.3.12 获取proguardConfigFile
+## 2.7 获取proguardConfigFile
 - **获取混淆的配置文件，这样在打补丁包的时候 就可以使用**
 
 - 可以在获取mapping的时候 顺便做这个事情。。因为都在获取`proguardTask`..也可以单独的做
@@ -697,7 +767,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	        proGuardTransform.getAllConfigurationFiles()
 	    }
 
-### 1.3.13 获取sdk路径
+## 2.8 获取sdk路径
 先从root路径下的local.properties中获取sdk路径.如果没有该文件，就通过系统环境变量来获取sdk的路径
 
 	   def getSdkDir(Project project) {
@@ -713,7 +783,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	        }
 	    }
 
-### 1.3.14 获取存储下来的mapping文件
+## 2.9 获取存储下来的mapping文件
 
     def getMappingFile(Project project, String flavorAndType) {
         def TAG = "getMappingFile :"
@@ -729,7 +799,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
     }
 
-### 1.3.15 保存输入文件的路径
+## 2.10 保存输入文件的路径
 - 保存`Transform`的输入文件，因为在打补丁包的时候，需要添加 这些补丁包的 依赖类！！所以建议在`Transform`遍历文件的时候把这些输入文件的路径保存下来！方便 在做dex操作时使用
 
 		proguardLibfiles.add(directoryInput.file)
@@ -749,7 +819,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 		        }
 
 
-### 1.3.16 读取保存的输入文件路径
+## 2.11 读取保存的输入文件路径
 
 	  def getProguardLibFiles() {
 	        List<File> proguardLibFiles = new ArrayList<>()
@@ -763,7 +833,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 	        proguardLibFiles
 	    }
 
-### 1.3.13 dex操作
+## 2.12 dex操作
 - 这一步主要完成的就是将class文件打成dex文件。这里需要知道一点就是之前自定义的`Transform`是在混淆操作之前的！ **所以输出的文件 也是未经混淆的**。如果是将未混淆的文件 打成dex包，下发到app端，进行热修复 肯定是错误的！
 
 - 因此需要判断是否存在混淆的task，如果存在 则需要手动混淆，混淆的时候应用之前记录下来的`configurationFiles`,并且还需要应用上次发版时的`mapping`文件 以保持类名的对应
@@ -889,9 +959,9 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 - 具体的混淆的逻辑。。建议看gradle的源码，因为上面的这些步骤 就是对gradle混淆的源码的复现
 
 
-# 2. Android DSL和Gradle 类的对应关系
+# 3. Android DSL和Gradle 类的对应关系
 
-## 2.1 添加插件
+## 3.1 添加插件
 
 在Android  Studio 添加插件时：
 
@@ -909,7 +979,7 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 - `Project`默认实现是`DefaultProject`
 
-## 2.2 插件
+## 3.2 插件
 
 `apply plugin: 'com.android.application'` ,表示添加插件，`com.android.application`实际上就是这个插件的名称，即`resources/META-INF.gradle-plugins/.properties`目录下的`.properties`文件的名称
 
