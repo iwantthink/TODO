@@ -110,11 +110,14 @@ Android源码学习
 
 - ~~Groovy复习~~
 
-- Gradle复习
+- ~~Gradle复习~~
+
+- 学习Java字节码!!!!!!
 
 - sensor开源项目研究
 
 - 编写全埋点 测试demo
+
 
 
 
