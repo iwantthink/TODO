@@ -1,9 +1,21 @@
+# 链接
+
+[Class文件格式实例解析](http://www.acyouzi.com/2016/11/10/jvm-class-file-structure/) 
+
+[Java虚拟机--字节码（二十一）](https://blog.csdn.net/qq_33301113/article/details/72972693)
+
+[《Java虚拟机原理图解》 1.1、class文件基本组织结构](https://blog.csdn.net/luanlouis/article/details/39892027)
+
 # 1.概述
 计算机只能识别0和1，所以大家编写的程序都需要经过编译器，转换为由0和1组成的二进制本地机器码(`Native Code`)。随着虚拟机的不断发展，很多程序语言开始选择与操作系统和机器指令集无关的格式作为编译后的存储格式（Class文件），从而实现”Write Once, Run Anywhere”。 Java设计之初，考虑后期能让Java虚拟机运行其他语言，目前有越来越多的其他语言都可以直接需要在Java虚拟机，虚拟机只能识别Class文件，至于是由何种语言编译而来的，虚拟机并不关心，如下图：
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fjgkeieb0mj20lt098gls.jpg)
 
-[Class文件格式实例解析](http://www.acyouzi.com/2016/11/10/jvm-class-file-structure/) 
+
+
+## 1.1 关系
+
+
 
 # 2.Class组成
 Class文件是一组以**8位字节为单位的二进制流**，中间没有任何分隔符，非常紧凑。 当需要占用8位以上的数据时，会按照Big-endian顺序，高位在前，低位在后的方式来分割成多个8位字节来存储。
