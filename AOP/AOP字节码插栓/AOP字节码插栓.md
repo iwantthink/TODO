@@ -1,5 +1,7 @@
 # 1.Android AOP 字节码插栓介绍
 
+[Android AOP之字节码插桩详解](https://mp.weixin.qq.com/s?__biz=MzUxMzcxMzE5Ng==&mid=2247488304&amp;idx=1&amp;sn=6ab9a2cccbf3653d97e3ac1bde3a3794&source=41#wechat_redirect)
+
 # 1.1 简介
 **面向切向编程**（Aspect Oriented Programming），相对于**面向对象编程**（Object Oriented Programming）而言。      
 
@@ -9,35 +11,46 @@ OOP是将功能模块化或者问题模块化,AOP就是将涉及到众多模块�
 ## 1.1 方式介绍
 
 ### 1.1.1 AOP 按实现原理可以分为 运行时AOP和编译时AOP
+
 - Android运行时AOP：主要实现通过hook某些关键方法
+
 - Android编译时AOP：主要是在apk打包过程中对class文件的字节码进行识别并更改
 
 
-### 1.1.2 主流的Anrdoid AOP 框架有：  
+### 1.1.2 主流的Anrdoid AOP 框架  
 
 1. Dexposed，Xposed等（运行时）
 
-2. [aspactJ（编译时）](http://blog.csdn.net/innost/article/details/49387395)
+2. [aspectJ（编译时）](http://blog.csdn.net/innost/article/details/49387395)
 
 还有一些非框架的但能实现 AOP的工具类库：
 
 1. java的动态代理机制(对java接口有效)
+
 2. ASM,javassit等字节码操作类库
+
 3. (偏方)DexMaker:Dalvik 虚拟机上，在编译期或者运行时生成代码的 Java API。
+
 4. (偏方)ASMDEX(一个类似 ASM 的字节码操作库，运行在Android平台，操作Dex字节码)
 
 ### 1.1.3 各种方式的选择
+
 - Dexposed只针对部分系统版本有效
+
 - Xposed需要机器拥有root权限
+
 - aspactJ没有上述缺点，但是其作为一个AOP框架太大了，不仅方法多，还有一堆引用需要添加
 
 
 **AOP方法可以确定为俩点：  **
+
 1. 采用编译时的字节码操作的做法
+
 2. hook Android编译打包流程并借助ASM库对项目字节码文件进行统一扫描，过滤以及修改
 
 
 # 2.AOP实现概述
+
 ![AOP大概流程](http://ww1.sinaimg.cn/large/6ab93b35gy1fjhx4ub6grj20o004dt8v.jpg)
 
 关键点在如下俩点：  
@@ -159,7 +172,3 @@ Java Instrumentation指的是可以独立于应用程序之外的代理(agent)�
 - 在dex过程
 	对我们的目标方法com.android.dx.command.Main.processClasses进行字节码插入，从而实现打入apk的每一个项目中的类都按照我们制定的规则进行过滤及字节码修改。
 
-
-
-# 3 参考链接
-[Android aop之字节码插栓](http://www.jianshu.com/p/c202853059b4)
