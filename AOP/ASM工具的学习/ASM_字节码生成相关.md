@@ -19,6 +19,8 @@
 
 -  这里的`org/domain/package/YourClass.class`改成待转换的类即可
 
+	**类最好填完整路径....**
+
 
 # 3. Bytecode Outline插件
 
