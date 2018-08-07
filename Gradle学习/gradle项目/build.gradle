@@ -314,7 +314,15 @@ dependencies {
 
 
 
+task TestTraverse{
 
+	5.times { i ->
+		if (i==3) {
+			return
+		}
+		println "current is $i"
+	}
+}
 
 
 
