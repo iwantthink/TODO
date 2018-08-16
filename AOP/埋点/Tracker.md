@@ -82,6 +82,8 @@
 ## 1.7 添加Transform的消耗时间
 
 
+## 1.8 增加对 recyclerView的判断
+
 
 # 2. Develop
 
