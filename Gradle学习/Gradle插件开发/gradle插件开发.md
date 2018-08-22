@@ -386,8 +386,11 @@ Gradle会编译和测试插件，并使其在构建脚本的类路径上可用�
 			}
 		}
 
-- resources/META-INF/gradle-plugins目录下的xxx.properties填写内容
+- resources/META-INF/gradle-plugins目录下的`xxx.properties`填写内容
 	>implementation-class=包名+插件名
+
+- `xxx.properties`中的`xxx`需要填写为包名
+
 
 ## 3.2 发布到本地仓库
 目前4.1版本的gradle 有俩种方式进行发布操作
