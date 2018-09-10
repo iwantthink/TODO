@@ -31,10 +31,6 @@ SDK性能优化
 
 学习python。。。
 
-利用transfromapi 设计一些 插件
-
-- 自动生成日志，插入到SDK生成之前的步骤中，这样就可以完全移除 发行版SDK中的log
-
 [学习android architecture Components..](https://developer.android.com/topic/libraries/architecture/index.html)
 
 **做一个做计划（记忆曲线）的demo apk**
@@ -75,7 +71,11 @@ jenkins+jacoco
 
 - ~~学习利用 instant run 实现热修复~~
 
-- 关于AOP插件的学习
+- ~~关于AOP插件的学习~~
+
+利用transfromapi 设计一些 插件
+
+- 自动生成日志，插入到SDK生成之前的步骤中，这样就可以完全移除 发行版SDK中的log
 
 
 研究插件化
