@@ -1,32 +1,3 @@
-# 1. 监听
-
-添加监听的位置在:MessageProcessor->monitorViewTreeChange
-
-1. OnGlobalLayoutListener
-
-2. OnScrollChangedListener
-
-3. OnGlobalFocusChangeListener
-
-Method:
-
-    public void saveNewWindowImpressionDelayed() {
-        ThreadUtils.postOnUiThreadDelayed(new Runnable() {
-            public void run() {
-                MessageProcessor.this.saveAllWindowImpress(true);
-            }
-        }, 500L);
-    }
-
-
-    private Runnable mSaveAllWindowImpression = new Runnable() {
-        public void run() {
-            MessageProcessor.this.flushPendingPageEvent();
-            MessageProcessor.this.saveAllWindowImpress();
-        }
-    };
-
-
 ## 1. GrowingIO 注册
 
 	Configuration configuration = new Configuration()
@@ -68,7 +39,9 @@ Method:
 5. 创建`ArgumentChecker`,用来检查数据的有效性
 
 
-## 1.4 生命周期的转发
+**在初始化完之后,数据开始收集的触发点是从 生命周期的回调开始**
+
+## 1.4 生命周期的转发--重要触发点
 
 `AppState`类实现了`ActivityLifeCallbacks`接口,并被注册到了系统中
 
@@ -194,6 +167,7 @@ Method:
 ## 2.4 flushPendingPageEvent()
 
     private void flushPendingPageEvent() {
+		// savePage中生成->onResume
         if(this.mPendingPageEvent != null) {
 			//判断是否是新进入一个页面
             if(SessionManager.enterNewPage()) {
@@ -277,6 +251,7 @@ Method:
 
     private void saveImpress(ActionCalculator calculator) {
         if(calculator != null) {
+			//跳转到 6.1
             List<ActionEvent> events = calculator.obtainImpress();
             if(events == null) {
                 return;
@@ -487,6 +462,16 @@ Method:
 
 - 获取`WindowManager`中的 `mViews`字段
 
+## 5.2 isDecorView(View rootView)
+
+    public static boolean isDecorView(View rootView) {
+        Class rootClass = rootView.getClass();
+        return rootClass == sPhoneWindowClazz || rootClass == sPopupWindowClazz;
+    }
+
+- 判断传入的View的字节码 是否和 `phoneWindow`/`popupWindow` 相同
+
+
 # 6. ActionCalculator 
 
 ## 6.1 obtainImpress()
@@ -495,6 +480,7 @@ Method:
         GConfig config = GConfig.getInstance();
         List<ActionEvent> events = null;
         if(config != null && config.shouldSendImp()) {
+			// 遍历RootView,创建ActionStruct 添加到,mNewImpressViews集合中
             this.mNewImpressViews = new ArrayList();
             if(this.mRootView != null && this.mRootView.get() != null) {
                 ViewHelper.traverseWindow((View)this.mRootView.get(), this.mWindowPrefix, this.mViewTraveler);
@@ -512,6 +498,7 @@ Method:
 
             if(this.mTodoViewNode.size() > 0) {
                 if(impEvents == null) {
+					//创建一个type='imp'的ActionEvent
                     impEvents = ActionEvent.makeImpEvent();
                     impEvents.setPageTime(this.mPtm);
                     impEvents.mPageName = this.mPage;
@@ -526,6 +513,62 @@ Method:
         return events;
     }
 
+## 6.2 mViewTraveler
+
+    private ViewTraveler mViewTraveler = new ViewTraveler() {
+        public void traverseCallBack(ViewNode viewNode) {
+            boolean isNew = false;
+			//判断 是否收集imageview&&控件类型是否是 ImageView && 没有文字内容
+            if(GConfig.getInstance().isImageViewCollectionEnable() && viewNode.mView instanceof ImageView && TextUtils.isEmpty(viewNode.mViewContent)) {
+                ActionCalculator.this.mTodoViewNode.add(viewNode);
+            } else {
+				// 往mImpressedViews中添加 ActionStruct
+                if(ActionCalculator.this.mImpressedViews.get(viewNode.hashCode()) == null) {
+					// 通过ViewNode创建ActionStruct对象
+                    ActionStruct actionStruct = ActionCalculator.genActionStruct(viewNode);
+					// 保存到mImporessedViews 集合中
+                    ActionCalculator.this.mImpressedViews.put(viewNode.hashCode(), actionStruct);
+                    ActionCalculator.this.mNewImpressViews.add(actionStruct);
+                    isNew = true;
+                }
+				//如果是WebView类型
+                if(viewNode.mView instanceof WebView || ClassExistHelper.instanceOfX5WebView(viewNode.mView)) {
+                    Iterator var5 = ActionCalculator.this.mImpressedWebView.iterator();
+
+                    while(var5.hasNext()) {
+                        WeakReference<View> view = (WeakReference)var5.next();
+                        if(view.get() == viewNode.mView) {
+                            isNew = false;
+                            break;
+                        }
+                    }
+
+                    if(isNew) {
+                        ActionCalculator.this.mImpressedWebView.add(new WeakReference(viewNode.mView));
+                    }
+
+                    VdsJsBridgeManager.updateViewNodeIfNeeded(viewNode.mView, viewNode, isNew);
+                }
+
+            }
+        }
+    };
+
+## 6.3 genActionStruct(ViewNode viewNode)
+
+    public static ActionStruct genActionStruct(ViewNode viewNode) {
+        ActionStruct actionStruct = new ActionStruct();
+        actionStruct.xpath = viewNode.mParentXPath;
+        actionStruct.time = System.currentTimeMillis();
+        actionStruct.index = viewNode.mLastListPos;
+        actionStruct.content = viewNode.mViewContent;
+        actionStruct.obj = viewNode.mInheritableGrowingInfo;
+        actionStruct.imgHashcode = viewNode.mImageViewDHashCode;
+        return actionStruct;
+    }
+
+- 根据传入的`ViewNode` 生成一个`ActionStruct`对象
+
 
 # 7. ViewHelper
 
@@ -534,21 +577,93 @@ Method:
     public static void traverseWindow(View rootView, String windowPrefix, ViewTraveler callBack) {
         if(rootView != null) {
             int[] offset = new int[2];
+			// 获取rootView在当前屏幕的位置
             rootView.getLocationOnScreen(offset);
+			// 判断是否全屏
             boolean fullscreen = offset[0] == 0 && offset[1] == 0;
+			//创建ViewNode , 传入了Callback
             ViewNode rootNode = new ViewNode(rootView, 0, -1, Util.isListView(rootView), fullscreen, false, false, windowPrefix, windowPrefix, windowPrefix, callBack);
             Object inheritableObject = rootView.getTag(84159243);
             if(inheritableObject != null && inheritableObject instanceof String) {
                 rootNode.mInheritableGrowingInfo = (String)inheritableObject;
             }
-
+			//判断是否可见 && 非忽略的控件
             if(rootNode.isNeedTrack()) {
+				//判断是否是 DecorView
                 if(!WindowHelper.isDecorView(rootView)) {
+					//非DecorView
                     rootNode.traverseViewsRecur();
                 } else {
+					//DecorView
                     rootNode.traverseChildren();
                 }
             }
 
         }
+    }
+
+# 8. ViewNode
+
+## 8.1 traverseViewsRecur
+
+    public void traverseViewsRecur() {
+		//判断是否需要进行遍历
+        if(this.mViewTraveler.needTraverse(this)) {
+            this.mViewName = Util.getSimpleClassName(this.mView.getClass());
+			//计算position
+            this.viewPosition();
+			//计算viewpath
+            this.calcXPath();
+			//获取View中的文本
+            this.viewContent();
+			//判断是否需要抓取
+            if(this.needTrack()) {
+				//组装数据
+                this.mViewTraveler.traverseCallBack(this);
+            }
+
+            if(ClassExistHelper.instanceOfX5WebView(this.mView)) {
+                return;
+            }
+			// 遍历子类
+            this.traverseChildren();
+        }
+
+    }
+
+## 8.2 needTrack
+
+    private boolean needTrack() {
+        ViewParent parent = this.mView.getParent();
+        return parent != null && (this.mView.isClickable() || this.mView instanceof TextView || this.mView instanceof ImageView || this.mView instanceof WebView || parent instanceof AdapterView || parent instanceof RadioGroup || this.mView instanceof Spinner || this.mView instanceof RatingBar || this.mView instanceof SeekBar || ClassExistHelper.instanceOfX5WebView(this.mView));
+    }
+
+- 当前View父类非空,并且其父类属于以上的几种类型
+
+
+## 8.3 traverseChildren
+
+    public void traverseChildren() {
+		// 当前View 属于 ViewGroup  && 不是Spinner类型
+        if(this.mView instanceof ViewGroup && !(this.mView instanceof Spinner)) {
+            ViewGroup viewGroup = (ViewGroup)this.mView;
+			//遍历子类
+            for(int i = 0; i < viewGroup.getChildCount(); ++i) {
+				//获取子类
+                View childView = viewGroup.getChildAt(i);
+				//创建子类的ViewNode
+                ViewNode childViewNode = new ViewNode(childView, i, this.mLastListPos, this.mHasListParent || Util.isListView(this.mView), this.mFullScreen, this.mInClickableGroup || Util.isViewClickable(this.mView), this.mParentIdSettled, this.mOriginalParentXPath, this.mParentXPath, this.mWindowPrefix, this.mViewTraveler);
+				//判断是否可以点击
+                if(Util.isViewClickable(this.mView)) {
+                    childViewNode.mClickableParentXPath = this.mParentXPath;
+                } else {
+                    childViewNode.mClickableParentXPath = this.mClickableParentXPath;
+                }
+
+                childViewNode.mBannerText = this.mBannerText;
+                childViewNode.mInheritableGrowingInfo = this.mInheritableGrowingInfo;
+                childViewNode.traverseViewsRecur();
+            }
+        }
+
     }
