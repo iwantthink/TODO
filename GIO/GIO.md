@@ -318,6 +318,7 @@
                             if(!(current instanceof ViewGroup)) {
                                 this.handView(current, activity);
 							// 对ViewGroup进行筛选,返回false 就不继续遍历处理了
+							// 3.5
                             } else if(!this.handleViewGroup(current, activity, stack)) {
                                 ViewGroup viewGroup = (ViewGroup)current;
 
