@@ -1,6 +1,7 @@
 
     public static ViewNode getViewNode(View view, ViewTraveler viewTraveler) {
 		//保存View的视图
+		// Bottom->Top
         ArrayList<View> viewTreeList = new ArrayList(8);
 		//获取当前View控件的父类
         ViewParent parent = view.getParent();
@@ -11,11 +12,11 @@
                 return null;
             }
 			// index[0] = 传入的View
-			// index[max] = 顶层View
+			// index[Top] = 顶层View
             viewTreeList.add((ViewGroup)parent);
             parent = parent.getParent();
         }
-		//index[max]
+		//index[Top]
         int endIndex = viewTreeList.size() - 1;
 		//获取顶级view
         View rootView = (View)viewTreeList.get(endIndex);
@@ -68,7 +69,7 @@
         if(rootView instanceof ViewGroup) {
 			//顶层View
             ViewGroup parentView = (ViewGroup)rootView;
-			// 从第二高的层级开始往下进行遍历  max->min
+			// 从第二高的层级开始往下进行遍历  Top->Bottom
             for(int i = endIndex - 1; i >= 0; --i) {
 				// 当前View位于 父类View控件中的位置
                 viewPosition = 0;
@@ -150,7 +151,7 @@
                         opx = opx + "/" + viewName + "[" + viewPosition + "]";
                         px = px + "/" + viewName + "[" + viewPosition + "]";
                     }
-
+					//拼凑ResIdName
                     if(GConfig.USE_ID) {
                         String id = Util.getIdName(childView, mParentIdSettled);
                         if(id != null) {
