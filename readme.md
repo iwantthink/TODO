@@ -84,7 +84,7 @@ jenkins+jacoco
 
 - ~~Hook AMS~~
 
-- Hoom PMS
+- ~~Hoom PMS~~
 
 分析Java集合类的原理。
 
@@ -99,11 +99,11 @@ jenkins+jacoco
 
 Android源码学习
 
-- SystemServer
+- ~~SystemServer~~
 
-- AMS启动过程
+- ~~AMS启动过程~~
 
-- Binder原理
+- ~~Binder原理~~
 
 
 研究并开发全埋点插件
@@ -116,11 +116,11 @@ Android源码学习
 
 - sensor开源项目研究
 
-- 编写全埋点 测试demo
+- ~~编写全埋点 测试demo~~
 
 - 其他sdk对全埋点的实现实例
 
-
+- mixpanel 学习
 
 c++学习
 
@@ -129,3 +129,10 @@ c++学习
 - ~~学习JNI开发~~
 
 - ~~使用JNI实现获取应用列表~~
+
+
+web-socket学习
+
+- 实现demo
+
+- 研究原理
