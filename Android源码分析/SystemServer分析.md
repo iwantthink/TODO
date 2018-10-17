@@ -134,7 +134,7 @@ SystemServer进程由`Zygote fork`生成,**进程名为`system_server`**,该进�
         throw new RuntimeException("Main thread loop unexpectedly exited");
     }
 
-- `LocalServices`通过用静态Map变量sLocalServiceObjects，来保存以服务类名为key，以具体服务对象为value的Map结构。
+- `LocalServices`通过用静态Map变量`sLocalServiceObjects`，来保存以服务类名为key，以具体服务对象为value的Map结构。
 
 - **该方法中创建了`SystemServiceManager`,该类用来启动各种服务**
 
@@ -607,7 +607,7 @@ SystemServiceManager中会回调各个已经被创建的Service的`onBootPhase(6
 
 - 这里还是一个单例
 
-- `ServiceManager`是由init进程通过解析init.rc文件而创建的
+- `ServiceManager`是由init进程通过解析`init.rc`文件而创建的
 
 - **这一步主要是为了获取能够跟远程ServiceManager服务进行通信的Binder远程代理,`ServiceManager`可以管理所有Binder服务**
 
@@ -628,9 +628,9 @@ SystemServiceManager中会回调各个已经被创建的Service的`onBootPhase(6
 
 - `ServiceManagerProxy`是`ServiceManagerNative`的内部类
 
--  通过`mRemote`(即Binder远程代理)发送一个`ADD_SERVICE_TRANSACTION`消息到`ServiceManager`所在的进程
+-  通过`mRemote`(即Binder远程代理)发送一个`ADD_SERVICE_TRANSACTION`消息到`ServiceManager`真正所在的进程
 
-	[Binder系列5—注册服务(addService)](http://gityuan.com/2015/11/14/binder-add-service/#addservice)
+	具体的在`system_server`中的`ServiceManager`服务如何注册服务参考文章->>>>>[Binder系列5—注册服务(addService)](http://gityuan.com/2015/11/14/binder-add-service/#addservice)
 
 
 ## 6.2 SystemServiceManager
