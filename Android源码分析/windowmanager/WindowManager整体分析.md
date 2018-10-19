@@ -64,7 +64,7 @@ WMS与WM通过Binder进行IPC,WMS作为系统级别的服务,并不会将全部A
 	另外,**这三个方法都是直接对`View`进行操作,说明WM具体管理的是以`View`形式存在的`Window`**
 
 
-# 4 Window创建过程
+# 4. Window创建过程
 
 `Window`是一个抽象类,具体实现类为`PhoneWindow`.`ActivityThread`的`performLaunchActivity()`方法在创建`Activity`时,会调用`Activity`的`attach()`,`Window`就在这时候被创建
 
