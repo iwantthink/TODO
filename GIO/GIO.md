@@ -23,7 +23,7 @@
 6. 初始化`APPState`
 
 7. 判断是否是Sample, 去创建不同的`GrowingIO`对象返回
-
+ 
 ## 1.3 GrowingIO构造函数
 
 1. `MessageProcessor`进行初始化
