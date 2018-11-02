@@ -158,7 +158,7 @@ WMS与WM通过Binder进行IPC,WMS作为系统级别的服务,并不会将全部A
 
 ### 4.2.4 CachedServiceFetcher.getService(ctx)
 
-    static abstract class CachedServiceFetcher<T> implements ServiceFetcher<T> {
+		static abstract class CachedServiceFetcher<T> implements ServiceFetcher<T> {
         private final int mCacheIndex;
 
         public CachedServiceFetcher() {
