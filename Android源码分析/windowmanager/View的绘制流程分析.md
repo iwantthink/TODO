@@ -189,14 +189,14 @@
 	            mFullRedrawNeeded = true;
 	            mLayoutRequested = true;
 	            //如果窗口的类型是有状态栏的，那么顶层视图DecorView所需要窗口的宽度和高度就是除了状态栏
-	            if (lp.type == WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL
-	                    || lp.type == WindowManager.LayoutParams.TYPE_INPUT_METHOD) {
-	                // NOTE -- system code, won't try to do compat mode.
+	            if (lp.type == TYPE_STATUS_BAR_PANEL
+                		|| lp.type == TYPE_INPUT_METHOD
+                		|| lp.type == TYPE_VOLUME_OVERLAY) {
 	                Point size = new Point();
 	                mDisplay.getRealSize(size);
 	                desiredWindowWidth = size.x;
 	                desiredWindowHeight = size.y;
-	            } else {//否则顶层视图DecorView所需要窗口的宽度和高度就是整个屏幕的宽高
+	            } else {//除了上面的情况,其他的顶层视图DecorView所需要窗口的宽度和高度就是整个屏幕的宽高
 	                DisplayMetrics packageMetrics =
 	                    mView.getContext().getResources().getDisplayMetrics();
 	                desiredWindowWidth = packageMetrics.widthPixels;
@@ -221,3 +221,18 @@
 	performDraw();
 	
 	}
+
+### 3.1.1 Display.getRealSize(Point size)
+
+通过`ContextImpl`获取到`Display`
+
+    @Override
+    public Display getDisplay() {
+        if (mDisplay == null) {
+            return mResourcesManager.getAdjustedDisplay(Display.DEFAULT_DISPLAY,
+                    mResources);
+        }
+
+        return mDisplay;
+    }
+
