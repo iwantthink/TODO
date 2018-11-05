@@ -212,7 +212,7 @@ ViewRootImpl身负了很多职责：
 
 - 在创建好视图之后,会回调`Activity`的`onContentChanged()`方法通知`Activity`视图已经发生了变化
 
-
+- **一个Window对象对应着一个View(DecorView),`ViewRootImpl`就是对这个`DecorView`进行操作**
 
 
 ### 3.2.1.1 PhoneWindow.installDecor()
