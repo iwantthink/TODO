@@ -172,6 +172,7 @@
         if (!mTraversalScheduled) {
             mTraversalScheduled = true;
             mTraversalBarrier = mHandler.getLooper().getQueue().postSyncBarrier();
+			
             mChoreographer.postCallback(
                     Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);
             if (!mUnbufferedInputDispatch) {
@@ -181,6 +182,8 @@
             pokeDrawLockIfNeeded();
         }
     }
+
+- `mChoreographer`是`Choreographer`类型,其内部包含了一个`Handler`,它在`ViewRootImpl`的构造函数中被创建,而`ViewRootImpl`由`WindowManager`创建并
 
 ## 2.7 ViewRootImpl.TraversalRunnable
 
@@ -198,16 +201,8 @@
             mTraversalScheduled = false;
             mHandler.getLooper().getQueue().removeSyncBarrier(mTraversalBarrier);
 
-            if (mProfile) {
-                Debug.startMethodTracing("ViewAncestor");
-            }
-
             performTraversals();
-
-            if (mProfile) {
-                Debug.stopMethodTracing();
-                mProfile = false;
-            }
+			....................
         }
     }
 
@@ -230,7 +225,12 @@
 		mIsInTraversal = true;
 		//是否马上绘制View
 		mWillDrawSoon = true;
-	
+		//mWindowAttributes 即WindowManager.LayoutParams
+		//默认的lp.width/height是  MATCH_PARENT
+        WindowManager.LayoutParams lp = mWindowAttributes;	
+		//mWinFrame是由WMS赋值的 窗口大小
+		Rect frame = mWinFrame;
+
 		//第一阶段:预测量
 		.............
 		//顶层视图DecorView所需要窗口的宽度和高度
@@ -353,6 +353,15 @@
               ......
 			}
 			//第二阶段:窗口布局阶段从这里结束
+
+            // !!FIXME!! This next section handles the case where we did not get the
+            // window size we asked for. We should avoid this by getting a maximum size from
+            // the window session beforehand.
+            if (mWidth != frame.width() || mHeight != frame.height()) {
+                mWidth = frame.width();
+                mHeight = frame.height();
+            }
+
 	
 			//第三阶段:最终测量阶段从这里开始
 	        if (!mStopped || mReportNextDraw) {
@@ -396,7 +405,6 @@
 	    final boolean didLayout = layoutRequested && (!mStopped || mReportNextDraw);
 	  ......
 		if (didLayout) {
-	        ......
 	        //⑵ 通过performLayout对控件进行布局
 	        performLayout(lp, mWidth, mHeight);
 	
@@ -635,3 +643,134 @@
         mMeasureCache.put(key, ((long) mMeasuredWidth) << 32 |
                 (long) mMeasuredHeight & 0xffffffffL); // suppress sign extension
     }
+
+
+## 4.2 布局窗口阶段(WindowLayout)
+
+根据**预测量**的结果,通过`IWindowSession.relayout()`方法想WMS请求调整窗口的尺寸等属性,这将引起WMS对窗口重新布局,并将布局结果返回给`ViewRootImpl`
+
+- 布局窗口能够进行的原因是控件系统有修改窗口属性的需求
+	例如第一次'遍历'需要确定窗口的尺寸以及一块`Surface`,预测量结果与窗口当前尺寸不一致,则需要窗口更改尺寸.
+
+	`mView`可见性发生变化,则需要将窗口隐藏或显示等..
+
+
+## 4.3 最终测量阶段(EndMeasure)
+
+预测量结果是控件树期待的窗口尺寸,但是在WMS中影响布局的因素很多,WMS不一定会将窗口的尺寸调整为控件树所要求的尺寸,反而是控件树要听从WMS的布局结果(WMS作为系统服务)
+
+在这个阶段中View及其子类的`onMeasure()`方法将会沿着控件树依次被回调。最终测量阶段直接调用`performMeasure()`方法而不是`measureHierarchy()`方法，是因为`measureHierarchy()`有个协商过程，而到了最终测量阶段控件树已经没有了协商的余地，无论控件树是否接收，它只能被迫接受WMS的布局结果
+
+
+## 4.4 布局控件树阶段(Layout)
+
+这一阶段主要的工作内容就是将上一步的最终测量结果作为依据对控件进行布局. 测量是确定控件的尺寸,布局则是确定控件的位置.**在这个阶段中,`View`及其子类的`onLayout()`方法将会被回调**
+
+总体来说 **布局控件阶段** 做了俩件事情
+
+### 4.4.1 控件树布局
+在这个阶段 主要调用了`performLayout()`函数
+
+    private void performLayout(WindowManager.LayoutParams lp, int desiredWindowWidth,
+            int desiredWindowHeight) {
+        mLayoutRequested = false;
+        mScrollMayChange = true;
+        mInLayout = true;
+
+        final View host = mView;
+        if (host == null) {
+            return;
+        }
+        try {
+            host.layout(0, 0, host.getMeasuredWidth(), host.getMeasuredHeight());
+			.......省略代码.........
+        } finally {
+        }
+        mInLayout = false;
+    }
+
+- `performLayout()`方法中,具体的布局操作一样是调用`View`的`layout()`
+
+
+---
+
+布局阶段把测量结果转化为控件的实际位置与尺寸,而控件的实际位置与尺寸由`View`的`mLeft`,`mTop`,`mRight`,`mBottom`这四个成员变量存储.
+
+也就是说控件树的布局过程就是根据测量结果为每一个控件设置这个四个成员变量的过程,`mLeft、mTop、mRight、mBottom` 是相对于父控件的坐标值。
+
+
+`View.layout()`代码如下:
+
+
+    public void layout(int l, int t, int r, int b) {
+        if ((mPrivateFlags3 & PFLAG3_MEASURE_NEEDED_BEFORE_LAYOUT) != 0) {
+            onMeasure(mOldWidthMeasureSpec, mOldHeightMeasureSpec);
+            mPrivateFlags3 &= ~PFLAG3_MEASURE_NEEDED_BEFORE_LAYOUT;
+        }
+
+        int oldL = mLeft;
+        int oldT = mTop;
+        int oldB = mBottom;
+        int oldR = mRight;
+
+        boolean changed = isLayoutModeOptical(mParent) ?
+                setOpticalFrame(l, t, r, b) : setFrame(l, t, r, b);
+		// PFLAG_LAYOUT_REQUIRED 是在View.measure()中被设置
+        if (changed || (mPrivateFlags & PFLAG_LAYOUT_REQUIRED) == PFLAG_LAYOUT_REQUIRED) {
+			//如果该View是ViewGroup类型,则在其onLayout()方法中会依次调用子类的layout()方法
+            onLayout(changed, l, t, r, b);
+			//清除PFLAG_LAYOUT_REQUIRED 标志
+            mPrivateFlags &= ~PFLAG_LAYOUT_REQUIRED;
+			//调用监听回调,告诉这些监听者 ,布局发生变化
+            ListenerInfo li = mListenerInfo;
+            if (li != null && li.mOnLayoutChangeListeners != null) {
+                ArrayList<OnLayoutChangeListener> listenersCopy =
+                        (ArrayList<OnLayoutChangeListener>)li.mOnLayoutChangeListeners.clone();
+                int numListeners = listenersCopy.size();
+                for (int i = 0; i < numListeners; ++i) {
+                    listenersCopy.get(i).onLayoutChange(this, l, t, r, b, oldL, oldT, oldR, oldB);
+                }
+            }
+        }
+			.....省略代码....
+    }
+
+- `View`中的`onLayout()`是空实现
+
+---
+**测量阶段和布局阶段的对比:**
+
+- 测量确定的是控件的尺寸,在一定程度上确定了子控件的位置.
+
+	布局则是根据测量结果来实施,并最终确定子控件位置
+
+- 测量结果对布局过程没有约束力. 子控件在`onMeasure()`方法中计算出了自身应有的尺寸,但是由于`layout()`方法是由父控件调用的,因此父控件最终决定控件的位置尺寸,测量结果仅仅是一个参考
+
+
+- 一般来说,子控件的测量结果影响父控件,因此测量过程是由子控件到根控件.
+
+	布局过程则相反,是由父控件的布局结果影响子控件的布局结果,所以布局过程是由根控件到子控件
+
+
+### 4.4.2 设置透明区域
+
+布局阶段的另一个工作是计算并设置窗口的透明区域。这一功能主要是为`SurfaceView`服务。
+
+
+
+## 4.5 绘制阶段(Draw)
+
+这是`performTraversals()`的最后阶段(`performDraw()`)。确定控件的尺寸和位置后。便进行对控件树的绘制。在这个阶段中View及其子类的`onDraw()`方法将会被回调。
+
+
+- 在开发Android自定义控件时，往往都需要重写`View.onDraw()`方法以绘制内容到一个给定的`Canvas`中。
+
+	 `Canvas`是一个绘图工具类，其API提供了一系列绘图指定供开发者使用。这些指令可以分为两个部分：
+
+	1. **绘制指令**:这些最常用的指令由一系列名为`drawXXX()`的方法提供。它们用来实现实际的绘制行为，例如绘制点、线、圆以及方块等
+
+	2. **辅助指令**:这些用于提供辅助功能的指令将会影响后续指令的效果。如变换、裁剪区域等。这些辅助指令不如上面的绘制指令那么直观，但是在Android的绘制过程中大量使用了辅助指令。在这些辅助指令中，最常用的莫过于变换指令了。变换指令包括`translate`(平移坐标系),`rotate`(旋转坐标系),`scale`(缩放坐标系)等，这些指令很大的帮助了控件树的绘制。
+
+		其实只要想一想我们在重写onDraw()函数时从未考虑过控件的位置、旋转、缩放等状态。这说明在onDraw()方法执行之前，这些状态都已经以变换的方式设置到Canvas中了。因此onDraw()方法中Canvas使用的是控件自身的坐标系。
+
+- `View.onDraw()`也是空实现,具体的逻辑交给子类去实现
