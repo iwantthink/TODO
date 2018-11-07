@@ -17,6 +17,7 @@
 
 真正将`DecorView`添加到`Window`并进行关联的过程是在`ActivityThread.handleResumeActivity()`中
 
+**重点分析`ViewRootImpl`类**
 
 # 2. 顶层DecorView添加到窗口的过程
 
@@ -27,7 +28,6 @@
             boolean clearHide, boolean isForward, boolean reallyResume, int seq, String reason) {
 		//获取到当前Activity的数据
         ActivityClientRecord r = mActivities.get(token);
-
 
         // TODO Push resumeArgs into the activity for consideration
         r = performResumeActivity(token, clearHide, reason);
@@ -143,6 +143,8 @@
 	      }
 	 }
 
+- 在方法的最后调用了`view.assignParent()`,即将`ViewRootImpl`设置给了`DecorView`,作为其父类存在
+
 ## 2.5 ViewRootImpl.requestLayout()
 
     @Override
@@ -183,7 +185,7 @@
         }
     }
 
-- `mChoreographer`是`Choreographer`类型,其内部包含了一个`Handler`,它在`ViewRootImpl`的构造函数中被创建,而`ViewRootImpl`由`WindowManager`创建并
+- `mChoreographer`是`Choreographer`类型,其内部包含了一个`Handler`,它在`ViewRootImpl`的构造函数中被创建,而`ViewRootImpl`由`WindowManager`创建并初始化
 
 ## 2.7 ViewRootImpl.TraversalRunnable
 
@@ -210,13 +212,35 @@
 
 **从这一步开始,View开始绘制,它经过`measure`,`layout`,`draw`三个过程将View绘制出来**.其中`measure`用来测量View的宽高,`layout`用来确定View在父容器中的位置,`draw`负责将View绘制在屏幕上
 
-# 3. View的绘制过程
+# 3. ViewRootImpl的绘制过程
+
+`ViewRootImpl.performTraversals()`方法可以划分为五个阶段:
+
+1. 预测量阶段
+
+	这是进入`performTraversals()`方法后的第一阶段,会对控件树进行第一次的测量,测量结果可以通过`mView.getMeasuredWidth()/Height()`获得. 在此阶段中将会计算出控件树为显示其内容所需的尺寸(即期望尺寸).此阶段中,`View`及其子类的`onMeasure()`将会沿着控件树依次被调用
+
+2. 布局窗口阶段
+
+	根据预测量的结果，通过`IWindowSession.relayout()`方法向WMS请求调整窗口的尺寸等属性，这将引发WMS对窗口进行重新布局，并将布局结果返回给ViewRootImpl。
+
+3. 最终测量阶段
+
+	预测量的结果是控件树所期望的窗口尺寸。然而由于在WMS中影响窗口布局的因素很多，WMS不一定会将窗口准确地布局为控件树所要求的尺寸，而迫于WMS作为系统服务的强势地位，控件树不得不接受WMS的布局结果。因此在这一阶段，`performTraversals()`将以窗口的实际尺寸对控件进行最终测量。在这个阶段中，View及其子类的`onMeasure()`方法将会沿着控件树依次被回调。
+
+4. 布局控件树阶段
+
+	完成最终测量之后便可以对控件树进行布局了。测量确定的是控件的尺寸，而布局则是确定控件的位置。在这个阶段中，View及其子类的`onLayout()`方法将会被回调。
+
+5. 绘制阶段
+
+	这是`performTraversals()`的最终阶段。确定了控件的位置与尺寸后，便可以对控件树进行绘制了。在这个阶段中，View及其子类的`onDraw()`方法将会被回调。
 
 ## 3.1 ViewRootImpl.performTraversals()
 
 	private void performTraversals() {
-		// cache mView since it is used so much below...
 		//mView就是DecorView,在WMG中VRI被创建,并传入了DV
+		//保存在局部变量中,以提高访问效率
 		final View host = mView;
 		//非空,是否已经添加
 		if (host == null || !mAdded)
@@ -228,7 +252,7 @@
 		//mWindowAttributes 即WindowManager.LayoutParams
 		//默认的lp.width/height是  MATCH_PARENT
         WindowManager.LayoutParams lp = mWindowAttributes;	
-		//mWinFrame是由WMS赋值的 窗口大小
+		//mWinFrame是由WMS赋值的窗口最新大小
 		Rect frame = mWinFrame;
 
 		//第一阶段:预测量
@@ -241,6 +265,7 @@
 		//在构造方法中mFirst已经设置为true，表示是否是第一次绘制DecorView
 		//此时窗口刚添加到WMS,并未进行relayout,因此mWinFrame中没有存储有效的窗口尺寸
 		Rect frame = mWinFrame;
+		//mFirst表示这是第一次遍历,此时窗口刚被添加到WMS,尚未进行`relayout()`,因此mWinFrame并没有存储有效的窗口大小!
 		if (mFirst) {
 			mFullRedrawNeeded = true;
 			mLayoutRequested = true;
@@ -275,21 +300,33 @@
 			mFullRedrawNeeded = true;
 			//需要对控件树重新布局
 			mLayoutRequested = true;
-			//控件树可能拒绝接受新的窗口尺寸,可能需要窗口在布局阶段尝试设置新的窗口尺寸,(仅尝试)
+			//控件树可能拒绝接受新的窗口尺寸,可能需要窗口在布局阶段尝试设置新的窗口尺寸
 			windowSizeMayChange = true;
 		}
 
+		............................
+        // Execute enqueued actions on every traversal in case a detached view enqueued an action
+        getRunQueue().executeActions(mAttachInfo.mHandler);
+		//layoutRequested为true表示在进行“遍历”之前requestLayout()方法被调用过。
+		// requestLayout()方法用于要求ViewRootImpl进行一次“遍历”并对控件树重新进行测量与布局
 		boolean layoutRequested = mLayoutRequested && (!mStopped || mReportNextDraw);
 		if (layoutRequested) {
 			final Resources res = mView.getContext().getResources();
 		
 			if (mFirst) {
 		          ......
+				//确认控件树是否需要进入TOUCH_MODE
 			} else {
 		            ......
 				/**
-				*检查WMS是否单方面改变了一些参数，标记下来，然后作为后文是否进行控件布局的条件之一
-				*如果窗口的width或height被指定为WRAP_CONTENT时。表示该窗口为悬浮窗口。
+				检查WMS是否单方面改变了一些参数，标记下来，然后作为后文是否进行控件布局的条件之一
+				*如果窗口的width或height被指定为WRAP_CONTENT时。表示该窗口为悬浮窗口。此时会对desiredWindowWidth/Height 进行调整
+
+				在前面的代码中，这两个值被设置为窗口的当前尺寸。
+				而根据MeasureSpec的要求，测量结果不得大于SPEC_SIZE。
+				然而，如果这个悬浮窗口需要更大的尺寸以完整显示其内容时，
+				例如为AlertDialog设置了一个更长的消息内容，如此取值将导致无法得到足够大的测量结果，从而导致内容无法完整显示。
+				因此，对于此等类型的窗口，ViewRootImpl会调整desiredWindowWidth/Height为此应用可以使用的最大尺寸
 				*/
 				if (lp.width == ViewGroup.LayoutParams.WRAP_CONTENT
 		                    || lp.height == ViewGroup.LayoutParams.WRAP_CONTENT) {
@@ -314,7 +351,8 @@
 			windowSizeMayChange |= measureHierarchy(host, lp, res,desiredWindowWidth, desiredWindowHeight);
 		}
 
-
+			//重置 mLayoutRequested标志,这个标志在requestLayout()中被置true
+			// 因此只要之后的代码执行过程中,任何一个控件执行了requestLayout(),那么就会重新进行遍历
 		if (layoutRequested) {
 			// Clear this now, so that if anything requests a layout in the
 			// rest of this function we will catch it and re-run a full
@@ -478,6 +516,30 @@
         return mDisplay;
     }
 
+
+### 3.1.2 View.post(Runnable action)
+
+    public boolean post(Runnable action) {
+        final AttachInfo attachInfo = mAttachInfo;
+        if (attachInfo != null) {
+            return attachInfo.mHandler.post(action);
+        }
+
+        // Postpone the runnable until we know on which thread it needs to run.
+        // Assume that the runnable will be successfully placed after attach.
+        getRunQueue().post(action);
+        return true;
+    }
+
+在进行多线程任务时，开发者可以通过调用`View.post()`或`View.postDelayed()`方法将一个Runnable对象发送到主线程执行。这两个方法的原理是将`Runnable`对象发送到`ViewRootImpl`的`mHandler`去。
+
+当控件已经加入到控件树时，可以通过`AttachInfo`轻易获取这个`Handler`。而当控件没有位于控件树中时，则没有mAttachInfo可用，此时执行`View.post()/PostDelay()`方法，Runnable将会被添加到这个RunQueue队列中。
+      
+在`performTraversals()`中，`ViewRootImpl`将会把`RunQueue`中的Runnable发送到mHandler中，进而得到执行。所以无论控件是否显示在控件树中，`View.post()/postDelay()`方法都是可用的，除非当前进程中没有任何处于活动状态的`ViewRootImpl`
+
+	getRunQueue().executeActions(mAttachInfo.mHandler);
+
+
 # 4. performTraversals 阶段分析
 
 ## 4.1 预测量阶段(PreMeasure)
@@ -489,16 +551,18 @@
 	预测量也是一次完整的测量过程,与最终测量的区别仅在于参数不同.实际的测量工作是在`View`或其子类的`onMeasure()`中完成,其测量结果受限于其父控件的指示.这个指示的具体表现是`onMeasure()`中的俩个参数:`widthSpec`和`heightSpec`.
 
 	关于`MeasureSpec` 可以参考 [View的绘制原理.md](https://github.com/iwantthink/note-view/blob/master/View_CustomView_base.md)
+
+	**预测量时`SPEC_SIZE`的取值规则**:
 	
 	- 第一次遍历时,选取最大的可用尺寸作为`SPEC_SIZE`候选
 
-	- 当此窗口为悬浮窗口时,即LayoutParams.width/height 其中之一被指定为`Wrap_content`,使用最大的可用尺寸作为`SPEC_SIZE`候选
+	- 当此窗口为悬浮窗口时,即`LayoutParams.width/height `其中之一被指定为`Wrap_content`,使用最大的可用尺寸作为`SPEC_SIZE`候选
 
 	- 其他情况下,使用窗口最新尺寸作为`SPEC_SIZE`候选
 
 2. **测量协商(对应第一阶段④)**
 
-	调用了`measureHierarchy()`方法,该方法用于测量整个控件树.控件树主要按照`desiredWindowWidth/Height`这俩个参数进行测量,另外在这个方法中会将窗口尽可能设计的优雅(通过与控件树的协商,但是协商仅发生在LayoutParams.width/height被指定为`WRAP_CONTENT`时,如果为`MATCH_PARENT`或固定数值 则协商过程不会发生)
+	调用了`measureHierarchy()`方法,该方法用于测量整个控件树.控件树主要按照`desiredWindowWidth/Height`这俩个参数进行测量,这俩个参数本可以直接作为控件树的测量参考,但是`measureHierarchy()`方法 仍然会对其进行修改,这是针对将`LayoutParams.width/height`设置为了`WRAP_CONTENT`的悬浮窗口而言
 
 	该方法会监测如果使用当前`desiredWindowWidth/Height`是否可能导致窗口尺寸变化
 
@@ -526,7 +590,7 @@
 
 	之所以这是一个必备条件是因为`performTraversals()`还有可能因为**重绘**被调用,当控件仅仅需要重绘而不需要重新布局时(例如背景颜色发生变化),会通过`invalidate()`方法回溯到`ViewRootImpl`.此时不会通过`requestLayout()`触发`performTraversals()`,而是通过`scheduleTraversals()`方法进行触发,**这种情况下不需要进行布局窗口阶段**
 
-	- `windowSizeMayChange`为true,表示在预测量阶段 最大宽度也不满足控件树展示的大小,那么可能就需要改变窗口的尺寸
+	- `windowSizeMayChange`为true,表示WMS单方面改变了窗口尺寸而控件树的测量结果与这一尺寸有差异，或当前窗口为悬浮窗口，其控件树的测量结果将决定窗口的新尺寸
 
 	**可选条件**:
 
@@ -534,32 +598,46 @@
 
 	- 悬浮窗口的测量结果与窗口的最新尺寸有差异
 
+
+在预测量阶段,除了对控件树进行预测量之外,还准备为后续阶段准备了所需的参数
+
+1. `viewVisibilityChanged`:即View的可见性是否发生了变化。由于`mView`是窗口的内容，因此`mView`的可见性即是窗口的可见性。当这一属性发生变化时，需要通过通过WMS改变窗口的可见性。
+
+2. `LayoutParams`:预测量阶段需要收集应用到`LayoutParams`的改动，这些改动一方面来自于`WindowManager.updateViewLayout()`,而另一方面则来自于控件树。
+
+	以`SystemUIVisibility`为例，`View.setSystemUIVisibility()`所修改的设置需要反映到`LayoutParams`中，而这些设置确却保存在控件自己的成员变量里。在预测量阶段会通过`ViewRootImpl.collectViewAttributes()`方法遍历控件树中的所有控件以收集这些设置，然后更新`LayoutParams`。
+
+
 ### 4.1.1 ViewRootImpl.measureHierarchy()
 
     private boolean measureHierarchy(final View host, final WindowManager.LayoutParams lp,
             final Resources res, final int desiredWindowWidth, final int desiredWindowHeight) {
+		// MeasureSpec 用于描述宽度 和高度
         int childWidthMeasureSpec;
         int childHeightMeasureSpec;
-		//表示是否可能导致窗口的尺寸变化
+		//表示测量结果是否可能导致窗口的尺寸发生变化
         boolean windowSizeMayChange = false;
 		//表示测量的值是否能够使控件树充分显示内容
         boolean goodMeasure = false;
+		//测量协商仅发生在 LayoutParams被指定为`WRAP_CONTENT`的情况下
         if (lp.width == ViewGroup.LayoutParams.WRAP_CONTENT) {
             // On large screens, we don't want to allow dialogs to just
             // stretch to fill the entire width of the screen to display
             // one line of text.  First try doing the layout at a smaller
             // size to see if it will fit.
-			//  ⑴ 首先使用它期望的宽度限制进行测量
+			//  ⑴ 首先使用它最期望的宽度限制进行测量
             final DisplayMetrics packageMetrics = res.getDisplayMetrics();
+			//这一宽度限制定义保存在frameworks/base/core/res/res/values/config.xml找到它的定义
             res.getValue(com.android.internal.R.dimen.config_prefDialogWidth, mTmpValue, true);
-            int baseSize = 0;
 			//宽度限制保存在 baseSize中
+            int baseSize = 0;
             if (mTmpValue.type == TypedValue.TYPE_DIMENSION) {
                 baseSize = (int)mTmpValue.getDimension(packageMetrics);
             }
 
 		    //如果宽度限制不为0并且传入的desiredWindowWidth 大于measureHierarchy期望的限制宽度，
             if (baseSize != 0 && desiredWindowWidth > baseSize) {
+				// 组合一个新的MeasureSpec,利用baseSize
                 childWidthMeasureSpec = getRootMeasureSpec(baseSize, lp.width);
                 childHeightMeasureSpec = getRootMeasureSpec(desiredWindowHeight, lp.height);
 				// ⑵ 第一次测量,使用measureHierarchy期望的限制宽度 并得到状态
@@ -582,7 +660,7 @@
                 }
             }
         }
-		//如果俩次测量 均不能让控件树满意,那么直接使用最大宽度(desiredWindowWidth)进行测量
+		//如果俩次测量 均不能让控件树满意,那么直接使用最大宽度(desiredWindowWidth)进行测量.这一次是最终测量,即使不满意 也不会再进行测量,因为已经没有多余控件了
         if (!goodMeasure) {
             childWidthMeasureSpec = getRootMeasureSpec(desiredWindowWidth, lp.width);
             childHeightMeasureSpec = getRootMeasureSpec(desiredWindowHeight, lp.height);
@@ -593,10 +671,16 @@
                 windowSizeMayChange = true;
             }
         }
+		//返回窗口尺寸是否可能发生变化
         return windowSizeMayChange;
     }
 
 - 主要测量内容在`performMeasure()`方法中
+
+- 对于非悬浮窗口，即当`LayoutParams.width`被设置为`MATCH_PARENT`时，不存在协商过程，直接使用给定的`desiredWindowWidth/Height`进行测量即可。
+	
+	**而对于悬浮窗口，`measureHierarchy()`可以连续进行两次让步。因而在最不利的情况下，在ViewRootImpl的一次“遍历”中，控件树需要进行三次测量，即控件树中的每一个View.onMeasure()会被连续调用三次之多。所以相对于onLayout()，onMeasure()方法的对性能的影响比较大。**
+
 
 ### 4.1.2 ViewRootImpl.performMeasure()
 
@@ -618,20 +702,51 @@
 ### 4.1.3 View.measure()
 
     public final void measure(int widthMeasureSpec, int heightMeasureSpec) {
-		
-		//省略初始化操作
+        		
+		//省略内容为 :: 针对LAYOUT_MODE_OPTICAL_BOUNDS 这种情况,修改MeasureSpec
 
+        // Suppress sign extension for the low bytes
+        long key = (long) widthMeasureSpec << 32 | (long) heightMeasureSpec & 0xffffffffL;
+        if (mMeasureCache == null) mMeasureCache = new LongSparseLongArray(2);
+		// 判断是否需要强制重新布局
+        final boolean forceLayout = (mPrivateFlags & PFLAG_FORCE_LAYOUT) == PFLAG_FORCE_LAYOUT;
+
+        // Optimize layout by avoiding an extra EXACTLY pass when the view is
+        // already measured as the correct size. In API 23 and below, this
+        // extra pass is required to make LinearLayout re-distribute weight.
+        final boolean specChanged = widthMeasureSpec != mOldWidthMeasureSpec
+                || heightMeasureSpec != mOldHeightMeasureSpec;
+        final boolean isSpecExactly = MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.EXACTLY
+                && MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY;
+        final boolean matchesSpecSize = getMeasuredWidth() == MeasureSpec.getSize(widthMeasureSpec)
+                && getMeasuredHeight() == MeasureSpec.getSize(heightMeasureSpec);
+        final boolean needsLayout = specChanged
+                && (sAlwaysRemeasureExactly || !isSpecExactly || !matchesSpecSize);
+		//仅当MeasureSpec 发生变化,或者被要求强制重新布局时,才会进行测量
         if (forceLayout || needsLayout) {
-            // first clears the measured dimension flag
-			// ⑴ 准备工作
+            // ⑴ 准备工作
             mPrivateFlags &= ~PFLAG_MEASURED_DIMENSION_SET;
-			....................
-			// ⑵ 对当前控件 进行测量
-			onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-            // ⑶ 检查onMeasure 的实现是否调用了 setMeasuredDimension()
+            resolveRtlPropertiesIfNeeded();
+
+            int cacheIndex = forceLayout ? -1 : mMeasureCache.indexOfKey(key);
+            if (cacheIndex < 0 || sIgnoreMeasureCache) {
+                // measure ourselves, this should set the measured dimension flag back
+				//⑵ 对当前控件 进行测量
+                onMeasure(widthMeasureSpec, heightMeasureSpec);
+                mPrivateFlags3 &= ~PFLAG3_MEASURE_NEEDED_BEFORE_LAYOUT;
+            } else {
+                long value = mMeasureCache.valueAt(cacheIndex);
+                // Casting a long to int drops the high 32 bits, no mask needed
+                setMeasuredDimensionRaw((int) (value >> 32), (int) value);
+                mPrivateFlags3 |= PFLAG3_MEASURE_NEEDED_BEFORE_LAYOUT;
+            }
+
+            // flag not set, setMeasuredDimension() was not invoked, we raise
+            // an exception to warn the developer
+			//⑶ 检查onMeasure 的实现是否调用了 setMeasuredDimension()
             if ((mPrivateFlags & PFLAG_MEASURED_DIMENSION_SET) != PFLAG_MEASURED_DIMENSION_SET) {
-				throw new IllegalStateException()
+                throw new IllegalStateException(".....);
             }
 
             mPrivateFlags |= PFLAG_LAYOUT_REQUIRED;
@@ -639,11 +754,54 @@
 
         mOldWidthMeasureSpec = widthMeasureSpec;
         mOldHeightMeasureSpec = heightMeasureSpec;
-		//缓存
+
         mMeasureCache.put(key, ((long) mMeasuredWidth) << 32 |
                 (long) mMeasuredHeight & 0xffffffffL); // suppress sign extension
     }
 
+- 从`View.measure()`方法中可以看出,其并没有实现任何测量算法,它的作用在于引发`onMeasure()`的调用,并对`onMeasure()`的准确性进行检查
+
+	另外,在控件系统看来,一旦控件执行了测量操作,那么随后必须进行布局操作,因此在完成测量之后,将`PFLAG_LAYOUT_REQUIRED`标记加入了`mPrivateFlags`,以便`View.layout()`顺利进行
+
+	**`onMeasure()`方法中获得的测量结果,则通过`setMeasuredDimension()`方法进行保存**,具体分析查看 #### 4.1.4
+
+-  所谓强制重新布局，是指当控件树中的一个子控件的内容发生变化时，需要进行重新的测量和布局的情况
+
+	在这种情况下，这个子控件的父控件（以及其父控件的父控件）所提供的`MeasureSpec`必定与上次测量时的值相同，因而导致从`ViewRootImpl`到这个控件的路径上的父控件的`measure()`方法无法得到执行
+
+    进而导致子控件无法重新测量其尺寸或布局。因此，当子控件因内容发生变化时，从子控件沿着控件树回溯到`ViewRootImpl`，并依次调用沿途父控件的`requestLayout()`方法，在这个方法中，会在`mPrivateFlags`中加入标记`PFLAG_FORCE_LAYOUT`，从而使得这些父控件的`measure()`方法得以顺利执行，进而这个子控件有机会进行重新测量与布局。这便是强制重新布局的意义
+
+- **`onMeasure()`如何将测量结果告知父控件?**
+
+	对于非`ViewGroup`的控件来说其实现相对简单，只要按照`MeasureSpec`的原则如实计算其所需的尺寸即可。而对于ViewGroup类型的控件来说情况则复杂得多，因为它不仅拥有自身需要显示的内容（如背景），它的子控件也是其需要测量的内容。因此它不仅需要计算自身显示内容所需的尺寸，还有考虑其一系列子控件的测量结果。为此它必须为每一个子控件准备`MeasureSpec`，并调用每一个子控件的`measure()`函数。
+
+### 4.1.4 View.setMeasuredDimension()
+
+    protected final void setMeasuredDimension(int measuredWidth, int measuredHeight) {
+        boolean optical = isLayoutModeOptical(this);
+        if (optical != isLayoutModeOptical(mParent)) {
+            Insets insets = getOpticalInsets();
+            int opticalWidth  = insets.left + insets.right;
+            int opticalHeight = insets.top  + insets.bottom;
+
+            measuredWidth  += optical ? opticalWidth  : -opticalWidth;
+            measuredHeight += optical ? opticalHeight : -opticalHeight;
+        }
+        setMeasuredDimensionRaw(measuredWidth, measuredHeight);
+    }
+
+    private void setMeasuredDimensionRaw(int measuredWidth, int measuredHeight) {
+        mMeasuredWidth = measuredWidth;
+        mMeasuredHeight = measuredHeight;
+
+        mPrivateFlags |= PFLAG_MEASURED_DIMENSION_SET;
+    }
+
+- 存储测量结果的俩个变量可以通过`getMeasuredWidthAndState()/getMeasuredHeightAndState()`获得
+
+- 此方法虽然简单，但需要注意，**与`MeasureSpec`类似，测量结果不仅仅是一个尺寸，而是一个测量状态与尺寸的复合变量**。
+
+	其0至30位表示了测量结果的尺寸，而31、32位则表示了控件对测量结果是否满意，即父控件给予的MeasureSpec是否可以使得控件完整地显示其内容。当控件对测量结果满意时，直接将尺寸传递给`setMeasuredDimension()`即可，注意要保证31、32位为0。倘若对测量结果不满意，则使用`View.MEASURED_STATE_TOO_SMALL | measuredSize `作为参数传递给`setMeasuredDimension()`以告知父控件对MeasureSpec进行可能的调整。
 
 ## 4.2 布局窗口阶段(WindowLayout)
 
