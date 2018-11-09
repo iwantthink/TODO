@@ -216,6 +216,9 @@
 
 `ViewRootImpl.performTraversals()`方法可以划分为五个阶段:
 
+![](http://ww1.sinaimg.cn/large/6ab93b35ly1fx0pu8gaxtj20mb0b3mz3.jpg)
+
+
 1. 预测量阶段
 
 	这是进入`performTraversals()`方法后的第一阶段,会对控件树进行第一次的测量,测量结果可以通过`mView.getMeasuredWidth()/Height()`获得. 在此阶段中将会计算出控件树为显示其内容所需的尺寸(即期望尺寸).此阶段中,`View`及其子类的`onMeasure()`将会沿着控件树依次被调用
@@ -307,6 +310,8 @@
 		............................
         // Execute enqueued actions on every traversal in case a detached view enqueued an action
         getRunQueue().executeActions(mAttachInfo.mHandler);
+
+
 		//layoutRequested为true表示在进行“遍历”之前requestLayout()方法被调用过。
 		// requestLayout()方法用于要求ViewRootImpl进行一次“遍历”并对控件树重新进行测量与布局
 		boolean layoutRequested = mLayoutRequested && (!mStopped || mReportNextDraw);
@@ -377,14 +382,32 @@
 		//第二阶段:窗口布局阶段从这里开始
         final boolean isViewVisible = viewVisibility == View.VISIBLE;
         final boolean windowRelayoutWasForced = mForceNextWindowRelayout;
+		//记录布局窗口之前的Surface版本号
+		final int surfaceGenerationId = mSurface.getGenerationId();
+
+
         //开始进行布局准备,进入窗口布局的几个条件
         if (mFirst || windowShouldResize || insetsChanged ||viewVisibilityChanged || params != null) {
             /*******部分代码省略**********/
         	......
+			//  记录下在布局窗口之前是否拥有一块有效的Surface
          	boolean hadSurface = mSurface.isValid();
          	......
           	try {
+				// 通过 relayoutWindow()方法布局窗口
               	relayoutResult = relayoutWindow(params, viewVisibility, insetsPending);
+				
+				// 对比布局结果,检查Insets是否发生变化
+				// 省略大部分对比的代码
+				final boolean visibleInsetsChanged = !mPendingVisibleInsets.equals(
+                        mAttachInfo.mVisibleInsets);
+				// 如果发生变化,则要更新到mAttachInfo中
+                if (contentInsetsChanged) {
+                    mAttachInfo.mContentInsets.set(mPendingContentInsets);
+                }
+				
+				..................................
+
               }catch(...){
 			......
 			}finally{
@@ -392,9 +415,11 @@
 			}
 			//第二阶段:窗口布局阶段从这里结束
 
-            // !!FIXME!! This next section handles the case where we did not get the
-            // window size we asked for. We should avoid this by getting a maximum size from
-            // the window session beforehand.
+			//省略代码, 对Surface进行处理
+
+			//保存窗口的位置和尺寸信息
+            mAttachInfo.mWindowLeft = frame.left;
+            mAttachInfo.mWindowTop = frame.top;			
             if (mWidth != frame.width() || mHeight != frame.height()) {
                 mWidth = frame.width();
                 mHeight = frame.height();
@@ -403,7 +428,17 @@
 	
 			//第三阶段:最终测量阶段从这里开始
 	        if (!mStopped || mReportNextDraw) {
-	            ......
+                boolean focusChangedDueToTouchMode = ensureTouchModeLocally(
+                        (relayoutResult&WindowManagerGlobal.RELAYOUT_RES_IN_TOUCH_MODE) != 0);
+
+				//进行最终测量的条件: 
+				//1. TouchMode 发生变化
+				//2. 最新的窗口尺寸不符合预测量结果
+				//3. ContentInsets发生变化
+                if (focusChangedDueToTouchMode || mWidth != host.getMeasuredWidth()
+                        || mHeight != host.getMeasuredHeight() || contentInsetsChanged ||
+                        updatedConfiguration) {
+					//最终生成MeasureSpec的参数 为窗口的最新尺寸
 	                int childWidthMeasureSpec = getRootMeasureSpec(mWidth, lp.width);
 	                int childHeightMeasureSpec = getRootMeasureSpec(mHeight, lp.height);
 	                //⑴ 可以看到测量中调用的performMeasure
@@ -434,6 +469,8 @@
 	            }
 	        }
 		}else{
+			//执行到这里,说明不符合执行布局窗口的条件,即窗口的尺寸不需要进行调整
+			//这种情况下,可能是窗口的位置发生了变化,那么仅需将窗口的最新位置保存到mAttachInfo中即可
 			maybeHandleWindowMove(frame);
 		}
 		//第三阶段:最终测量阶段到这里结束
@@ -459,7 +496,7 @@
 	            if (mTranslator != null) {
 	                mTranslator.translateRegionInWindowToScreen(mTransparentRegion);
 	            }
-	
+				// 将透明区域设置到WMS
 	            if (!mTransparentRegion.equals(mPreviousTransparentRegion)) {
 	                mPreviousTransparentRegion.set(mTransparentRegion);
 	                mFullRedrawNeeded = true;
@@ -475,6 +512,7 @@
 
 		//第五阶段:绘制阶段从这里开始
 	    ......
+		// 当mView不可见 自然不需要绘制
 	    boolean cancelDraw = mAttachInfo.mTreeObserver.dispatchOnPreDraw() || !isViewVisible;
 	
 	    if (!cancelDraw && !newSurface) {
@@ -805,13 +843,73 @@
 
 ## 4.2 布局窗口阶段(WindowLayout)
 
-根据**预测量**的结果,通过`IWindowSession.relayout()`方法想WMS请求调整窗口的尺寸等属性,这将引起WMS对窗口重新布局,并将布局结果返回给`ViewRootImpl`
+根据**预测量**的结果,通过`IWindowSession.relayout()`方法想WMS请求调整窗口的尺寸等属性,这将引起WMS对窗口重新布局,并将布局结果返回给`ViewRootImpl`.
+
+如果布局结果使得窗口尺寸发生变化,那么最终测量阶段将会被执行. 最终测量阶段使用`performMeasure()`方法完成,其过程与预测量完全一致,区别在于`MeasureSpec`参数的不同
+
+布局窗口会对`Surface`产生影响,这个阶段会出现硬件加速相关的内容.
 
 - 布局窗口能够进行的原因是控件系统有修改窗口属性的需求
+
 	例如第一次'遍历'需要确定窗口的尺寸以及一块`Surface`,预测量结果与窗口当前尺寸不一致,则需要窗口更改尺寸.
 
 	`mView`可见性发生变化,则需要将窗口隐藏或显示等..
 
+### 4.2.1 布局窗口的条件
+
+窗口布局的开销很大,因此必须限制窗口布局阶段的执行. 
+
+另外如果不需要进行窗口布局,则WMS不会在预测量之后修改窗口的尺寸,这种情况下,预测量值是有效的!同时不需要再进行最终测量
+
+	if (mFirst || windowShouldResize || insetsChanged ||
+                viewVisibilityChanged || params != null || mForceNextWindowRelayout) {
+			//布局窗口与最终测量阶段的代码
+	}else{
+		//不需要进行布局窗口的情况
+	}
+
+1. `mFirst`
+
+	表示这是窗口创建以来的第一次遍历,此时窗口仅仅是添加到了WMS中,但是尚未进行窗口布局,并没有有效的`Surface`进行内容绘制.因此必须进行窗口布局
+
+2. `windowShouldResize` :
+
+	当控件树的测量结果与窗口当前的尺寸有差异,需要通过布局窗口阶段向WMS提出修改窗口大小的请求以满足控件树的要求
+
+3. `insetsChanged`: 
+
+	表示WMS单方面改变了窗口的`ContentInsets`.这种情况一般发生在`SystemUI`的可见性发生了变化或输入法窗口弹出或关闭的情况
+
+	严格来说,这种情况并不需要重新进行窗口布局,只不过`ContentInsets`发生变化时需要执行一段渐变动画使窗口内容过度到新的`ContentInsets`下,而这段动画的启动动作发生在窗口布局阶段
+
+4. `viewVisibilityChanged`:
+
+	`DecorView`是`ViewRootImpl`具体内容的体现,这个条件表示 其可见度发生了变化,那么就需要重新进行布局阶段
+
+5. `params!=null`:
+
+	在`performTraversals()`方法开始,该值被设置为null. 后续窗口使用者可以通过`WindowManager.updateViewLayout()`方法修改窗口的`LayoutParams`,或者在预测量阶段通过`collectViewAttributes()`方法收集到的控件属性使得`LayoutParams`发生改变
+
+	那就需要将新的`LayoutParams`通过窗口布局更新到WMS中,使其对窗口依照新的属性进行重新布局
+
+6. `mForceNextWindowRelayout`:
+
+### 4.2.2 布局窗口
+
+`ViewRootImpl.relayoutWindow()`是`IWindowSession.relayout()`的包装方法,它将窗口的`LayoutParams`,预测量结果以及`mView`的可见度等作为输入,获得`mWindowFrame`,`mPendingContentInsets`,`mSurface`等作为输出
+
+- `ViewRootImpl.relayoutWIndow()`方法并没有直接将预测量结果交给WMS,而是乘上了`appScale`这个系数
+
+	`appScale`用于在兼容模式下显示下一个窗口.当窗口在设备的屏幕尺寸下显示异常时,Android会尝试使用兼容尺寸显示它,此时测量与布局控件树都将以此兼容尺寸为准
+
+- `mPendingCOnfiguration`就是一个`Configuration`类型的实例,其意义是WMS给予窗口的当前配置
+
+	其内容包含了 设备当前的语言,屏幕尺寸,输入方式,UI模式(夜间模式,车载模式),dpi等等信息
+
+
+### 4.2.3 布局窗口后的处理
+
+更新`mAttachInfo`中的参数
 
 ## 4.3 最终测量阶段(EndMeasure)
 
@@ -819,14 +917,24 @@
 
 在这个阶段中View及其子类的`onMeasure()`方法将会沿着控件树依次被回调。最终测量阶段直接调用`performMeasure()`方法而不是`measureHierarchy()`方法，是因为`measureHierarchy()`有个协商过程，而到了最终测量阶段控件树已经没有了协商的余地，无论控件树是否接收，它只能被迫接受WMS的布局结果
 
+最终测量阶段与预测量阶段最大的区别就是:
+
+- **预测量使用了屏幕的可用空间或窗口的当前尺寸作为候选大小,然后通过`measureHierarchy()`方法以协商的方式确定`MeasureSpec`,其结果体现了控件树所期望的窗口尺寸**.在窗口布局时这一参数会传递给WMS，WMS去处理具体
+
+- **最终测量阶段,控件树只能接受WMS的布局结果,以最新的窗口大小作为`MeasureSpec`进行测量**
 
 ## 4.4 布局控件树阶段(Layout)
 
 这一阶段主要的工作内容就是将上一步的最终测量结果作为依据对控件进行布局. 测量是确定控件的尺寸,布局则是确定控件的位置.**在这个阶段中,`View`及其子类的`onLayout()`方法将会被回调**
 
+控件的实际位置与尺寸由`View`的`mLeft,mTop,mRight,mBottom`四个成员变量存储的坐标值进行表示,因此,控件树的布局过程就是根据测量结果为每一个控件设置这个四个值
+
+- `mLeft`等坐标值 是相对于父控件的左上角的距离
+
 总体来说 **布局控件阶段** 做了俩件事情
 
 ### 4.4.1 控件树布局
+
 在这个阶段 主要调用了`performLayout()`函数
 
     private void performLayout(WindowManager.LayoutParams lp, int desiredWindowWidth,
@@ -854,7 +962,7 @@
 
 布局阶段把测量结果转化为控件的实际位置与尺寸,而控件的实际位置与尺寸由`View`的`mLeft`,`mTop`,`mRight`,`mBottom`这四个成员变量存储.
 
-也就是说控件树的布局过程就是根据测量结果为每一个控件设置这个四个成员变量的过程,`mLeft、mTop、mRight、mBottom` 是相对于父控件的坐标值。
+- 也就是说控件树的布局过程就是根据测量结果为每一个控件设置这个四个成员变量的过程,`mLeft、mTop、mRight、mBottom` 是相对于父控件的坐标值。
 
 
 `View.layout()`代码如下:
@@ -875,6 +983,7 @@
                 setOpticalFrame(l, t, r, b) : setFrame(l, t, r, b);
 		// PFLAG_LAYOUT_REQUIRED 是在View.measure()中被设置
         if (changed || (mPrivateFlags & PFLAG_LAYOUT_REQUIRED) == PFLAG_LAYOUT_REQUIRED) {
+
 			//如果该View是ViewGroup类型,则在其onLayout()方法中会依次调用子类的layout()方法
             onLayout(changed, l, t, r, b);
 			//清除PFLAG_LAYOUT_REQUIRED 标志
@@ -894,6 +1003,9 @@
     }
 
 - `View`中的`onLayout()`是空实现
+
+- `setOpticalFrame()`最终也是调用的`setFrame()`方法,将传入的`l,t,r,b`设置给`mLeft,mRight...`等
+
 
 ---
 **测量阶段和布局阶段的对比:**
