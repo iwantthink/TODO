@@ -1044,3 +1044,734 @@
 		其实只要想一想我们在重写onDraw()函数时从未考虑过控件的位置、旋转、缩放等状态。这说明在onDraw()方法执行之前，这些状态都已经以变换的方式设置到Canvas中了。因此onDraw()方法中Canvas使用的是控件自身的坐标系。
 
 - `View.onDraw()`也是空实现,具体的逻辑交给子类去实现
+
+### 4.5.1 ViewRootImpl.performDraw()
+
+    private void performDraw() {
+
+        final boolean fullRedrawNeeded = mFullRedrawNeeded;
+        mFullRedrawNeeded = false;
+        mIsDrawing = true;
+
+        try {
+            draw(fullRedrawNeeded);
+        } finally {
+            mIsDrawing = false;
+        }
+		`````````省略代码`````````````
+    }
+
+### 4.5.2 ViewRootImpl.draw()
+
+
+    private void draw(boolean fullRedrawNeeded) {
+        Surface surface = mSurface;
+		.....
+		// 计算mView在垂直方向的滚动量(ScrollY),
+        scrollToRectOrFocus(null, false);
+		//mScroller 保存了上述代码中的滚动量,ViewRootImpl使用mScroller产生一个动画效果,使滚动不显示那么突兀
+		//类似于一个插值器,用于计算本次绘制时间点所需使用的滚动量
+        boolean animating = mScroller != null && mScroller.computeScrollOffset();
+        final int curScrollY;
+        if (animating) {
+			//如果mScroller正在执行滚动动画,则采用mScroller所计算的滚动量
+            curScrollY = mScroller.getCurrY();
+        } else {
+			//如果已经结束,则使用上面的scrollToRectOrFocus()所计算出的滚动量
+            curScrollY = mScrollY;
+        }
+		//如果新计算出的滚动量与上次绘制的滚动量不同,则需要进行完整的重绘
+		//因为发生滚动时,整个画面都是需要更新的!!!
+        if (mCurScrollY != curScrollY) {
+            mCurScrollY = curScrollY;
+            fullRedrawNeeded = true;
+            if (mView instanceof RootViewSurfaceTaker) {
+                ((RootViewSurfaceTaker) mView).onRootViewScrollYChanged(mCurScrollY);
+            }
+        }
+		.........省略代码............
+
+		//如果需要进行完整重绘,则修改脏区域为整个窗口
+        if (fullRedrawNeeded) {
+            mAttachInfo.mIgnoreDirtyState = true;
+            dirty.set(0, 0, (int) (mWidth * appScale + 0.5f), (int) (mHeight * appScale + 0.5f));
+        }
+
+     	.........省略代码............
+
+        if (!dirty.isEmpty() || mIsAnimating || accessibilityFocusDirty) {
+			//当满足下列条件,表示此窗口采用硬件加速的绘制方式
+			//硬件加速绘制入口是HardwareRenderer
+            if (mAttachInfo.mThreadedRenderer != null && mAttachInfo.mThreadedRenderer.isEnabled()) {
+				.........省略代码............
+                mAttachInfo.mThreadedRenderer.draw(mView, mAttachInfo, this);
+            } else {
+				//软件绘制的入口 drawSoftware()
+                if (!drawSoftware(surface, mAttachInfo, xOffset, yOffset, scalingRequired, dirty)) {
+                    return;
+                }
+            }
+        }
+		//如果mScroller 仍在动画过程之中,则立即安排下一次重绘
+        if (animating) {
+            mFullRedrawNeeded = true;
+            scheduleTraversals();
+        }
+    }
+
+- 在`ViewRootImpl.setView()`方法中,会调用`enableHardwareAcceleration()`方法,该方法中会根据窗口的`LayoutParams`判断是否开启硬件加速,并将结果保存在`mAttachInfo`中
+
+
+# 5. 绘制流程
+
+## 5.1 软件绘制的原理
+
+    private boolean drawSoftware(Surface surface, AttachInfo attachInfo, int xoff, int yoff,
+            boolean scalingRequired, Rect dirty) {
+
+        // 使用软件渲染器绘制,定义绘制所需的canvas
+        final Canvas canvas;
+        try {
+			......省略代码..........
+			//通过Surface.lockCanvas()获取一个依次Surface为画布的Canvas
+			// 其参数为脏区域
+            canvas = mSurface.lockCanvas(dirty);
+			......省略代码..........
+        } catch (................) {
+            return false;
+        } 
+
+        try {
+			//绘制开始之前,先清空之前所计算的脏区域
+			//这样如果在绘制的过程中执行了View.invalidate(),则可以重新计算脏区域
+            dirty.setEmpty();
+            mIsAnimating = false;
+            mView.mPrivateFlags |= View.PFLAG_DRAWN;
+
+            try {
+				//使用Canvas进行第一次交换,此次变化的目的是使得坐标系统按照之前所计算的滚动量进行相应的滚动
+				//随后绘制的内容都会在滚动后的新坐标下进行
+                canvas.translate(-xoff, -yoff);
+                if (mTranslator != null) {
+                    mTranslator.translateCanvas(canvas);
+                }
+                canvas.setScreenDensity(scalingRequired ? mNoncompatDensity : 0);
+                attachInfo.mSetIgnoreDirtyState = false;
+				// 通过mView.draw()在Canvas上绘制整个控件树
+                mView.draw(canvas);
+
+                drawAccessibilityFocusedDrawableIfNeeded(canvas);
+            } finally {
+            }
+        } finally {
+            try {
+				// 最后步骤,通过Surface.unlockCanvasAndPost()方法显示绘制后的内容
+                surface.unlockCanvasAndPost(canvas);
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+- 返回结果true,表示绘制成功,false 表示绘制时出现错误
+
+- `drawSoftware()`主要的四步工作:
+
+	1. 通过`Surface.lockCanvas()`获取一个用于绘制的Canvas
+
+	2. 对Canvas进行变化以实现滚动效果
+
+	3. 通过`mView.draw()`将根控件绘制在Canvas上
+
+	4. 通过`Surface.unlockCanvasAndPost()`显示绘制后的内容
+
+## 5.2 View.draw(Canvas)绘制流程
+
+`View.draw()`绘制过程中,可以划分为 简便绘制流程 和 完整绘制流程
+
+## 5.2.1 简便绘制流程
+
+    public void draw(Canvas canvas) {
+        final int privateFlags = mPrivateFlags;
+		//检查PFLAG_DIRTY_OPAQUEz是否存在于mPrivateFlags中,以确定是否是'实心'控件
+        final boolean dirtyOpaque = (privateFlags & PFLAG_DIRTY_MASK) == PFLAG_DIRTY_OPAQUE &&
+                (mAttachInfo == null || !mAttachInfo.mIgnoreDirtyState);
+        mPrivateFlags = (privateFlags & ~PFLAG_DIRTY_MASK) | PFLAG_DRAWN;
+
+        /*
+         * Draw traversal performs several drawing steps which must be executedin the appropriate order:
+         *
+         *      1. Draw the background
+         *      2. If necessary, save the canvas' layers to prepare for fading
+         *      3. Draw view's content
+         *      4. Draw children
+         *      5. If necessary, draw the fading edges and restore layers
+         *      6. Draw decorations (scrollbars for instance)
+         */
+
+        // Step 1, draw the background, if needed
+        int saveCount;
+		//为了提高效率,'实心'控件的背景绘制会被跳过
+        if (!dirtyOpaque) {
+            drawBackground(canvas);
+        }
+
+        // skip step 2 & 5 if possible (common case)
+		// step2-5 通常情况下会被跳过
+        final int viewFlags = mViewFlags;
+        boolean horizontalEdges = (viewFlags & FADING_EDGE_HORIZONTAL) != 0;
+        boolean verticalEdges = (viewFlags & FADING_EDGE_VERTICAL) != 0;
+		//控件不需要绘制渐变边界,那么可以直接进行简便绘制流程
+        if (!verticalEdges && !horizontalEdges) {
+            // Step 3, draw the content
+			// 绘制控件自身内容
+            if (!dirtyOpaque) onDraw(canvas);
+
+            // Step 4, draw the children
+			//绘制控件的子控件,如果当前控件不是ViewGroup,那么该方法什么都不做
+            dispatchDraw(canvas);
+
+            drawAutofilledHighlight(canvas);
+
+            // Overlay is part of the content and draws beneath Foreground
+            if (mOverlay != null && !mOverlay.isEmpty()) {
+                mOverlay.getOverlayView().dispatchDraw(canvas);
+            }
+
+            // Step 6, draw decorations (foreground, scrollbars)
+            onDrawForeground(canvas);
+
+            // Step 7, draw the default focus highlight
+            drawDefaultFocusHighlight(canvas);
+
+            // we're done...
+            return;
+        }
+		
+		...........省略完整绘制流程...............
+    }
+
+- `drawBackground()`
+	
+	    private void drawBackground(Canvas canvas) {
+	        final Drawable background = mBackground;
+				.........省略代码........
+			//将背景绘制到Canvas上
+	        final int scrollX = mScrollX;
+	        final int scrollY = mScrollY;
+	        if ((scrollX | scrollY) == 0) {
+	            background.draw(canvas);
+	        } else {
+				//draw(canvas) 方法是在控件自身的坐标系下调用的
+				//就是说Canvas已经根据其`mScrollX/Y`对Canvas进行了变化以实现控件滚动的效果,从而所绘制的背景也会被滚动
+				//不过Android 希望仅滚动控件的内容,而保持背景静止
+				//因此在绘制背景时,先进行逆变换,以撤销先前实行的滚动变换,完成背景绘制之后再将滚动变换重新应用到Canvas
+	            canvas.translate(scrollX, scrollY);
+	            background.draw(canvas);
+	            canvas.translate(-scrollX, -scrollY);
+	        }
+	    }
+
+- 简便绘制过程非常简单
+
+	1. 绘制背景(背景不会受滚动影响)
+
+	2. 通过调用`onDraw()`方法绘制控件自身的内容
+
+	3. 通过调用`dispatchDraw()`绘制其子控件
+
+	4. 绘制控件的装饰
+
+### 5.2.1.1 确定子控件绘制的顺序,View.dispatchDraw(Canvas)
+此方法是重绘工作得以从根控件`mView`延续到控件树中每一个子控件的重要过程
+
+**`View.dispatchDraw()`默认是空实现,需要到`ViewGroup`中查看**
+
+    protected void dispatchDraw(Canvas canvas) {
+        boolean usingRenderNodeProperties = canvas.isRecordingFor(mRenderNode);
+        final int childrenCount = mChildrenCount;
+        final View[] children = mChildren;
+        int flags = mGroupFlags;
+		
+		..........省略动画相关..............
+
+        int clipSaveCount = 0;
+		//① 设置剪裁区域
+		//有时候子控件可能部分或者完全位于ViewGroup之外,默认情况下,ViewGroup的下列代码可以通过Canvas.clipRect()方法将子控件的绘制限制在自身区域之内
+		//超出自身区域的绘制内容将被裁剪
+		//是否需要对越界内容进行裁剪取决于ViewGroup.mGroupFlags中是否包含CLIP_TOP_PADDING_MASK标记,因此开发者可以通过ViewGroup.setClipToPadding()方法修改这一行为,使得子控件在超出范围 仍被绘制
+
+        final boolean clipToPadding = (flags & CLIP_TO_PADDING_MASK) == CLIP_TO_PADDING_MASK;
+        if (clipToPadding) {
+			//首先保存Canvas的状态,随后可以通过Canvas.restore()方法恢复到这个状态
+            clipSaveCount = canvas.save(Canvas.CLIP_SAVE_FLAG);
+			//保证给定区域之外的绘制都会被裁剪
+			// padding 的值也会被去除
+            canvas.clipRect(mScrollX + mPaddingLeft, mScrollY + mPaddingTop,
+                    mScrollX + mRight - mLeft - mPaddingRight,
+                    mScrollY + mBottom - mTop - mPaddingBottom);
+        }
+
+        // We will draw our child's animation, let's reset the flag
+        mPrivateFlags &= ~PFLAG_DRAW_ANIMATION;
+        mGroupFlags &= ~FLAG_INVALIDATE_REQUIRED;
+
+        boolean more = false;
+		//获取当前时间戳,用于子控件计算其动画参数
+        final long drawingTime = getDrawingTime();
+
+		.........省略部分看不懂的代码............
+        for (int i = 0; i < childrenCount; i++) {
+			........动画操作相关,省略代码...........
+			// 判断是否自定义了绘制顺序..通过控制 子类的index 从而控制绘制顺序
+            final int childIndex = getAndVerifyPreorderedIndex(childrenCount, i, customOrder);
+            final View child = getAndVerifyPreorderedView(preorderedList, children, childIndex);
+            if ((child.mViewFlags & VISIBILITY_MASK) == VISIBLE || child.getAnimation() != null) {
+                more |= drawChild(canvas, child, drawingTime);
+            }
+        }
+
+		//绘制透明的控件
+        while (transientIndex >= 0) {
+            // there may be additional transient views after the normal views
+            final View transientChild = mTransientViews.get(transientIndex);
+            if ((transientChild.mViewFlags & VISIBILITY_MASK) == VISIBLE ||
+                    transientChild.getAnimation() != null) {
+                more |= drawChild(canvas, transientChild, drawingTime);
+            }
+            transientIndex++;
+            if (transientIndex >= transientCount) {
+                break;
+            }
+        }
+
+		.............省略动画处理相关内容.............
+
+		// 撤销之前所做的裁剪操作
+        if (clipToPadding) {
+            canvas.restoreToCount(clipSaveCount);
+        }
+		............省略动画处理相关内容.............
+    }
+
+- 本方法中,最重要的内容就是定义重绘顺序,绘制顺序对于子控件来说意义重大,因为当多个控件存在重叠时,后绘制的控件会覆盖先前绘制的控件
+
+	默认情况下,后加入ViewGroup的子控件位于`mChildren`数组的尾部,因此绘制顺序与加入顺序一致
+
+	ViewGroup可以通过`ViewGroup.setChildrenDrawingOrderEnabled()`方法将`FALG_USE_CHILD_DRAWING_ORDER`标记加入`mGroupFlags`,并重写`getChildDrawingOrder()`方法来自定义绘制顺序
+
+- 在确定绘制顺序之后,便通过`ViewGroup.drawChild()`方法绘制子控件
+
+	`drawChild()`仅仅只是调用了子控件的`View.draw(ViewGroup,Canvas,Long)`方法进行子控件的绘制
+
+#### 5.2.1.2 View.draw(ViewGroup,Canvas,Long)
+该方法的工作内容 就是为随后调用`View.draw(Canvas)`准备坐标系,此外还包括硬件加速,绘图缓存和动画计算等工作
+
+    /**
+     * This method is called by ViewGroup.drawChild() to have each child view draw itself.
+     *
+     * This is where the View specializes rendering behavior based on layer type,
+     * and hardware acceleration.
+     */
+    boolean draw(Canvas canvas, ViewGroup parent, long drawingTime) {
+		//是否开启硬件加速的标志
+        final boolean hardwareAcceleratedCanvas = canvas.isHardwareAccelerated();
+		//如果控件处于动画中,transformToApply会存储动画在当前时点所计算出的Transformation
+        Transformation transformToApply = null;
+		// 进行动画的计算,并将结果保存在transformToApply中
+		// 这是进行坐标变换的第一个因素
+		.............省略代码.................
+
+		// 计算控件内容的滚动量
+		// 计算是通过computeScroll()方法完成的,其将结果保存在mScrollX/Y中
+		// 这是进行坐标变换的第二个因素
+        int sx = 0;
+        int sy = 0;
+        if (!drawingWithRenderNode) {
+			//自定义滑动控件时,通常会重写该方法,并设置mScrollX/Y
+            computeScroll();
+            sx = mScrollX;
+            sy = mScrollY;
+        }
+
+        final boolean drawingWithDrawingCache = cache != null && !drawingWithRenderNode;
+        final boolean offsetForScroll = cache == null && !drawingWithRenderNode;
+		//保存Canvas的当前状态
+		// 此时Canvas的坐标系为父控件的坐标系
+		// 在随后将Canvas变换到此控件的坐标系并完成绘制后,会通过Canvas.restoreTo()方法将Canvas状态重置到此时
+		// 这样Canvas即可继续用来绘制父控件的下一个子控件
+        int restoreTo = -1;
+        if (!drawingWithRenderNode || transformToApply != null) {
+            restoreTo = canvas.save();
+        }
+
+		// 第一次变换,对应控件位置和滚动量
+		// 最先处理的是子控件的位置mLeft/mTop,以及滚动量
+		// 子控件的位置mLeft/mTop 这是进行坐标变换的第三个因素
+        if (offsetForScroll) {
+            canvas.translate(mLeft - sx, mTop - sy);
+        } else {
+            if (!drawingWithRenderNode) {
+                canvas.translate(mLeft, mTop);
+            }
+            if (scalingRequired) {
+                if (drawingWithRenderNode) {
+                    // TODO: Might not need this if we put everything inside the DL
+                    restoreTo = canvas.save();
+                }
+                // mAttachInfo cannot be null, otherwise scalingRequired == false
+                final float scale = 1.0f / mAttachInfo.mApplicationScale;
+                canvas.scale(scale, scale);
+            }
+        }
+
+        float alpha = drawingWithRenderNode ? 1 : (getAlpha() * getTransitionAlpha());
+
+		// 如果此控件的动画所计算出的变换存在(即有动画在执行),或者通过View.setScaleX/Y()等方法修改了控件自身的变换,则将它们所产生的变化矩阵应用到Canvas
+        if (transformToApply != null
+                || alpha < 1
+                || !hasIdentityMatrix()
+                || (mPrivateFlags3 & PFLAG3_VIEW_IS_ANIMATING_ALPHA) != 0) {
+            if (transformToApply != null || !childHasIdentityMatrix) {
+                int transX = 0;
+                int transY = 0;
+				//记录滚动量
+                if (offsetForScroll) {
+                    transX = -sx;
+                    transY = -sy;
+                }
+				//将动画产生的变化矩阵应用到Canvas
+                if (transformToApply != null) {
+                    if (concatMatrix) {
+						//表示使用硬件加速
+                        if (drawingWithRenderNode) {
+                            renderNode.setAnimationMatrix(transformToApply.getMatrix());
+                        } else {
+                            //应用动画产生的矩阵到Canvas
+							//首先撤销了滚动量的变化,在动画的变换矩阵应用到Canvas之后,再重新应用滚动量变换
+                            canvas.translate(-transX, -transY);
+                            canvas.concat(transformToApply.getMatrix());
+                            canvas.translate(transX, transY);
+                        }
+                        parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
+                    }
+
+                    float transformAlpha = transformToApply.getAlpha();
+                    if (transformAlpha < 1) {
+                        alpha *= transformAlpha;
+                        parent.mGroupFlags |= ViewGroup.FLAG_CLEAR_TRANSFORMATION;
+                    }
+                }
+				// 将控件自身的变换矩阵应用到Canvas中
+				//控件自身的变换矩阵是进行坐标系变换的第四个因素
+                if (!childHasIdentityMatrix && !drawingWithRenderNode) {
+                    canvas.translate(-transX, -transY);
+                    canvas.concat(getMatrix());
+                    canvas.translate(transX, transY);
+                }
+            }
+
+			.............省略代吗..............
+        } else if ((mPrivateFlags & PFLAG_ALPHA_SET) == PFLAG_ALPHA_SET) {
+            onSetAlpha(255);
+            mPrivateFlags &= ~PFLAG_ALPHA_SET;
+        }
+
+		// 非硬件加速的情况下,直接进行剪裁
+		...........省略代码............
+	
+		//不使用绘图缓存
+        if (!drawingWithDrawingCache) {
+            if (drawingWithRenderNode) {
+                mPrivateFlags &= ~PFLAG_DIRTY_MASK;
+				//使用硬件加速的方式绘制控件
+                ((DisplayListCanvas) canvas).drawRenderNode(renderNode);
+            } else {
+                // 使用变换过的Canvas 进行最终绘制
+				// 在完成了坐标系的变换之后,Canvas已经位于控件自身的坐标系之下,也就可以通过draw(Canvas)进行控件内容的实际绘制工作,这样一来,绘制流程便回到了 简单绘制流程,而 dispatchDraw()则会继续绘制其子类
+
+				//PFLAG_SKIP_DRAW 会跳过draw()方法,直接调用子类绘制
+				//这是一种优化,对于大多数ViewGroup而言,其onDraw()内容为空
+                if ((mPrivateFlags & PFLAG_SKIP_DRAW) == PFLAG_SKIP_DRAW) {
+                    mPrivateFlags &= ~PFLAG_DIRTY_MASK;
+                    dispatchDraw(canvas);
+                } else {
+                    draw(canvas);
+                }
+            }
+        } else if (cache != null) {
+       		.........省略代码,使用绘图缓存绘制控件...................
+        }
+
+		//恢复Canvas的状态 在一切开始之前
+		// Canvas回到父控件的坐标系,这样便允许 父控件在调用`dispatchDraw()`过程中将Canvas 交给下一个子控件,避免了互相影响
+        if (restoreTo >= 0) {
+            canvas.restoreToCount(restoreTo);
+        }
+		............省略代码.............
+		//该值来自动画计算,动画若继续,则more 为true
+        return more;
+    }
+
+- **坐标系变换**,将Canvas从父控件的坐标系变换到子控件的坐标系一次需要变换如下参数
+
+	1. 控件在父控件中的位置,即`mLeft/mTop`.
+	
+		使用了`Canvas.translate()`方法
+
+	2. 控件动画过程中所产生的矩阵.
+
+		绘制过程中,控件可能正在进行一个或多个动画(ScaleAnimation,RotateAnimation,TranslateAnimation等),这些动画根据当前的时间点计算出`Transformation`,再将其中所包含的变换矩阵通过`Canvas.concact()`方法设置给Canvas,是的坐标系发生变换
+
+	3. 控件自身的变换矩阵
+
+		除了动画可以产生矩阵使得控件发生动画效果之外,View类还提供了`setScaleX/Y()`,`setTranslationX/Y()`等方法使得控件产生上述效果
+
+		这一系列方法所设置的变换信息会被整合在`View.mTransformationInfo`成员变量中,并可以通过`VIew.getMatrix()`方法从这个成员变量中提取一个整合了所有变换信息的矩阵
+
+		这个矩阵会在`View.draw(VIewGroup,Canvas,long)`方法中被应用
+
+	4. 控件内容的滚动量,即`mScrollX/Y`
+
+		虽然滚动量在一开始通过`Canvas.translate()`进行了变换,但是在进行另外俩种矩阵变换时,都会先撤销变换,待完成变换之后,再重新应用滚动量
+
+		这说明滚动量是最后被应用的~
+
+- Canvas针对4个因素进行坐标系变换之后,其坐标系已经是控件自身的坐标系了,接着调用`draw(canvas)`进行控件内容的绘制,通过`onDraw()`绘制自身内容. 然后继续通过`dispatchDraw()`方法遍历子类
+		
+
+### 5.2.2 完整绘制流程
+
+    public void draw(Canvas canvas) {
+        final int privateFlags = mPrivateFlags;
+        final boolean dirtyOpaque = (privateFlags & PFLAG_DIRTY_MASK) == PFLAG_DIRTY_OPAQUE &&
+                (mAttachInfo == null || !mAttachInfo.mIgnoreDirtyState);
+        mPrivateFlags = (privateFlags & ~PFLAG_DIRTY_MASK) | PFLAG_DRAWN;
+
+        // Step 1, draw the background, if needed
+        int saveCount;
+
+        if (!dirtyOpaque) {
+            drawBackground(canvas);
+        }
+
+		...............省略简便绘制流程....................
+
+        /*
+         * Here we do the full fledged routine...
+         * (this is an uncommon case where speed matters less,
+         * this is why we repeat some of the tests that have been
+         * done above)
+         */
+
+        boolean drawTop = false;
+        boolean drawBottom = false;
+        boolean drawLeft = false;
+        boolean drawRight = false;
+
+        float topFadeStrength = 0.0f;
+        float bottomFadeStrength = 0.0f;
+        float leftFadeStrength = 0.0f;
+        float rightFadeStrength = 0.0f;
+
+        // Step 2, save the canvas' layers
+        int paddingLeft = mPaddingLeft;
+
+        final boolean offsetRequired = isPaddingOffsetRequired();
+        if (offsetRequired) {
+            paddingLeft += getLeftPaddingOffset();
+        }
+
+        int left = mScrollX + paddingLeft;
+        int right = left + mRight - mLeft - mPaddingRight - paddingLeft;
+        int top = mScrollY + getFadeTop(offsetRequired);
+        int bottom = top + getFadeHeight(offsetRequired);
+
+        if (offsetRequired) {
+            right += getRightPaddingOffset();
+            bottom += getBottomPaddingOffset();
+        }
+
+        final ScrollabilityCache scrollabilityCache = mScrollCache;
+        final float fadeHeight = scrollabilityCache.fadingEdgeLength;
+        int length = (int) fadeHeight;
+
+        // clip the fade length if top and bottom fades overlap
+        // overlapping fades produce odd-looking artifacts
+        if (verticalEdges && (top + length > bottom - length)) {
+            length = (bottom - top) / 2;
+        }
+
+        // also clip horizontal fades if necessary
+        if (horizontalEdges && (left + length > right - length)) {
+            length = (right - left) / 2;
+        }
+
+        if (verticalEdges) {
+            topFadeStrength = Math.max(0.0f, Math.min(1.0f, getTopFadingEdgeStrength()));
+            drawTop = topFadeStrength * fadeHeight > 1.0f;
+            bottomFadeStrength = Math.max(0.0f, Math.min(1.0f, getBottomFadingEdgeStrength()));
+            drawBottom = bottomFadeStrength * fadeHeight > 1.0f;
+        }
+
+        if (horizontalEdges) {
+            leftFadeStrength = Math.max(0.0f, Math.min(1.0f, getLeftFadingEdgeStrength()));
+            drawLeft = leftFadeStrength * fadeHeight > 1.0f;
+            rightFadeStrength = Math.max(0.0f, Math.min(1.0f, getRightFadingEdgeStrength()));
+            drawRight = rightFadeStrength * fadeHeight > 1.0f;
+        }
+
+        saveCount = canvas.getSaveCount();
+
+        int solidColor = getSolidColor();
+        if (solidColor == 0) {
+            final int flags = Canvas.HAS_ALPHA_LAYER_SAVE_FLAG;
+
+            if (drawTop) {
+                canvas.saveLayer(left, top, right, top + length, null, flags);
+            }
+
+            if (drawBottom) {
+                canvas.saveLayer(left, bottom - length, right, bottom, null, flags);
+            }
+
+            if (drawLeft) {
+                canvas.saveLayer(left, top, left + length, bottom, null, flags);
+            }
+
+            if (drawRight) {
+                canvas.saveLayer(right - length, top, right, bottom, null, flags);
+            }
+        } else {
+            scrollabilityCache.setFadeColor(solidColor);
+        }
+
+        // Step 3, draw the content
+        if (!dirtyOpaque) onDraw(canvas);
+
+        // Step 4, draw the children
+        dispatchDraw(canvas);
+
+        // Step 5, draw the fade effect and restore layers
+        final Paint p = scrollabilityCache.paint;
+        final Matrix matrix = scrollabilityCache.matrix;
+        final Shader fade = scrollabilityCache.shader;
+
+        if (drawTop) {
+            matrix.setScale(1, fadeHeight * topFadeStrength);
+            matrix.postTranslate(left, top);
+            fade.setLocalMatrix(matrix);
+            p.setShader(fade);
+            canvas.drawRect(left, top, right, top + length, p);
+        }
+
+        if (drawBottom) {
+            matrix.setScale(1, fadeHeight * bottomFadeStrength);
+            matrix.postRotate(180);
+            matrix.postTranslate(left, bottom);
+            fade.setLocalMatrix(matrix);
+            p.setShader(fade);
+            canvas.drawRect(left, bottom - length, right, bottom, p);
+        }
+
+        if (drawLeft) {
+            matrix.setScale(1, fadeHeight * leftFadeStrength);
+            matrix.postRotate(-90);
+            matrix.postTranslate(left, top);
+            fade.setLocalMatrix(matrix);
+            p.setShader(fade);
+            canvas.drawRect(left, top, left + length, bottom, p);
+        }
+
+        if (drawRight) {
+            matrix.setScale(1, fadeHeight * rightFadeStrength);
+            matrix.postRotate(90);
+            matrix.postTranslate(right, top);
+            fade.setLocalMatrix(matrix);
+            p.setShader(fade);
+            canvas.drawRect(right - length, top, right, bottom, p);
+        }
+
+        canvas.restoreToCount(saveCount);
+
+        drawAutofilledHighlight(canvas);
+
+        // Overlay is part of the content and draws beneath Foreground
+        if (mOverlay != null && !mOverlay.isEmpty()) {
+            mOverlay.getOverlayView().dispatchDraw(canvas);
+        }
+
+        // Step 6, draw decorations (foreground, scrollbars)
+        onDrawForeground(canvas);
+
+        if (debugDraw()) {
+            debugDrawFocus(canvas);
+        }
+    }
+
+
+## 5.2 硬件绘制的原理
+
+`ViewRootImpl.draw()`方法中可以看到,如果`mAttachInfo.mHardwareRenderer`存在并且有效,则会使用硬件加速的方式绘制控件树. 相较于软件绘制,硬件加速绘制可以充分利用GPU性能,提高绘制效率
+
+### 5.2.1 硬件加速绘制简介
+
+如果窗口使用硬件加速,`ViewRootImpl`会创建一个`ThreadedRenderer`并保存在`mAttachInfo`中
+
+`ThreadedRenderer`用于硬件加速的渲染器,封装了硬件加速的图形库,并以Android与硬件加速图形库的中间层的身份存在.负责从Android的Surface生成一个`HardwareLayer`,供硬件加速图形库作为绘制的输出目标
+
+
+
+### 5.2.2 硬件加速绘制的流程
+
+`ViewRootImpl.draw()`方法中,如果存在硬件加速,则会调用
+
+	mAttachInfo.mThreadedRenderer.draw(mView, mAttachInfo, this);
+
+- `mAttachInfo`: `View.AttachInfo`类
+
+- `mThreadRenderer`: `ThreadedRenderer`类
+
+#### 5.2.2.1 ThreadedRenderer.draw()
+
+
+    void draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks) {
+        attachInfo.mIgnoreDirtyState = true;
+
+        final Choreographer choreographer = attachInfo.mViewRootImpl.mChoreographer;
+        choreographer.mFrameInfo.markDrawStart();
+
+        updateRootDisplayList(view, callbacks);
+
+        attachInfo.mIgnoreDirtyState = false;
+
+        // register animating rendernodes which started animating prior to renderer
+        // creation, which is typical for animators started prior to first draw
+        if (attachInfo.mPendingAnimatingRenderNodes != null) {
+            final int count = attachInfo.mPendingAnimatingRenderNodes.size();
+            for (int i = 0; i < count; i++) {
+                registerAnimatingRenderNode(
+                        attachInfo.mPendingAnimatingRenderNodes.get(i));
+            }
+            attachInfo.mPendingAnimatingRenderNodes.clear();
+            // We don't need this anymore as subsequent calls to
+            // ViewRootImpl#attachRenderNodeAnimator will go directly to us.
+            attachInfo.mPendingAnimatingRenderNodes = null;
+        }
+
+        final long[] frameInfo = choreographer.mFrameInfo.mFrameInfo;
+        int syncResult = nSyncAndDrawFrame(mNativeProxy, frameInfo, frameInfo.length);
+        if ((syncResult & SYNC_LOST_SURFACE_REWARD_IF_FOUND) != 0) {
+            setEnabled(false);
+            attachInfo.mViewRootImpl.mSurface.release();
+            // Invalidate since we failed to draw. This should fetch a Surface
+            // if it is still needed or do nothing if we are no longer drawing
+            attachInfo.mViewRootImpl.invalidate();
+        }
+        if ((syncResult & SYNC_INVALIDATE_REQUIRED) != 0) {
+            attachInfo.mViewRootImpl.invalidate();
+        }
+    }
+
+# 6. 使用绘图缓存
