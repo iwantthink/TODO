@@ -136,3 +136,18 @@ web-socket学习
 - 实现demo
 
 - 研究原理
+
+
+源码学习
+
+- WMS分析
+
+	- WindowManager分析
+
+	- WindowManagerService分析
+
+- ViewRootImpl分析
+	
+	- 图形绘制的流程分析
+
+	- 输入事件派发的分析
