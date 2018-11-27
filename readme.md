@@ -88,11 +88,13 @@ jenkins+jacoco
 
 分析Java集合类的原理。
 
-研究锁屏广告实现原理
+**研究锁屏广告实现原理**
 
 - ~~研究Java版本~~
 
 - 研究JNI版本
+
+- 额外实现一份DEMO
 
 
 ~~分析ActivityThread~~
@@ -120,7 +122,7 @@ Android源码学习
 
 - 其他sdk对全埋点的实现实例
 
-- mixpanel 学习
+- ~~mixpanel 学习~~
 
 c++学习
 
@@ -133,7 +135,7 @@ c++学习
 
 web-socket学习
 
-- 实现demo
+- ~~实现demo~~
 
 - 研究原理
 
@@ -142,9 +144,9 @@ web-socket学习
 
 - WMS分析
 
-	- WindowManager分析
+	- ~~WindowManager分析~~
 
-	- WindowManagerService分析
+	- ~~WindowManagerService分析~~
 
 - ViewRootImpl分析
 	
