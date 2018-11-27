@@ -1,4 +1,4 @@
-# 输入事件的派发
+# ViewRootImpl中输入事件的派发
 
 [深入理解Android 卷iii PDF版]()
 
