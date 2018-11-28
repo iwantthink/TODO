@@ -785,4 +785,14 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 
 - `MotionEvent`是`InputEvent`的子类,用来表示移动事件(鼠标,笔,手指,轨迹球)
 
-# 6. View中的事件分发
+### 5.4.3 View.dispatchPointerEvent()
+
+    public final boolean dispatchPointerEvent(MotionEvent event) {
+        if (event.isTouchEvent()) {
+            return dispatchTouchEvent(event);
+        } else {
+            return dispatchGenericMotionEvent(event);
+        }
+    }
+
+- 根据是否是触摸事件 进行分发
