@@ -138,7 +138,9 @@
 
 - **`dispatchTouchEvent()`有`View`和`ViewGroup`俩种实现,`ViewGroup`的实现负责将触摸事件沿着控件树向子控件进行派发,而`View`的实现则主要用于事件接收与处理工作**
 
-## 4.2 View对触摸事件的派发
+
+
+# 5. View对触摸事件的派发
 
 View.dispatchTouchEvent()
 
@@ -202,7 +204,7 @@ View.dispatchTouchEvent()
 
 - `ENABLED_MASK`: 与`setFlags()`一起使用的,用于判断此`View`是否可用的标记
 
-### 4.2.1 View.onFilterTouchEventForSecurity()
+## 5.1 View.onFilterTouchEventForSecurity()
 
 	//根据安全策略过滤触摸事件
     public boolean onFilterTouchEventForSecurity(MotionEvent event) {
@@ -219,7 +221,7 @@ View.dispatchTouchEvent()
 
 	开发者可以通过在执行敏感行为的控件上调用`View.setFilterTouchesWhenObscured()`方法在`mViewFlags`中添加这一标记
 
-## 4.3 ViewGroup对触摸事件的派发
+# 6. ViewGroup对触摸事件的派发
 
 `ViewGroup`的主要工作是将触摸事件派发给合适的子控件
 
@@ -227,13 +229,15 @@ View.dispatchTouchEvent()
 
 - **确定派发目标**
 
-	对于触摸事件来说,序列不可中断性原则,确定派发目标发生在收到`ACTION_DOWN`或`ACTION_POINTER_DOWN`时刻
+	**对于触摸事件来说,序列不可中断性原则,确定派发目标发生在收到`ACTION_DOWN`或`ACTION_POINTER_DOWN`时刻**
 
 	- `ViewGroup`会按照逆绘制顺序依次查找事件坐标所落在的子控件,并将事件发送给子控件的`dispatchTouchEvent()`方法,然后根据返回值确定第一个愿意接受这一序列的子控件,将其确定为后续事件的派发目标
 
 	一旦通过`ACTION_DOWN`或`ACTION_POINTER_DOWN`确定派发目标,`ViewGroup`会将此触控点的ID与目标控件建立绑定关系,属于此触控点的事件序列都会发送给这一目标
 
-	`VIewGroup`通过一个`TouchTarget`类的实例来描述这种绑定关系,这个类保存了一个触控点ID的列表 以及一个 `View`实例,以此实现从触控点ID到目标控件的映射
+	`ViewGroup`通过一个`TouchTarget`类的实例来描述这种绑定关系,这个类保存了一个触控点ID的列表 以及一个 `View`实例,以此实现从触控点ID到目标控件的映射
+
+
 
 - **执行派发**
 
@@ -241,12 +245,15 @@ View.dispatchTouchEvent()
 
 	由于多点触控的存在,执行派发时可能需要将`MotionEvent`进行拆分, 因此`ViewGroup`在其派发过程中可能维护着多个`TouchTarget`实例
 
-	`TouchTarget`存在一个`next`成员变量,它其实是一个单向链表. `ViewGroup`将所有的`TouchTarget`存储在一个以`mFirstTouchTarget`为表头的单向链表中
+	`TouchTarget`存在一个`next`成员变量,**它其实是一个单向链表**. `ViewGroup`将所有的`TouchTarget`存储在一个以`mFirstTouchTarget`为表头的单向链表中
+
+		    // First touch target in the linked list of touch targets.
+	    	private TouchTarget mFirstTouchTarget;
 
 
-`ViewGroup.dispatchTouchEvent()`中会通过`onInterceptTouchEvent()`尝试对输入事件进行截获
+**`ViewGroup.dispatchTouchEvent()`中会通过`onInterceptTouchEvent()`尝试对输入事件进行截获**
 
-## 4.3 ViewGroup.dispatchPointerEvent()
+## 6.1 ViewGroup.dispatchTouchEvent() - 确定派发目标
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
@@ -255,23 +262,24 @@ View.dispatchTouchEvent()
         boolean handled = false;
 		//同样的会对遮盖状态进行检查和过滤
         if (onFilterTouchEventForSecurity(ev)) {
+			// 获取动作,包含触控点的索引号
             final int action = ev.getAction();
 			//获取实际的动作,不包含触控点的索引号
             final int actionMasked = action & MotionEvent.ACTION_MASK;
 
             //处理一个初始化的down
             if (actionMasked == MotionEvent.ACTION_DOWN) {
-				// ACTION_DOWN表示一条新的事件序列的开始,这是会重置一切状态,包括清空TouchTarget列表
+				// ACTION_DOWN表示一条新的事件序列的开始,这是会重置一切状态,包括清空TouchTarget列表,这样ViewGroup 就可以进行新的触摸事件派发
                 cancelAndClearTouchTargets(ev);
                 resetTouchState();
             }
 
             // 判断是否有拦截
             final boolean intercepted;
-			// 事件动作为DOWN, 或者事件序列已经确定派发目标
+			// 事件动作为DOWN, 或者事件序列已经确定派发目标 才会重新计算是否需要拦截
             if (actionMasked == MotionEvent.ACTION_DOWN
                     || mFirstTouchTarget != null) {
-				// 判断是否禁止拦截
+				// 判断是否禁止拦截,即ViewGroup禁止拦截事件
                 final boolean disallowIntercept = (mGroupFlags & FLAG_DISALLOW_INTERCEPT) != 0;
 				// 如果没有禁止拦截
                 if (!disallowIntercept) {
@@ -301,10 +309,19 @@ View.dispatchTouchEvent()
             final boolean canceled = resetCancelNextUpFlag(this)
                     || actionMasked == MotionEvent.ACTION_CANCEL;
 
-            // Update list of touch targets for pointer down, if needed.
+            // split表示此控件树是否启用事件拆分机制
+			// 开发者通过setMotionEventSplittingEnabled()方法控制这一机制
+			// 这个flag 在 initViewGroup()中被设置(构造函数调用了这个方法),所以默认情况下是存在这个flag的
             final boolean split = (mGroupFlags & FLAG_SPLIT_MOTION_EVENTS) != 0;
+			// 如果此次事件产生了新的派发目标,那么会保存在这个局部变量中
+			// 派发目标仅在(ACTION_DOWN 或 ACTION_POINTER_DOWN)发生
             TouchTarget newTouchTarget = null;
+			// 如果确定派发目标 调用了子控件的dispatchTouchEvent(),代表事件已经完成派发
+			// 这种情况下此变量置为true , 以跳过后续的派发过程
             boolean alreadyDispatchedToNewTouchTarget = false;
+
+			// 如果事件序列没有被取消 并且 没有被当前ViewGroup拦截
+			// 满足这俩个条件才有进行派发目标查找的必要
             if (!canceled && !intercepted) {
 
                 // If the event is targeting accessiiblity focus we give it to the
@@ -315,51 +332,60 @@ View.dispatchTouchEvent()
                 View childWithAccessibilityFocus = ev.isTargetAccessibilityFocus()
                         ? findChildWithAccessibilityFocus() : null;
 
+				// 如果事件的实际动作是ACTION_DOWN 或 ACTION_POINTER_DOWN ,标志一个子序列的开始,此时需要执行派发目标的确定
                 if (actionMasked == MotionEvent.ACTION_DOWN
                         || (split && actionMasked == MotionEvent.ACTION_POINTER_DOWN)
                         || actionMasked == MotionEvent.ACTION_HOVER_MOVE) {
+					// 获取这一按下事件的触控点的索引号
                     final int actionIndex = ev.getActionIndex(); // always 0 for down
-                    final int idBitsToAssign = split ? 1 << ev.getPointerId(actionIndex)
-                            : TouchTarget.ALL_POINTER_IDS;
+
+					// 通过索引号获取触控点的id
+					// 为了能够在一个整型变量中存储一个ID列表,通过将1进行左移若干个位的方式将ID转换为2的ID次方的形式并存储在idBitsToAssign变量中
+					// 当找到一个派发目标之后,会将这个idBitsToAssign添加到派发目标所对应的TouchTarget中,从而使得这一触控点被绑定在TouchTarget上
+					// 根据int的容量, 可知Android控件系统最多可以支持32个触控点
+					
+					// 当 split为false及ViewGroup没有启用序列的拆分时,idBitsToAssign被设置为TouchTarget.All_POINTER_IDS,意思是所有触控点的事件都会被派发给后续被确定的目标控件
+                    final int idBitsToAssign = split ? 1 << ev.getPointerId(actionIndex): TouchTarget.ALL_POINTER_IDS;
 
                     // Clean up earlier touch targets for this pointer id in case they
                     // have become out of sync.
                     removePointersFromTouchTargets(idBitsToAssign);
 
+					//开始对子控件按照逆绘制顺序进行遍历,检查哪一个控件对这一新的事件子序列感兴趣
                     final int childrenCount = mChildrenCount;
                     if (newTouchTarget == null && childrenCount != 0) {
+						// 触摸事件是基于位置进行派发目标的查找,因此需要先获取事件坐标
+						// 通过触控点的索引号获取坐标
                         final float x = ev.getX(actionIndex);
                         final float y = ev.getY(actionIndex);
-                        // Find a child that can receive the event.
-                        // Scan children from front to back.
+
+						// 返回一个预排序的View集合
                         final ArrayList<View> preorderedList = buildTouchDispatchChildList();
+						// 是否使用自定义绘制顺序
                         final boolean customOrder = preorderedList == null
                                 && isChildrenDrawingOrderEnabled();
                         final View[] children = mChildren;
+						// 注意这里是逆绘制顺序
                         for (int i = childrenCount - 1; i >= 0; i--) {
+							
                             final int childIndex = getAndVerifyPreorderedIndex(
                                     childrenCount, i, customOrder);
                             final View child = getAndVerifyPreorderedView(
                                     preorderedList, children, childIndex);
 
-                            // If there is a view that has accessibility focus we want it
-                            // to get the event first and if not handled we will perform a
-                            // normal dispatch. We may do a double iteration but this is
-                            // safer given the timeframe.
-                            if (childWithAccessibilityFocus != null) {
-                                if (childWithAccessibilityFocus != child) {
-                                    continue;
-                                }
-                                childWithAccessibilityFocus = null;
-                                i = childrenCount - 1;
-                            }
+   							...........省略一段看不懂的代码,跟childWithAccessibilityFocus有关.................
 
+
+							// 判断控件是否能处理事件 和 事件坐标是否落在控件之内,如果不符合则跳转到下一次循环
                             if (!canViewReceivePointerEvents(child)
                                     || !isTransformedTouchPointInView(x, y, child, null)) {
                                 ev.setTargetAccessibilityFocus(false);
                                 continue;
                             }
 
+							// 从mFirstTouchTarget 链表中查找控件所对应的TouchTarget
+							// 如果子控件所对应的TouchTarget已经存在,表明此控件已经在接收另外一个事件子序列,ViewGroup会默认此控件对这一条子序列也感兴趣
+							// 此时将触控点ID绑定在其上,并终止派发目标的查找,后续的派发工作会据此 将此事件派发给这一控件
                             newTouchTarget = getTouchTarget(child);
                             if (newTouchTarget != null) {
                                 // Child is already receiving touch within its bounds.
@@ -369,6 +395,12 @@ View.dispatchTouchEvent()
                             }
 
                             resetCancelNextUpFlag(child);
+
+							// 使用dispatchTransformedTouchEvent()方法尝试将事件派发给当前子控件:
+							// 1. 根据最后一个参数idBitsToAssign 将其指定的触控点的信息从原始事件ev中分离并产生一个新的MotionEvent的Action
+							// 2. 如果有必要,修改新MotionEvent的Action
+							// 3. 把事件的坐标转换到子控件的坐标系下
+							// 4. 将新的MotionEvent派发给子控件
                             if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
                                 // Child wants to receive touch within its bounds.
                                 mLastTouchDownTime = ev.getDownTime();
@@ -385,7 +417,9 @@ View.dispatchTouchEvent()
                                 }
                                 mLastTouchDownX = ev.getX();
                                 mLastTouchDownY = ev.getY();
+								// 当子控件决定接受这一事件,为其创建一个TouchTarget并保存在mFirstTouchTarget链表中,从此之后,来自此触控点的事件都会派发给这个子控件
                                 newTouchTarget = addTouchTarget(child, idBitsToAssign);
+								// 表示此事件已经在子控件中得到处理, 后续的事件派发流程将不会再次发送此事件到这一子控件
                                 alreadyDispatchedToNewTouchTarget = true;
                                 break;
                             }
@@ -394,9 +428,11 @@ View.dispatchTouchEvent()
                             // the flag and do a normal dispatch to all children.
                             ev.setTargetAccessibilityFocus(false);
                         }
+						// 遍历结束,清空数据避免泄露
                         if (preorderedList != null) preorderedList.clear();
                     }
 
+					// 如果上述遍历过程并没有找到能够接受此事件序列的子控件,ViewGroup会将这一事件序列强行交给最近一次接受事件序列的子控件
                     if (newTouchTarget == null && mFirstTouchTarget != null) {
                         // Did not find a child to receive the event.
                         // Assign the pointer to the least recently added target.
@@ -408,58 +444,158 @@ View.dispatchTouchEvent()
                     }
                 }
             }
-
-            // Dispatch to touch targets.
-            if (mFirstTouchTarget == null) {
-                // No touch targets so treat this as an ordinary view.
-                handled = dispatchTransformedTouchEvent(ev, canceled, null,
-                        TouchTarget.ALL_POINTER_IDS);
-            } else {
-                // Dispatch to touch targets, excluding the new touch target if we already
-                // dispatched to it.  Cancel touch targets if necessary.
-                TouchTarget predecessor = null;
-                TouchTarget target = mFirstTouchTarget;
-                while (target != null) {
-                    final TouchTarget next = target.next;
-                    if (alreadyDispatchedToNewTouchTarget && target == newTouchTarget) {
-                        handled = true;
-                    } else {
-                        final boolean cancelChild = resetCancelNextUpFlag(target.child)
-                                || intercepted;
-                        if (dispatchTransformedTouchEvent(ev, cancelChild,
-                                target.child, target.pointerIdBits)) {
-                            handled = true;
-                        }
-                        if (cancelChild) {
-                            if (predecessor == null) {
-                                mFirstTouchTarget = next;
-                            } else {
-                                predecessor.next = next;
-                            }
-                            target.recycle();
-                            target = next;
-                            continue;
-                        }
-                    }
-                    predecessor = target;
-                    target = next;
-                }
-            }
-
-            // Update list of touch targets for pointer up or cancel, if needed.
-            if (canceled
-                    || actionMasked == MotionEvent.ACTION_UP
-                    || actionMasked == MotionEvent.ACTION_HOVER_MOVE) {
-                resetTouchState();
-            } else if (split && actionMasked == MotionEvent.ACTION_POINTER_UP) {
-                final int actionIndex = ev.getActionIndex();
-                final int idBitsToRemove = 1 << ev.getPointerId(actionIndex);
-                removePointersFromTouchTargets(idBitsToRemove);
-            }
-        }
-
-        if (!handled && mInputEventConsistencyVerifier != null) {
-            mInputEventConsistencyVerifier.onUnhandledEvent(ev, 1);
-        }
-        return handled;
+		..........省略实际执行派发工作的代码..............
     }
+
+- **`ViewGroup.dispatchTouchEvent()`方法前半部分的目的是以更新`mFirstTouchTarget`链表的方式确定一系列的派发目标**.派发目标由`TouchTarget`表示,并在`TouchTarget`中的`pointerIdBits`中保管目标所感兴趣的触控点的列表,这是后续执行派发的关键.
+
+**`ViewGroup`确定派发目标的原则:**
+
+1. 仅当事件的动作为`ACTION_DOWN`或`ACTION_POINTER_DOWN`时才会进行派发目标的查找. 因为这些动作标志着新的事件子序列的开始,`ViewGroup`仅需要为新的序列查找一个派发目标
+
+2. `ViewGroup`会沿着绘制顺序相反的方向查找. 用户肯定是希望点击在能够看得到的东西上.**因此`ZOrder`越大的控件接收事件的优先级越大**
+
+3. `ViewGroup`会将一个控件作为派发目标的先决条件是 控件能够接收事件 并且 事件的坐标位于其边界内.  当事件落入子控件内部并且它接受过另外一条事件序列时,则直接认定它就是此事件序列的派发目标 . 因为当用户将俩根手指按在一个控件上时,很可能是想要对此控件进行多点操作
+
+4. `ViewGroup`会首先通过`dispatchTransformedTouchEvent()`尝试将事件派发给候选控件,倘若控件在其事件处理函数中返回true,则可以确定它就是派发目标,否则继续测试下一个控件
+
+5. 当遍历了所有子控件后都无法找到一个合适的派发目标,`ViewGroup`会强行将接受了上一条事件序列的子控件作为派发目标. 因为`ViewGroup`猜测用户以相邻次序按下的俩根手指应该包含能够共同完成某种任务的期望
+
+	可以看出,`ViewGroup`尽其所能将事件派发给子控件,而不是将事件留给自己处理. 不过当目前没有任何一个子控件正在接收事件序列时(mFirstTouchTarget 为null),`ViewGroup`只能自己处理
+
+
+
+### 6.1.1 ViewGroup.cancelAndClearTouchTargets()
+
+    /**
+     * Cancels and clears all touch targets.
+     */
+    private void cancelAndClearTouchTargets(MotionEvent event) {
+        if (mFirstTouchTarget != null) {
+            boolean syntheticEvent = false;
+			//创建一个合成的MotionEvent
+            if (event == null) {
+                final long now = SystemClock.uptimeMillis();
+                event = MotionEvent.obtain(now, now,
+                        MotionEvent.ACTION_CANCEL, 0.0f, 0.0f, 0);
+                event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+                syntheticEvent = true;
+            }
+
+			// 遍历链表,清空标记
+            for (TouchTarget target = mFirstTouchTarget; target != null; target = target.next) {
+                resetCancelNextUpFlag(target.child);
+                dispatchTransformedTouchEvent(event, true, target.child, target.pointerIdBits);
+            }
+            clearTouchTargets();
+
+            if (syntheticEvent) {
+                event.recycle();
+            }
+        }
+    }
+
+### 6.1.2 ViewGroup.buildTouchDispatchChildList()
+
+    public ArrayList<View> buildTouchDispatchChildList() {
+        return buildOrderedChildList();
+    }
+
+    /**
+     * 用已经预排序过的控件的子类去填充并返回 mPreSortedChildren
+     * 这个预排序顺序指的是 优先通过Z坐标,然后按照子绘图顺序
+     * mPreSortedChildren 必须在使用后清空,避免泄露
+     */
+    ArrayList<View> buildOrderedChildList() {
+        final int childrenCount = mChildrenCount;
+		// 如果子类只有一个 那直接返回,如果子类中存在没有z坐标的 也直接返回 null
+        if (childrenCount <= 1 || !hasChildWithZ()) return null;
+
+		.........省略复用或创建ArrayList mPreSortedChildren 的过程.............
+
+		// 判断ViewGroup是否需要使用 getChildDrawingOrder()方法定义的顺序去绘制子类
+        final boolean customOrder = isChildrenDrawingOrderEnabled();
+        for (int i = 0; i < childrenCount; i++) {
+			// 获取下一个被添加到list中的view的索引
+            final int childIndex = getAndVerifyPreorderedIndex(childrenCount, i, customOrder);
+			// 获取这个view
+            final View nextChild = mChildren[childIndex];
+			// 获取View的Z坐标
+            final float currentZ = nextChild.getZ();
+
+            // 根据 z坐标的大小计算 当前控件在mPreSortedChildren中的位置
+			// z坐标越大 位置越靠后
+            int insertIndex = i;
+			// 跟之前插入list 中的view 进行z坐标的比较,z 坐标越大 insertIndex 越大
+            while (insertIndex > 0 && mPreSortedChildren.get(insertIndex - 1).getZ() > currentZ) {
+                insertIndex--;
+            }
+			//按照z坐标升序
+            mPreSortedChildren.add(insertIndex, nextChild);
+        }
+        return mPreSortedChildren;
+    }
+
+#### 6.1.2.1 ViewGroup.getChildDrawingOrder()
+
+    /**
+     * 返回此次迭代所需要绘制的子类索引
+     * 
+     */
+    protected int getChildDrawingOrder(int childCount, int i) {
+        return i;
+    }
+
+- 可以通过重写这个方法自定义绘制顺序 , 默认 会直接返回 `i`(`i`表示)
+
+- 如果希望这个方法能够被使用到,必须先调用`setChildrenDrawingOrderEnabled(boolean)`开启子类绘制顺序
+
+#### 6.1.2.2 ViewGroup.getAndVerifyPreorderedIndex()
+
+    private int getAndVerifyPreorderedIndex(int childrenCount, int i, boolean customOrder) {
+        final int childIndex;
+		// 判断是否使用自定义的索引号
+        if (customOrder) {
+            final int childIndex1 = getChildDrawingOrder(childrenCount, i);
+			// 对自定义返回的绘制顺序进行校验,不能大于子类的总数...
+            if (childIndex1 >= childrenCount) {
+                throw new IndexOutOfBoundsException(.....);
+            }
+            childIndex = childIndex1;
+        } else {
+            childIndex = i;
+        }
+        return childIndex;
+    }
+
+#### 6.1.2.3 ViewGroup.isChildrenDrawingOrderEnabled()
+
+	/**
+	 *	判断ViewGroup是否使用getChildDrawingOrder()提供的绘制顺序去绘制子类
+	 */
+    protected boolean isChildrenDrawingOrderEnabled() {
+        return (mGroupFlags & FLAG_USE_CHILD_DRAWING_ORDER) == FLAG_USE_CHILD_DRAWING_ORDER;
+    }
+
+#### 6.1.2.4 ViewGroup.getAndVerifyPreorderedView()
+
+    private static View getAndVerifyPreorderedView(ArrayList<View> preorderedList, View[] children,
+            int childIndex) {
+        final View child;
+		// 是否存在按照预排列顺序排列好的list
+        if (preorderedList != null) {
+			// 从list中取出
+            child = preorderedList.get(childIndex);
+            if (child == null) {
+                throw new RuntimeException("Invalid preorderedList contained null child at index "
+                        + childIndex);
+            }
+        } else {
+			// 直接从mChildren中取
+            child = children[childIndex];
+        }
+        return child;
+    }
+
+## 6.2 ViewGroup.dispatchTouchEvent() - 执行派发工作
+
