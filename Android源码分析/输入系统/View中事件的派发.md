@@ -3,7 +3,7 @@
 
 # 1. 简介
 
-从[输入事件的派发.md]()中最后一小节可知,在`ViewPostImeInputStage.processPointerEvent()`方法中,事件被传递了`mView`去派发
+从[ViewRootImpl中输入事件的派发.md]()中最后一小节可知,在`ViewPostImeInputStage.processPointerEvent()`方法中,事件被传递了`mView`去派发
 
 这里的`PointerEvent`是包含以`MotionEvent.getAction()`进行区分的俩种事件,以是否实际接触到屏幕为区分
 
@@ -66,7 +66,9 @@
 
 ## 2.6 特殊情况
 
-当`MotionEvent`所携带的动作为`ACTION_MOVE`时,其`getAction()`所获得的动作信息并不包含触控点的索引,因为`ACTION_MOVE`并不会导致增加或减少触控点,**不过它仍然保存了所有触控点的位置/ID等信息**
+**当`MotionEvent`所携带的动作为`ACTION_MOVE`时,其`getAction()`所获得的动作信息并不包含触控点的索引**
+
+- 因为`ACTION_MOVE`并不会导致增加或减少触控点,**不过它仍然保存了所有触控点的位置/ID等信息**
 
 开发者可以通过`MotionEvent.getPointerCount()`获得此时有多少触控点处于活动状态,并通过for循环遍历每一个触控点的信息
 
@@ -100,7 +102,10 @@
 
 如3.1节中的例子,触控点1的信息组成一条单点序列,触控点2和3 组成一条双点序列. 这俩条序列被称为原始序列的子序列,这一行为就被称为事件序列的拆分(Split)
 
-`MotionEvent`的拆分可以通过`MotionEvent.split()`方法完成,可以从当前`MotionEvent`中产生一个新的仅包含特定触控点信息的`MotionEvent`,而这个新的`MotionEvent`则称为子序列的一部分
+`MotionEvent`的拆分可以通过`MotionEvent.split()`方法完成,可以从当前`MotionEvent`中产生一个新的仅包含特定触控点信息的`MotionEvent`,而这个新的`MotionEvent`则称为子序
+列的一部分
+
+- `MotionEvent.split()`是一个被`@hide`修饰的方法
 
 ### 3.2.1 拆分的作用
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fx9x8zdr0pj20md061myo.jpg)
@@ -131,7 +136,7 @@
 
 - 在该方法中会判断当前事件是否是触摸事件,然后将触摸事件交给`dispatchTouchEvent()`进行处理
 
-- `dispatchTouchEvent()`有`View`和`ViewGroup`俩种实现,`ViewGroup`的实现负责将触摸事件沿着控件树向子控件进行派发,而`View`的实现则主要用于事件接收与处理工作
+- **`dispatchTouchEvent()`有`View`和`ViewGroup`俩种实现,`ViewGroup`的实现负责将触摸事件沿着控件树向子控件进行派发,而`View`的实现则主要用于事件接收与处理工作**
 
 ## 4.2 View对触摸事件的派发
 
@@ -146,6 +151,7 @@ View.dispatchTouchEvent()
      */
     public boolean dispatchTouchEvent(MotionEvent event) {
 		............省略代码................
+		//处理结果
         boolean result = false;
 		............省略代码................
 
@@ -192,9 +198,9 @@ View.dispatchTouchEvent()
         return result;
     }
 
-- 总体流程就是 先尝试让`onTouchListener()`处理事件,如果没有处理成功,那么就让`onTouchEvent()`回调进行处理.
+- 总体流程就是 **先尝试让`onTouchListener()`处理事件,如果没有处理成功,那么就让`onTouchEvent()`回调进行处理.**
 
-- `ENABLED_MASK`: 与`setFlags()`一起使用的,用于判断此View是否可用的标记
+- `ENABLED_MASK`: 与`setFlags()`一起使用的,用于判断此`View`是否可用的标记
 
 ### 4.2.1 View.onFilterTouchEventForSecurity()
 
