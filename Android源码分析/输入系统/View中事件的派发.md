@@ -599,3 +599,284 @@ View.dispatchTouchEvent()
 
 ## 6.2 ViewGroup.dispatchTouchEvent() - 执行派发工作
 
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+		.............
+
+        boolean handled = false;
+        if (onFilterTouchEventForSecurity(ev)) {
+
+			...............省略查找派发目标的代码 6.1小节......................
+
+            // Dispatch to touch targets.
+            if (mFirstTouchTarget == null) {
+                // 当mFirstTouchTarget 为null,表示之前没有任何一个合适的子控件接受事件序列,此时只能将事件序列交给ViewGroup自身处理
+				// 同样的使用dispatchTransformedTouchEvent()将事件派发给ViewGroup自身,但是 第三个参数child = null
+                handled = dispatchTransformedTouchEvent(ev, canceled, null,
+                        TouchTarget.ALL_POINTER_IDS);
+            } else {
+                // 遍历链表 为每一个TouchTarget派发事件,除了已经派发过的
+                TouchTarget predecessor = null;
+                TouchTarget target = mFirstTouchTarget;
+                while (target != null) {
+                    final TouchTarget next = target.next;
+					// target是上述 查找派发逻辑中找到的那个 target,说明已经处理了事件,不需要额外派发
+                    if (alreadyDispatchedToNewTouchTarget && target == newTouchTarget) {
+						// 标记已经处理成功
+                        handled = true;
+                    } else {
+						// 表示因为某种原因需要中断目标控件继续接受事件序列,通常是因为目标控件即将被移出控件树,或者ViewGroup决定截取此事件序列
+						// 此时仍然会将事件发送给目标控件,但是其动作会被改成ACTION_CANCEL
+                        final boolean cancelChild = resetCancelNextUpFlag(target.child)
+                                || intercepted;
+						// 将事件派发给目标控件
+                        if (dispatchTransformedTouchEvent(ev, cancelChild,
+                                target.child, target.pointerIdBits)) {
+                            handled = true;
+                        }
+						
+						// 如果已经决定终止目标控件继续接受事件序列,则将其对应的TouchTarget从链表中删除并回收.
+						// 下次事件到来时将不会为其派发事件
+                        if (cancelChild) {
+                            if (predecessor == null) {
+								// 将当前target从链表中移除
+                                mFirstTouchTarget = next;
+                            } else {
+                                predecessor.next = next;
+                            }
+                            target.recycle();
+                            target = next;
+                            continue;
+                        }
+                    }
+                    predecessor = target;
+					// 切换到下一个派发目标
+                    target = next;
+                }
+            }
+
+            // Update list of touch targets for pointer up or cancel, if needed.
+			...............
+        }
+
+		................
+        return handled;
+    }
+
+### 6.2.1 ViewGroup.dispatchTransformedTouchEvent()
+
+    /**
+     * 将MotionEvent 转换成特定子控件的坐标空间
+     * 过滤掉不相关的触控点id,并在必要的时候覆盖其action
+     * 如果child==null ,则假定ViewGroup将处理事件序列
+     */
+    private boolean dispatchTransformedTouchEvent(MotionEvent event, boolean cancel,
+            View child, int desiredPointerIdBits) {
+        final boolean handled;
+
+		// 首先处理当需要终止子控件对事件序列进行处理的情况
+		// 终止事件序列的处理 不需要执行坐标转换和过滤,需要对动作进行处理
+		// 此时只需要将事件的动作替换为ACTION_CANCEL 并调用子控件的dispatchTouchEvent()即可
+		// 并不需要坐标变换等操作,因为ACTION_CANCEL 是一个要求接受者立刻终止事件处理并恢复到事件处理之前状态的一个记号而已,此时其所携带的除动作之外的信息都是无效的
+        final int oldAction = event.getAction();
+        if (cancel || oldAction == MotionEvent.ACTION_CANCEL) {
+            event.setAction(MotionEvent.ACTION_CANCEL);
+            if (child == null) {
+                handled = super.dispatchTouchEvent(event);
+            } else {
+                handled = child.dispatchTouchEvent(event);
+            }
+            event.setAction(oldAction);
+			//事件派发完毕,直接返回
+            return handled;
+        }
+
+        // 这俩个局部变量是确定是否需要进行事件序列分割的依据
+		// oldPointerIdBits 表示了原始事件中所有触控点的列表
+		// newPointerIdBits 表示了目标希望接受的触控点的列表 , 是子集
+		// desiredPointerIdBits 已经描述了目标希望接受的触控点的列表,仍然需要newPointerIdBits , 因为desiredPointerIdBits 的值有可能是 TouchTarget.All_POINTER_IDS(此时它并不能准确的表示实际需要派发的触控点列表)
+        final int oldPointerIdBits = event.getPointerIdBits();
+        final int newPointerIdBits = oldPointerIdBits & desiredPointerIdBits;
+
+        // If for some reason we ended up in an inconsistent state where it looks like we
+        // might produce a motion event with no pointers in it, then drop the event.
+        if (newPointerIdBits == 0) {
+            return false;
+        }
+
+        // transformedEvent 是一个来自原始MotionEvent 的新的MotionEvent,它只包含了目标所感兴趣的触控点,派发给目标事件对象的是它 而不是原始事件
+        final MotionEvent transformedEvent;
+
+		// 如果俩者相等 , 则表示目标对原始事件的所有触控点全盘接受,因此 transformedEvent 仅仅是原始事件的一个复制
+        if (newPointerIdBits == oldPointerIdBits) {
+			// 如果子类为空 ,说明ViewGroup自身接收事件序列
+			// 子类不存在矩阵变换
+			// 存在以上俩种情况,直接去处理事件序列
+            if (child == null || child.hasIdentityMatrix()) {
+                if (child == null) {
+					//ViewGroup 自己处理事件序列
+                    handled = super.dispatchTouchEvent(event);
+                } else {
+					// 进行矩阵变换
+                    final float offsetX = mScrollX - child.mLeft;
+                    final float offsetY = mScrollY - child.mTop;
+                    event.offsetLocation(offsetX, offsetY);
+					// 将变换后的事件交给子控件去处理
+                    handled = child.dispatchTouchEvent(event);
+
+                    event.offsetLocation(-offsetX, -offsetY);
+                }
+                return handled;
+            }
+            transformedEvent = MotionEvent.obtain(event);
+        } else {
+			// 当俩者不相等时
+			// transformedEvent 仅仅只是 原始事件的一个子集,使用split()将其分离
+            transformedEvent = event.split(newPointerIdBits);
+        }
+
+        // 执行必要的转换并转发
+        if (child == null) {
+			// 当child参数为null , 将事件发送给ViewGroup自身
+            handled = super.dispatchTouchEvent(transformedEvent);
+        } else {
+			// 对transformedEvent 进行坐标系变换,使之位于派发目标的坐标系之中
+			// 计算ViewGroup的滚动量 以及目标控件的位置
+            final float offsetX = mScrollX - child.mLeft;
+            final float offsetY = mScrollY - child.mTop;
+            transformedEvent.offsetLocation(offsetX, offsetY);
+
+			// 当目标控件中存在使用 setScaleX()等方法设置的矩阵变换时,将对事件坐标进行变换. 此次变换完成之后 , 事件坐标点便位于目标控件的坐标系
+            if (! child.hasIdentityMatrix()) {
+                transformedEvent.transform(child.getInverseMatrix());
+            }
+			// 将执行变换过的事件 发送给目标控件
+            handled = child.dispatchTouchEvent(transformedEvent);
+        }
+
+        // 销毁
+        transformedEvent.recycle();
+        return handled;
+    }
+
+此方法包含的内容
+
+- 处理`ACTION_CANCEL`
+
+- 处理`transformedEvent`
+
+	1. 根据目标所感兴趣的触控点列表生成`transformedEvent`,`transformedEvent`有可能是原始事件的copy,或者是仅包含部分触控点信息的一个子集
+
+	2. 对`transformedEvent`进行坐标系变换,使坐标位于目标控件坐标系中
+
+	3. 通过`dispatchTouchEvent()`将`transformedEvent`发送给目标控件
+
+
+- 修改事件的Action, 这部分逻辑体现在`MotionEvent.split()`方法中
+
+#### 6.2.1.1 View.hasIdentityMatrix()
+
+    final boolean hasIdentityMatrix() {
+        return mRenderNode.hasIdentityMatrix();
+    }
+
+- 判断是否存在单位矩阵,即没有通过`setScaleX()`等方法设置过矩阵变换
+
+### 6.2.2 为什么需要修改Action?
+
+在 3.1 示例 中,事件序列一定以`ACTION_DOWN`开始,经过一系列`ACTION_POINTER_DOWN`,`ACTION_POINTER_UP`,`ACTION_MOVE`之后以一条`ACTION_UP`结束
+
+**特殊情况1: **
+
+- 假设`ViewGroup`收到示例中的事件序列,它的一个子控件仅对触控点3 对应的子序列感兴趣,此时`ViewGroup`通过`MotionEvent.split()`方法将触控点3的信息分离出来并派发给子控件
+
+	对于`ViewGroup`来说,触控点3 是`ACTION_POINTER_UP`->`ACTION_MOVE`->`ACTION_POINTER_UP`,这是合理的 . 但是对于目标子控件来说 这不合理,对于目标子控件来说,它需要接收的事件序列必须是以`ACTION_DOWN`开始,`ACTION_UP`结束
+
+**特殊情况2:**
+
+- `ViewGroup`中的子控件仅对触控点2感兴趣,那么当触控点3的按下事件发生时,其动作为`ACTION_POINTER_UP`,子控件肯定是对这个动作不感兴趣. 但是对其所携带的触控点2的坐标等信息是感兴趣的. 
+
+	因此,当`ViewGroup`为子控件分离触控点2的信息到一个`transformedEvent`时,需要将事件的动作修改为`ACTION_MOVE`
+
+#### 6.2.2.1 如何修改事件动作?
+
+1. 首先,修改事件动作的情况仅发生在原始事件的动作包含`ACTION_POINTER_DOWN`/`ACTION_POINTER_UP`的情况
+
+2. 当传递给`MotionEvent.split()`的触控点ID列表中仅包含一个触控点,并且它是引发`ACTION_POINTER_DOWN/UP`的触控点时,分离出的事件动作将被设置为`ACTION_DOWN/UP`
+
+3. 当传递给`MotionEvent.split()`的触控点ID列表中不包含引发`ACTION_POINTER_DOWN/UP`的触控点时,则表示不关心这一按下或抬起动作,分离出的事件的动作将会被设置为`ACTION_MOVE`
+
+4. 当传递给`MotionEvent.split()`的触控点ID列表中包含多个触控点,并且其中之一是引发`ACTION_POINTER_DOWN/UP`的触控点时,分离出的事件动作将会被保持为`ACTION_POINTER_DOWN/UP`,但是其包含的触控点索引将会根据新事件内部的`mSamplePointerCoords`数组的状况重新计算
+
+## 6.3 移除派发目标
+
+	@Override
+	public boolean dispatchTouchEvent(MotionEvent ev) {
+	    .............
+	
+	    boolean handled = false;
+	    if (onFilterTouchEventForSecurity(ev)) {
+	
+	        ...............省略查找派发目标的代码 6.1小节......................
+	
+			...............省略派发事件的代码 6.2 小节...................
+	
+	        // Update list of touch targets for pointer up or cancel, if needed.
+	                   // Update list of touch targets for pointer up or cancel, if needed.
+	            if (canceled
+	                    || actionMasked == MotionEvent.ACTION_UP
+	                    || actionMasked == MotionEvent.ACTION_HOVER_MOVE) {
+					//当ViewGroup收到一个 ACTION_UP 或 ACTION_CANCEL 事件时,整个事件序列已经结束,因此删除掉所有TouchTarget
+	                resetTouchState();
+	            } else if (split && actionMasked == MotionEvent.ACTION_POINTER_UP) {
+					// 当事件 ACTION_POINTER_UP , 将其对应的触控点ID 从对应的TouchTarget中移除
+					// removePointersFromTouchTargets() 会在TouchTarget的最后一个触控点ID被移除的同时,将这个TouchTarget从mFirstTouchTarget 链表中删除并销毁
+	                final int actionIndex = ev.getActionIndex();
+	                final int idBitsToRemove = 1 << ev.getPointerId(actionIndex);
+	                removePointersFromTouchTargets(idBitsToRemove);
+	            }
+	    }
+	
+	    ................
+	    return handled;
+	}
+
+### 6.3.1 ViewGroup.removePointersFromTouchTargets()
+
+    private void removePointersFromTouchTargets(int pointerIdBits) {
+        TouchTarget predecessor = null;
+        TouchTarget target = mFirstTouchTarget;
+        while (target != null) {
+            final TouchTarget next = target.next;
+            if ((target.pointerIdBits & pointerIdBits) != 0) {
+                target.pointerIdBits &= ~pointerIdBits;
+                if (target.pointerIdBits == 0) {
+                    if (predecessor == null) {
+                        mFirstTouchTarget = next;
+                    } else {
+                        predecessor.next = next;
+                    }
+                    target.recycle();
+                    target = next;
+                    continue;
+                }
+            }
+            predecessor = target;
+            target = next;
+        }
+    }
+
+- 从链表中移除指定的经过处理的触控点id,同时会在`TouchTarget`中的最后一个触控点ID被移除时,将这个`TouchTarget`从`mFirstTouchTarget`链表中删除并销毁
+
+
+# 7. 触摸事件派发的总结
+
+触摸事件 因为 **多点触摸 和 事件序列拆分机制**的存在 而变得十分复杂,其本质就是**从根控件开始在其子控件中寻找目标子控件并发给目标子控件,然后再从目标子控件中继续刚才的寻找,直到事件得到处理,**
+
+多点触摸与事件序列拆分是围绕`TouchTarget`完成的,** `TouchTarget`是绑定触控点与目标控件的纽带**
+
+每当一个事件子序列到来,`ViewGroup`都会新建或选择一个现有的`TouchTarget`,并将子序列对应的触控点ID绑定在其上,从而生成`TouchTarget`感兴趣的触控点列表. 随后的事件到来时`ViewGroup`会从其所收到的`MotionEvent`中为每一个`TouchTarget`分离出包含它所感兴趣的触控点的新`MotionEvent`,然后派发给对应的子控件
+
+`TouchTarget`的数量就是 事件序列经过此`ViewGroup`之后被拆分成的子序列的个数
+
+
