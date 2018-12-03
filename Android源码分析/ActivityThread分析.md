@@ -865,7 +865,7 @@ IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什
     r.activity.performResume();
 	···省略代码···
 
-- 调用`Activity.performResume()`,该方法中会调用`onResume`,表示当前页面已经可见
+- 调用`Activity.performResume()`,该方法中会调用`onResume`,但是这里并不表示`Activity`已经可见
 
 - **注意**
 
