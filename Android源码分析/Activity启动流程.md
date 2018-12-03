@@ -22,35 +22,35 @@
 
 Android系统中有一个`zygote`进程专用于孵化Android框架层和应用层程序的进程。有一个`system_server`进程，该进程运行了很多提供Binder的service，例如：`ActivityManagerService,PackageManagerService,WindowManagerService`等，这些服务分别运行在不同的线程中
 
-`ActivityManagerService`就是负责管理Activity栈，应用程序，task等
+`ActivityManagerService`就是负责管理`Activity`栈，应用程序，task等
 
 **启动Activity这个工作，无论被启动的Activity是否处于同一进程，同一应用，都是由AMS管理的**
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fqzbxttc06j20ln0bq74f.jpg)
 
-1. 用户在Launcher程序里点击应用图标时，会通知ActivityManagerService启动应用的入口Activity
+1. 用户在Launcher程序里点击应用图标时，会通知`ActivityManagerService`启动应用的入口`Activity`
 
-2. ActivityManagerService发现这个应用还未启动，则会通知Zygote进程孵化出应用进程，然后在这个dalvik/ART应用进程里执行ActivityThread的main方法。
+2. `ActivityManagerService`发现这个应用还未启动，则会通知`Zygote`进程孵化出应用进程，然后在这个`dalvik/ART`应用进程里执行`ActivityThread`的`main`方法。
 
-3. 应用进程接下来通知ActivityManagerService应用进程已启动，ActivityManagerService保存应用进程的一个Binder代理对象，这样ActivityManagerService可以通过这个代理对象控制应用进程
+3. 应用进程接下来通知`ActivityManagerService`应用进程已启动，`ActivityManagerService`保存应用进程的一个`Binder`代理对象，这样`ActivityManagerService`可以通过这个代理对象控制应用进程
 
-5. 然后ActivityManagerService通知应用进程创建入口Activity的实例，并执行它的生命周期方法。
+5. 然后`ActivityManagerService`通知应用进程创建入口Activity的实例，并执行它的生命周期方法。
 
 ## 1.1 重要类介绍
 
 **ActivityManagerService管理Activity时，主要涉及以下几个类:**
 
-1. ActivityManagerService，它是管理activity的入口类，聚合了ProcessRecord对象和ActivityStack对象
+1. `ActivityManagerService`，它是管理activity的入口类，聚合了ProcessRecord对象和ActivityStack对象
 
-2. ProcessRecord，表示应用进程记录，每个应用进程都有对应的ProcessRecord对象
+2. `ProcessRecord`，表示应用进程记录，每个应用进程都有对应的ProcessRecord对象
 
-3. ActivityStack，该类主要管理回退栈
+3. `ActivityStack`，该类主要管理回退栈
 
-4. ActivityRecord，每次启动一个Actvity会有一个对应的ActivityRecord对象，表示Activity的一个记录.**可以查看[ActivityRecord分析]**
+4. `ActivityRecord`，每次启动一个Actvity会有一个对应的ActivityRecord对象，表示Activity的一个记录.**可以查看[ActivityRecord分析]**
 
-5. ActivityInfo，Activity的信息，比如启动模式，taskAffinity，flag信息(这些信息在AndroidManifest.xml里声明Activity时填写)
+5. `ActivityInfo`，Activity的信息，比如启动模式，taskAffinity，flag信息(这些信息在AndroidManifest.xml里声明Activity时填写)
 
-6. TaskRecord，Task记录信息，一个Task可能有多个ActivityRecord，但是一个ActivityRecord只能属于一个TaskRecord
+6. `TaskRecord`，Task记录信息，一个Task可能有多个ActivityRecord，但是一个ActivityRecord只能属于一个TaskRecord
 
 
 # 2. Activity启动流程简介
@@ -92,6 +92,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 	    }
 
 	    void startActivitySafely(Intent intent) {
+			// 注意这里 添加了new_task的 flag
 	        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 	        try {
 	            startActivity(intent);
@@ -107,7 +108,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 	- [Launcher源码](https://android.googlesource.com/platform/packages/apps/Launcher/+/master/src/com/android/launcher/Launcher.java)
 
-	- 点击Launcher应用的桌面图标之后，Launcher程序会调用`startActivity`启动应用,**俩种情况最终都会走到Instrumentation的execStartActivity来启动应用**,
+	- 点击`Launcher`应用的桌面图标之后，`Launcher`程序会调用`startActivity`启动应用,**俩种情况最终都会走到`Instrumentation`的`execStartActivity()`来启动应用**,
 
 2. 普通应用调用AMS
 
@@ -212,7 +213,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 	- **查看源码的时候请注意**:`Instrumentation` 中有俩个`execStartActivity()`方法。俩者所需的参数不同，提供给不同的地方去调用，但是正常的启动activity流程是走的 参数少的那个方法。俩个方法最终调用的AMS方法也不同，一个是调用 startActivityAsUser ，一个是调用startActivity(**实际上这个方法也会调用startActivityUser**)。
 
-	- ActivityManager.getService() 通过`SingleTon`这个类获取到了AMS的Binder代理，接着通过这个Binder代理调用了`startActivityAsUser()`方法，那么实际上会调用`IActivityManager.Stub.Proxy.startActivityAsUser`
+	- `ActivityManager.getService()` 通过`SingleTon`这个类获取到了AMS的Binder代理，接着通过这个Binder代理调用了`startActivityAsUser()`方法，那么实际上会调用`IActivityManager.Stub.Proxy.startActivityAsUser`
 
 	而Proxy这个类，会通过Binder通信 去调用`IActivityManager.Stub.startActivityAsUser`.完成一次进程间通信(**具体细节查看Binder分析.md**)
 
@@ -525,7 +526,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 - app指的是待启动Activity所在的应用程序进程，`app.thread.scheduleLaunchActivity()`指的是要在目标进程中启动Activity。
 
-- 当前代码运行在system_server进程，通过IApplicationThread来和应用程序进程进行进程间通讯
+- 当前代码运行在`system_server`进程，通过IApplicationThread来和应用程序进程进行进程间通讯
 
 ### 2.2.13   ApplicationThread.scheduleLaunchActivity
 
