@@ -160,3 +160,5 @@ web-socket学习
 - Retrofit
 
 - RxAndroid
+
+- Dagger 1/2
