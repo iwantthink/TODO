@@ -467,7 +467,6 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		      ...
 		           mStackSupervisor.startSpecificActivityLocked(next, true, true);
 		       }
-		        if (DEBUG_STACK) mStackSupervisor.validateTopActivitiesLocked();
 		       return true;
 		}
 
@@ -492,8 +491,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 		                realStartActivityLocked(r, app, andResume, checkConfig);//3
 		                return;
 		            } catch (RemoteException e) {
-		                Slog.w(TAG, "Exception when starting activity "
-		                        + r.intent.getComponent().flattenToShortString(), e);
+						........
 		            }
 		        }
 		        mService.startProcessLocked(r.processName, r.info.applicationInfo, true, 0,
@@ -522,9 +520,9 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 			      return true;
 			  }
 
- - 这里的app.thread指的是IApplicationThread(实际类型为Binder代理对象,IApplicationThread.Stub.Proxy),它的具体实现是ActivityThread的内部类ApplicationThread(继承了IApplication.Stub)
+ - 这里的`app.thread`指的是`IApplicationThread`(实际类型为`Binder`代理对象,`IApplicationThread.Stub.Proxy`),它的具体实现是`ActivityThread`的内部类`ApplicationThread`(继承了`IApplication.Stub`)
 
-- app指的是待启动Activity所在的应用程序进程，`app.thread.scheduleLaunchActivity()`指的是要在目标进程中启动Activity。
+- `app`指的是待启动Activity所在的应用程序进程，`app.thread.scheduleLaunchActivity()`指的是要在目标进程中启动Activity。
 
 - 当前代码运行在`system_server`进程，通过IApplicationThread来和应用程序进程进行进程间通讯
 
