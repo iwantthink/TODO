@@ -15,16 +15,16 @@
 
 # 1. 简介
 
-android应用程序作为控制类程序，跟Java程序类似，都有一个入口，Java程序的入口是main()函数，**而Adnroid程序的入口是ActivityThread 的main()方法**
+android应用程序作为控制类程序，跟Java程序类似，都有一个入口，Java程序的入口是main()函数，**而Android程序的入口是ActivityThread 的main()方法**
 
-ActivityThread主要的作用是 根据AMS(ActivityManagerService)的要求，通过IApplicationThread的接口来负责调度和执行activities,broadcasts和其他操作。
+`ActivityThread`主要的作用是 根据AMS(ActivityManagerService)的要求，通过`IApplicationThread`的接口来负责调度和执行activities,broadcasts和其他操作。
 
 在Android系统中，四大组件默认都是运行在主线程中
 
 # 2. ActivityThread main(String [] args)
 
     public static void main(String[] args) {
-        Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "ActivityThreadMain");
+
         // CloseGuard defaults to true and can be quite spammy.  We
         // disable it here, but selectively enable it later (via
         // StrictMode) on debug builds, but using DropBox, not logs.
@@ -45,12 +45,7 @@ ActivityThread主要的作用是 根据AMS(ActivityManagerService)的要求，�
         if (sMainThreadHandler == null) {
             sMainThreadHandler = thread.getHandler();
         }
-        if (false) {
-            Looper.myLooper().setMessageLogging(new
-                    LogPrinter(Log.DEBUG, "ActivityThread"));
-        }
-        // End of event ActivityThreadMain.
-        Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
+
 		//开启循环,无法退出 一旦退出就会抛出异常
         Looper.loop();
         throw new RuntimeException("Main thread loop unexpectedly exited");
@@ -58,7 +53,7 @@ ActivityThread主要的作用是 根据AMS(ActivityManagerService)的要求，�
 
 **这里可以看到俩点：**
 
-- 在Activity中可以直接去创建Handler 并使用 而不用调用`Looper.prepare()`和`Looper.loop()` 是因为在ActivityThread 的入口处 已经做了这个操作
+- 在`Activity`中可以直接去创建Handler 并使用 而不用调用`Looper.prepare()`和`Looper.loop()` 是因为在`ActivityThread `的入口处 已经做了这个操作
 
 - **主线程的Looper是不能在程序中调用退出的**，如果调用的话，就会抛出异常，**退出主线程的循环是框架层在调用退出应用程序的时候才调用的**
 
@@ -90,18 +85,18 @@ ActivityThread主要的作用是 根据AMS(ActivityManagerService)的要求，�
 	        //省略代码
 	    }
 
-ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRecord 是传入AMS的一个标志，里面携带了很多信息，代码中的有一个Activity对象，就是真正的Activity实例。通过它可以知道用户去往哪些页面
+`ActivityClientRecord`是`ActivityThread`的一个内部类，这个`ActivityClientRecord` 是传入AMS的一个标志，里面携带了很多信息，代码中的有一个`Activity`对象，就是真正的`Activity`实例。通过它可以知道用户去往哪些页面
 
 ### 2.1.2 ApplicationThread 
 
     private class ApplicationThread extends IApplicationThread.Stub {
-
+			................
 	}
 
 
-- ApplicationThread是一个Binder对象
+- `ApplicationThread`是一个`Binder`对象,其具备进程间通信的能力
 
-- ApplicationThread是提供给AMS的，用来控制Activity去执行对应方法
+- `ApplicationThread`是提供给AMS的，用来通知`Activity`去执行对应方法
 
 ### 2.1.3 H
 
@@ -113,15 +108,15 @@ ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRe
 		//省略若干代码
 
 		  public void handleMessage(Message msg) {
-            if (DEBUG_MESSAGES) Slog.v(TAG, ">>> handling: " + codeToString(msg.what));
             switch (msg.what) {
                 case LAUNCH_ACTIVITY: {
-                    Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "activityStart");
+
                     final ActivityClientRecord r = (ActivityClientRecord) msg.obj;
                     r.loadedApk = getLoadedApkNoCheck(
                             r.activityInfo.applicationInfo, r.compatInfo);
+
                     handleLaunchActivity(r, null, "LAUNCH_ACTIVITY");
-                    Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
+
                 } break;
 			//省略若干代码
 			}
@@ -180,7 +175,7 @@ ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRe
         //省略代码
     }
 
-- 通过ActivityManager.getService()获取到一个代理Binder对象(IBinder),然后通过IActivityManager.Stub 进行转换(获取Stub类或者Stub内部类Proxy)。
+- 通过`ActivityManager.getService()`获取到一个代理`Binder`对象(`IBinder`),然后通过`IActivityManager.Stub `进行转换(获取Stub类或者Stub内部类Proxy)。
 
 	**可以通过源代码看到，getService()方法 借助`Singleton`类 实现了单例的懒加载**
 
@@ -203,11 +198,15 @@ ActivityClientRecord是ActivityThread的一个内部类，这个ActivityClientRe
 
 ## 2.3 AMS.attachApplication(mAppThread)
 
-`mAppThread`是ApplicationThread类型，该类型继承自IApplicationThread.Stub类型(即一个Binder对象)
+- **`mAppThread`是`ApplicationThread`类型，该类型继承自`IApplicationThread.Stub`类型(即一个Binder对象)**
 
-IActivityManager是一个`IInterface`，代表`ActivityManagerService `具备什么能力(即有哪些接口可供调用)。
+	`mAppThread`是`ActivityThread`的成员变量,在对象初始化时被创建
 
-`attach()`方法中通过`ActivityManager.getService()`获取到了ASM的Binder代理对象，然后通过这个对象调用 ActivityManagerService的`attachApplication(mAppThread)`，mAppThread传递给ActivityManagerService 提供给AMS去调用四大组件的方法(实际上这个AMS接收到的mAppThread是一个ApplicationThreadProxy,即Binder的代理对象)
+- `IActivityManager`是一个`IInterface`，代表`ActivityManagerService `具备什么能力(即有哪些接口可供调用)。
+
+- `attach()`方法中通过`ActivityManager.getService()`获取到了ASM的Binder代理对象，然后通过这个对象调用 `ActivityManagerService`的`attachApplication(mAppThread)`，
+
+	`mAppThread`传递给`ActivityManagerService` 提供给AMS去调用四大组件的方法(实际上这个AMS接收到的`mAppThread`是一个ApplicationThreadProxy,即Binder的代理对象)
 
 
 
