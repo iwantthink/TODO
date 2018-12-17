@@ -223,4 +223,4 @@ Android 系统Framework框架里的`ActivityManagerService` 会调度Activity的
 		```省略大量代码``
 	}
 
-- **将`Activity`的`ContextImpl` 绑定到`ContextWrapper`**
+- **将`Activity`的`ContextImpl` 绑定到`Activity-ContextWrapper`**
