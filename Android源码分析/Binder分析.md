@@ -295,7 +295,7 @@ AIDL这种通信方式是有一种固定的模式：
 
 2. 如果是本地Binder对象，那么一定继承Binder实现IInterface
 
-3. 如果是代理Binder对象，那么久需要实现IInterface并持有IBinder引用
+3. 如果是代理Binder对象，那么就需要实现IInterface并持有IBinder引用
 
 **Proxy类和Stub类不一样。**
 
@@ -414,7 +414,7 @@ Binder通信中的四个角色：client,server,sm,driver。那么具体client如
 
 Binder机制并不是通过以上方式实现的，**通信是一个广泛的概念，只要一个进程能调用另外一个进程里某个对象的方法，那么具体要完成什么通信内容就很容易**
 
-![](http://7sbqce.com1.z0.glb.clouddn.com/2016binder-procedure.png)
+![图挂了](http://7sbqce.com1.z0.glb.clouddn.com/2016binder-procedure.png)
 
 1. Server进程向SM注册，告诉SM自己的名字，有什么能力。即Server告诉SM自己叫ASM，自己有个object对象，可以执行add操作。于是SM建立了一张表，然后保存了这些信息(简化了SM注册的流程，见下文)
 
