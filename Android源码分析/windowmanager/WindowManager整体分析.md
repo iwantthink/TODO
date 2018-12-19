@@ -22,7 +22,7 @@ Android中所有的视图都是通过`Window`来呈现的,不管是`Activity`,`D
 
 ## 2.2 WindowManager
 
-`WindowManager`是外接访问`Window`的入口,作为一个接口类,继承自接口`ViewManager`,是用来管理`Window`的(可以通过WM对`Window`进行添加和删除的操作).
+`WindowManager`是外界访问`Window`的入口,作为一个接口类,继承自接口`ViewManager`,是用来管理`Window`的(可以通过WM对`Window`进行添加和删除的操作).
 
 它的具体实现类是`WindowManagerImpl`
 
