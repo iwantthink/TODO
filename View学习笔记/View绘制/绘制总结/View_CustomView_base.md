@@ -1,21 +1,23 @@
-# View的绘制原理
----  
+# View的绘制原理基础
 
-# 1. ViewRoot 和DecorView
-- ViewRoot对应于ViewRootImpl , 是连接WindowManager 和DecorView的纽带，View绘制的三大流程都是通过ViewRoot来完成的。  
+# 1. ViewRootImpl 和DecorView
+- `ViewRootImpl`是连接`WindowManager` 和`DecorView`的纽带，View绘制的三大流程都是通过`ViewRootImpl`来完成的。  
 
-- 在ActivityThread中，当activity 对象被创建之后，会先将DecorView 添加到Window中，同时会创建ViewRootImpl对象，并将ViewRootImpl 对象和 DecorView建立关联。
+- 创建流程:
 
-- View的绘制流程从ViewRoot的**performTraversals**方法开始,然后会依次调用performMeasure,performLayout,performDraw 。  经过measure , layout , draw 三个过程 才能最终将一个view绘制出来 。  
-例如:ViewGroup(performMeasure->measure->onMeasure)->View(measure),在onMeasure中会对所有的子类进行遍历并调用子类的measure
+	`ViewRootImpl`,`DecorView`,`PhoneWindow`等创建过程参考[视图添加过程.md](),[视图创建过程.md]()
+
+- View的绘制流程从`ViewRootImpl`的**`performTraversals`**方法开始,然后会依次调用`performMeasure,performLayout,performDraw` 。  经过measure , layout , draw 三个过程 才能最终将一个view绘制出来 。
+  
+	例如:`ViewGroup`(performMeasure->measure->onMeasure)->View(measure),在onMeasure中会对所有的子类进行遍历并调用子类的measure
 
 - measure的过程结束后，可以获得测量宽高，getMeasureWidth,几乎所有情况下 测量宽高都等同于 最终宽高。  
 
-- performDraw的遍历过程是在draw方法中通过dispatchDraw来实现  
+- `performDraw()`的遍历过程是在draw方法中通过`dispatchDraw()`来实现  
 
-- Layout过程决定了View的四个顶点的坐标和实际的View的宽高，可以通过getWidth getHeight方法获取最终宽高
+- Layout过程决定了View的四个顶点的坐标和实际的View的宽高，可以通过`getWidth()`, `getHeight()`方法获取最终宽高
 
-- android.R.id.content 是DecorView的content 部分的id
+- `android.R.id.content` 是`DecorView`的content 部分的id
 
 
 
@@ -35,16 +37,24 @@
 MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量模式，低30位为SpecSize 代表该模式下的大小信息  
 
 - **获取size:** 
-`MeasureSpec.getSize(measureSpec)`
+
+		MeasureSpec.getSize(measureSpec)
 
 - **获取mode:**
-`MeasureSpec.getMode(measureSpec)`
+
+		MeasureSpec.getMode(measureSpec)
 
 - **生成specMode**
-`MeasureSpec.makeMeasureSpec(size,mode)`
+
+		MeasureSpec.makeMeasureSpec(size,mode)
   
 ## 2.2 SpecMode类型
-MeasureSpec.EXACTLY , MeasureSpec.AT_MOST ，MeasureSpec.UNSPECIFIED
+
+1. `MeasureSpec.EXACTLY `
+
+2. `MeasureSpec.AT_MOST`
+
+3. `MeasureSpec.UNSPECIFIED`
 
 ### 2.2.1 MeasureSpec.EXACTLY
 >The parent has determined an exact size for the child. The child is going to be given those bounds regardless of how big it wants to be.
@@ -70,10 +80,11 @@ MeasureSpec.UNSPECIFIED这种模式一般用作Android系统内部，或者ListV
 
 
 ## 2.3 MeasureSpec 和LayoutParams 的关系 
-LayoutParams 需要和父容器一起才能决定view的MeasureSpec。  
+**`LayoutParams` 需要和父容器一起才能决定`view`的`MeasureSpec`**
 
-- 对于顶级DecorView来说，其MeasureSpec由窗口的尺寸和自身LayoutParams 共同决定.   
-在ViewRootImpl 的measureHierarchy 中 有如下一段代码，展示了DecorView的MeasureSpec的创建过程
+- 对于顶级`DecorView`来说，其`MeasureSpec`由窗口的尺寸和自身`LayoutParams` 共同决定.   
+
+	在`ViewRootImpl` 的`measureHierarchy ()`中 有如下一段代码，展示了`DecorView`的`MeasureSpec`的创建过程
 
 		childWidthMeasureSpec = getRootMeasureSpec(desiredWindowWidth, lp.width);
     	childHeightMeasureSpec = getRootMeasureSpec(desiredWindowHeight, lp.height);
@@ -81,8 +92,8 @@ LayoutParams 需要和父容器一起才能决定view的MeasureSpec。
 
 	`getRootMeasureSpec()`的逻辑:
 
-		//windowSize 		窗口大小
-		//rootDImension 	窗口LayoutParams
+		//windowSize 		窗口大小 期待大小
+		//rootDImension 	窗口LayoutParams 大小
 		private static int getRootMeasureSpec(int windowSize, int rootDimension) {
 	        int measureSpec;
 	        switch (rootDimension) {
@@ -104,89 +115,94 @@ LayoutParams 需要和父容器一起才能决定view的MeasureSpec。
     }
 
 
-- 对于普通view来说，View的`measure`过程由`ViewGroup`传递而来，首先可以看下viewGroup的`measureChildWithMargins()`方法
+- 对于普通`View`来说，`View`的`measure`过程由`ViewGroup`传递而来，首先可以看下`ViewGroup`的`measureChildWithMargins()`方法
 
 	    protected void measureChildWithMargins(View child,
         int parentWidthMeasureSpec, int widthUsed,
         int parentHeightMeasureSpec, int heightUsed) {
-        final MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
-
-        final int childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec,
-                mPaddingLeft + mPaddingRight + lp.leftMargin + lp.rightMargin
-                        + widthUsed, lp.width);
-        final int childHeightMeasureSpec = getChildMeasureSpec(parentHeightMeasureSpec,
-                mPaddingTop + mPaddingBottom + lp.topMargin + lp.bottomMargin
-                        + heightUsed, lp.height);
-
-        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+	        final MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
+	
+	        final int childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec,
+	                mPaddingLeft + mPaddingRight + lp.leftMargin + lp.rightMargin
+	                        + widthUsed, lp.width);
+	        final int childHeightMeasureSpec = getChildMeasureSpec(parentHeightMeasureSpec,
+	                mPaddingTop + mPaddingBottom + lp.topMargin + lp.bottomMargin
+	                        + heightUsed, lp.height);
+	
+	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
     	}
 
-	该方法在调用子元素的measure之前，会先通过`getChildMeasureSpec()`方法来获得子元素的`MeasureSpec` 。
+	该方法在调用子元素的measure之前，会先通过`getChildMeasureSpec()`方法来获得子元素的`MeasureSpec`
 
 	    public static int getChildMeasureSpec(int spec, int padding, int childDimension) {
+			// 父类mode
 	        int specMode = MeasureSpec.getMode(spec);
+			// 父类size
 	        int specSize = MeasureSpec.getSize(spec);
-	
+			// 父类大小-padding 大小 , 不能小于0
 	        int size = Math.max(0, specSize - padding);
-	
+			// 子类大小
 	        int resultSize = 0;
+			// 子类模式
 	        int resultMode = 0;
 	
 	        switch (specMode) {
-	        // Parent has imposed an exact size on us
-	        case MeasureSpec.EXACTLY:
-	            if (childDimension >= 0) {
-	                resultSize = childDimension;
-	                resultMode = MeasureSpec.EXACTLY;
-	            } else if (childDimension == LayoutParams.MATCH_PARENT) {
-	                // Child wants to be our size. So be it.
-	                resultSize = size;
-	                resultMode = MeasureSpec.EXACTLY;
-	            } else if (childDimension == LayoutParams.WRAP_CONTENT) {
-	                // Child wants to determine its own size. It can't be
-	                // bigger than us.
-	                resultSize = size;
-	                resultMode = MeasureSpec.AT_MOST;
-	            }
-	            break;
-	
-	        // Parent has imposed a maximum size on us
-	        case MeasureSpec.AT_MOST:
-	            if (childDimension >= 0) {
-	                // Child wants a specific size... so be it
-	                resultSize = childDimension;
-	                resultMode = MeasureSpec.EXACTLY;
-	            } else if (childDimension == LayoutParams.MATCH_PARENT) {
-	                // Child wants to be our size, but our size is not fixed.
-	                // Constrain child to not be bigger than us.
-	                resultSize = size;
-	                resultMode = MeasureSpec.AT_MOST;
-	            } else if (childDimension == LayoutParams.WRAP_CONTENT) {
-	                // Child wants to determine its own size. It can't be
-	                // bigger than us.
-	                resultSize = size;
-	                resultMode = MeasureSpec.AT_MOST;
-	            }
-	            break;
-	
-	        // Parent asked to see how big we want to be
-	        case MeasureSpec.UNSPECIFIED:
-	            if (childDimension >= 0) {
-	                // Child wants a specific size... let him have it
-	                resultSize = childDimension;
-	                resultMode = MeasureSpec.EXACTLY;
-	            } else if (childDimension == LayoutParams.MATCH_PARENT) {
-	                // Child wants to be our size... find out how big it should
-	                // be
-	                resultSize = View.sUseZeroUnspecifiedMeasureSpec ? 0 : size;
-	                resultMode = MeasureSpec.UNSPECIFIED;
-	            } else if (childDimension == LayoutParams.WRAP_CONTENT) {
-	                // Child wants to determine its own size.... find out how
-	                // big it should be
-	                resultSize = View.sUseZeroUnspecifiedMeasureSpec ? 0 : size;
-	                resultMode = MeasureSpec.UNSPECIFIED;
-	            }
-	            break;
+		        // Parent has imposed an exact size on us
+		        case MeasureSpec.EXACTLY:
+					// 结合子类的LayoutParams进行判断
+		            if (childDimension >= 0) {
+						// 子类有确切的大小
+		                resultSize = childDimension;
+		                resultMode = MeasureSpec.EXACTLY;
+		            } else if (childDimension == LayoutParams.MATCH_PARENT) {
+		                // Child wants to be our size. So be it.
+		                resultSize = size;
+		                resultMode = MeasureSpec.EXACTLY;
+		            } else if (childDimension == LayoutParams.WRAP_CONTENT) {
+		                // Child wants to determine its own size. It can't be
+		                // bigger than us.
+		                resultSize = size;
+		                resultMode = MeasureSpec.AT_MOST;
+		            }
+		            break;
+		
+		        // Parent has imposed a maximum size on us
+		        case MeasureSpec.AT_MOST:
+		            if (childDimension >= 0) {
+		                // Child wants a specific size... so be it
+		                resultSize = childDimension;
+		                resultMode = MeasureSpec.EXACTLY;
+		            } else if (childDimension == LayoutParams.MATCH_PARENT) {
+		                // Child wants to be our size, but our size is not fixed.
+		                // Constrain child to not be bigger than us.
+		                resultSize = size;
+		                resultMode = MeasureSpec.AT_MOST;
+		            } else if (childDimension == LayoutParams.WRAP_CONTENT) {
+		                // Child wants to determine its own size. It can't be
+		                // bigger than us.
+		                resultSize = size;
+		                resultMode = MeasureSpec.AT_MOST;
+		            }
+		            break;
+		
+		        // Parent asked to see how big we want to be
+		        case MeasureSpec.UNSPECIFIED:
+		            if (childDimension >= 0) {
+		                // Child wants a specific size... let him have it
+		                resultSize = childDimension;
+		                resultMode = MeasureSpec.EXACTLY;
+		            } else if (childDimension == LayoutParams.MATCH_PARENT) {
+		                // Child wants to be our size... find out how big it should
+		                // be
+		                resultSize = View.sUseZeroUnspecifiedMeasureSpec ? 0 : size;
+		                resultMode = MeasureSpec.UNSPECIFIED;
+		            } else if (childDimension == LayoutParams.WRAP_CONTENT) {
+		                // Child wants to determine its own size.... find out how
+		                // big it should be
+		                resultSize = View.sUseZeroUnspecifiedMeasureSpec ? 0 : size;
+		                resultMode = MeasureSpec.UNSPECIFIED;
+		            }
+		            break;
 	        }
 	        //noinspection ResourceType
 	        return MeasureSpec.makeMeasureSpec(resultSize, resultMode);
@@ -195,10 +211,13 @@ LayoutParams 需要和父容器一起才能决定view的MeasureSpec。
 
 	**简单的总结下：  **
 		
-		1. 当View采用固定宽高的时候，View的MeasureSpec都是精确模式切大小遵循LayoutParams的大小。     
-		2. 当View的宽高是match\_parent 如果父容器的模式是精准模式，那么view也是精准模式并且其大小是父容器的剩余空间,如果父容器的模式是最大模式，那么View也是最大模式，并且其大小不会超过父容器的剩余空间   
-		3. 当View的宽高是wrap\_content时，不管父容器是精准还是最大化，View的模式总是最大化，并且大小不可以超过父容器的剩余空间  
-		4. **一般情况下不考虑UNSPECIFIED模式。。 这个模式主要是系统内部多次measure时用到**
+		1. 当View采用固定宽高的时候，View的`MeasureSpec`都是精确模式切大小遵循`LayoutParams`的大小。     
+
+		2. 当View的宽高是`match_parent` 如果父容器的模式是精准模式，那么view也是精准模式并且其大小是父容器的剩余空间,如果父容器的模式是最大模式，那么View也是最大模式，并且其大小不会超过父容器的剩余空间   
+
+		3. 当View的宽高是`wrap_content`时，不管父容器是精准还是最大化，View的模式总是最大化，并且大小不可以超过父容器的剩余空间  
+
+		4. **一般情况下不考虑`UNSPECIFIED`模式。。 这个模式主要是系统内部多次measure时用到**
 		 
 
 # 3. View的工作流程
@@ -207,7 +226,7 @@ LayoutParams 需要和父容器一起才能决定view的MeasureSpec。
 
 1. 从`ViewRootImpl.performTraversals()`开始,然后执行`ViewRootImpl.performMeasure()`,接着在其代码中调用`mView.measure()`(已知该mView是DecorView)
 
-2. `DecorView`是`FrameLayout`类型,其没有也不能重写`View.measure()`方法
+2. `DecorView`是`FrameLayout`类型,其没有也不能重写`measure()`方法,`measure()`存在于`View`中
 
 3. 在`View.measure()`方法中,调用了`onMeasure()`方法,该方法在`DecorView`中被重写,`DecorView`实现了自己的测量逻辑,并创建了代表自身的`MeasureSpec`
 
@@ -223,7 +242,7 @@ LayoutParams 需要和父容器一起才能决定view的MeasureSpec。
 
 	`ViewGroup`无法重写`View.measure()`方法,所以其实现还是在`View`中
 
-	遍历子类的逻辑需要继承`ViewGroup`类型的控件自己来实现,具体的地方就是`ViewGroup`类型控件的`onMeasure()`方法中
+	**遍历子类的逻辑需要继承`ViewGroup`类型的控件自己来实现,具体的操作就是重写`ViewGroup`类型控件的`onMeasure()`方法中,然后在`onMeasure()`方法中遍历子类,获取其`MeasureSpec`并调用其`measure()`方法**
 
 
 ### 3.1.1 View的measure 过程  
@@ -283,7 +302,7 @@ LayoutParams 需要和父容器一起才能决定view的MeasureSpec。
 - 参数:
 	1. `measureSpec`可以拆分成俩个值,`specMode`代表父类控件对子类控件的要求,`specSize`代表父类提供给子类的最大值
 
-	2. `size`代表控件自身需要的最小值
+	2. **`size`代表控件自身需要的最小值**
 
 
 - 从中可以看出默认情况下`AT_MOST`和`EXACTLY` 是同一种处理方式
@@ -299,11 +318,11 @@ LayoutParams 需要和父容器一起才能决定view的MeasureSpec。
 
 ### 3.1.2 ViewGroup的measure过程  
 
-ViewGroup没有重写`onMeasure()`方法,是一个抽象类。
+`ViewGroup`没有重写`onMeasure()`方法,是一个抽象类。
   		  
-ViewGroup没有具体的定义测量的过程，其测量过程需要各个子类去具体实现  
+`ViewGroup`没有具体的定义测量的过程，其测量过程需要各个子类去具体实现  
 
-ViewGroup提供了一个`measureChildren()`的方法，在ViewGroup进行measure时，会对每一个子元素进行measure
+`ViewGroup`提供了一个`measureChildren()`的方法，在`ViewGroup`进行`measure`时，会对每一个子元素进行`measure`
 
 	protected void measureChildren(int widthMeasureSpec, int heightMeasureSpec) {
 		final int size = mChildrenCount;
@@ -316,9 +335,9 @@ ViewGroup提供了一个`measureChildren()`的方法，在ViewGroup进行measure
 	        }
     	}
 
-- measureChild主要就是通过`lp.width`(具体数值，`match_parent`,`wrap_content`)和父容器生成的`measureSpec`来生成 子类的measureSpec,并传给子类measure使用
+- `measureChild()`主要就是通过`lp.width`(具体数值，`match_parent`,`wrap_content`)和父容器生成的`measureSpec`来生成 子类的`MeasureSpec`,并传给子类`measure()`方法当做参数使用
 
-   		protected void measureChild(View child, int parentWidthMeasureSpec,
+		protected void measureChild(View child, int parentWidthMeasureSpec,
             int parentHeightMeasureSpec) {
 	        final LayoutParams lp = child.getLayoutParams();
 	
@@ -328,32 +347,34 @@ ViewGroup提供了一个`measureChildren()`的方法，在ViewGroup进行measure
 	                mPaddingTop + mPaddingBottom, lp.height);
 	
 	        child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
-   		}
+		}
 
+### 3.1.3 宽高信息注意事项
 
-Activity的生命周期和View的生命周期是不同步的，因此如果你在activity的生命周期中去获取view的宽高信息，很有可能获得是0！  
+**Activity的生命周期和View的生命周期是不同步的，因此如果你在activity的生命周期中去获取view的宽高信息，很有可能获得是0！ ** 
+
 **解决办法如下：**  
 
 
-1. Activity / View  #onWindowFocusChanged  
+1. `Activity / View  #onWindowFocusChanged  `
 
 	但是注意这个方法可能会被调用多次，在焦点频繁的获得失去的时候.  
 
-2. view.post(runnable)  
+2. `View.post(runnable)  `
 
 	在runnable中获取宽高信息，然后post到消息队列的尾部，等待looper调用此runnable时，View也已经初始化好了  
 
-3. ViewTreeObserver  
+3. `ViewTreeObserver  `
 
 	View树的状态改变，onGlobalLayout会被多次调用
 
-4. 手动调用view.measure(measureSpecWidth,measureSpecHeight)  
+4. 手动调用`view.measure(measureSpecWidth,measureSpecHeight)`  
 	
 
 
 ### 3.2 layout过程
 
-layout作用是Viewgroup用来确定自身的位置，当Viewgroup的位置被确定后，它在`onLayout()`中会遍历所有的子元素并调用其layout方法，在layout方法中又会调用onLayout方法。  
+`layout`作用是`Viewgroup`用来确定自身的位置，当`Viewgroup`的位置被确定后，它在`onLayout()`中会遍历所有的子元素并调用其`layout`方法，在`layout`方法中又会调用`onLayout`方法。  
 layout方法会确定view本身位置，onLayout方法会确定所有子元素的位置
 
 View的`layout()`方法   
