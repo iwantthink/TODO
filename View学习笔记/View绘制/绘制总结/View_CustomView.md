@@ -1,10 +1,14 @@
 # 自定义View
 ---
 # 1.自定义view的分类
-## 1.1 继承View重写onDraw方法
-## 1.2 继承ViewGroup派生特殊的Layout
-## 1.3 继承特定的View(比如TextView)
-## 1.4 继承特定的ViewGroup(比如LinearLayout)
+
+1. 继承View重写onDraw方法
+
+2. 继承ViewGroup派生特殊的Layout
+
+3. 继承特定的View(比如TextView)
+
+4. 继承特定的ViewGroup(比如LinearLayout)
 
 # 2.自定义Vie注意事项
 
