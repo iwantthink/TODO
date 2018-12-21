@@ -115,7 +115,7 @@ MeasureSpec.UNSPECIFIED这种模式一般用作Android系统内部，或者ListV
     }
 
 
-- 对于普通`View`来说，`View`的`measure`过程由`ViewGroup`传递而来，首先可以看下`ViewGroup`的`measureChildWithMargins()`方法
+- 对于普通`View`来说，`View`的`measure`过程由`ViewGroup`传递而来，首先可以看下`ViewGroup`的`measureChildWithMargins()`方法,了解非rootView 的`MeasureSpec`是如何进行创建
 
 	    protected void measureChildWithMargins(View child,
         int parentWidthMeasureSpec, int widthUsed,
@@ -140,6 +140,7 @@ MeasureSpec.UNSPECIFIED这种模式一般用作Android系统内部，或者ListV
 			// 父类size
 	        int specSize = MeasureSpec.getSize(spec);
 			// 父类大小-padding 大小 , 不能小于0
+			// 即减去paading之后的大小
 	        int size = Math.max(0, specSize - padding);
 			// 子类大小
 	        int resultSize = 0;
@@ -211,9 +212,11 @@ MeasureSpec.UNSPECIFIED这种模式一般用作Android系统内部，或者ListV
 
 	**简单的总结下：  **
 		
-		1. 当View采用固定宽高的时候，View的`MeasureSpec`都是精确模式切大小遵循`LayoutParams`的大小。     
+		1. 当子`View`决定采用固定宽高的时候，子`View`的`MeasureSpec`都是精确模式,并且大小遵循`LayoutParams`的大小。     
 
-		2. 当View的宽高是`match_parent` 如果父容器的模式是精准模式，那么view也是精准模式并且其大小是父容器的剩余空间,如果父容器的模式是最大模式，那么View也是最大模式，并且其大小不会超过父容器的剩余空间   
+		2. 当子`View`的宽高是`match_parent` ,则要根据父容器的`MeasureSpec`来具体区分
+			1. 如果父容器的模式是精准模式，那么子`View`也是精准模式,并且其大小是父容器的剩余空间
+			2. 如果父容器的模式是最大模式，那么子`View`也是最大模式，并且其大小不会超过父容器的剩余空间   
 
 		3. 当View的宽高是`wrap_content`时，不管父容器是精准还是最大化，View的模式总是最大化，并且大小不可以超过父容器的剩余空间  
 
