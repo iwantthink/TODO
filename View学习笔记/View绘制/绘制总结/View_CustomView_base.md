@@ -1,4 +1,5 @@
 # View的绘制原理基础
+[Android开发艺术探索]()
 
 # 1. ViewRootImpl 和DecorView
 - `ViewRootImpl`是连接`WindowManager` 和`DecorView`的纽带，View绘制的三大流程都是通过`ViewRootImpl`来完成的。  
@@ -76,11 +77,11 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 
 控件在进行测量时,父容器不对子View做限制,可以无视`SPEC_SIZE`的值.控件可以是它所期望的任何值
  
-MeasureSpec.UNSPECIFIED这种模式一般用作Android系统内部，或者ListView和ScrollView等滑动控件
+`MeasureSpec.UNSPECIFIED`这种模式一般用作Android系统内部，或者ListView和ScrollView等滑动控件
 
 
 ## 2.3 MeasureSpec 和LayoutParams 的关系 
-**`LayoutParams` 需要和父容器一起才能决定`view`的`MeasureSpec`**
+**`LayoutParams` 需要和父容器一起才能决定`View`的`MeasureSpec`**
 
 - 对于顶级`DecorView`来说，其`MeasureSpec`由窗口的尺寸和自身`LayoutParams` 共同决定.   
 
