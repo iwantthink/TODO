@@ -3,11 +3,11 @@
 
 [Binder学习指南-weishu](http://weishu.me/2016/01/12/binder-index-for-newer/)
 
-[Binder 设计与实现](https://blog.csdn.net/universus/article/details/6211589)
-
 [Binder系列-开篇-GitYUan](http://gityuan.com/2015/10/31/binder-prepare/)
 
 [Android跨进程通信：图文详解 Binder机制 原理](https://blog.csdn.net/carson_ho/article/details/73560642)
+
+[Binder 设计与实现-精华-必看!!!!!!!!!!!!!!!!!!](https://blog.csdn.net/universus/article/details/6211589)
 
 **学习Binder路线：**
 
@@ -15,7 +15,7 @@
 2. 看完本文
 3. 看Android文档，Parcel, IBinder, Binder等涉及到跨进程通信的类
 4. 不依赖AIDL工具，手写远程Service完成跨进程通信
-5. 看《Binder设计与实现》
+5. 看[《Binder设计与实现》](https://blog.csdn.net/universus/article/details/6211589)
 6. 看老罗的博客或者书（书结构更清晰）
 7. 再看《Binder设计与实现》
 8. 学习Linux系统相关知识；自己看源码。
