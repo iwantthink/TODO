@@ -6,7 +6,9 @@
 
 控件树中的输入事件派发是由`ViewRootImpl`为起点,沿着控件树逐层传递给目标控件,最终再回到`ViewRootImpl`的一个环形过程
 
-事件派发的过程发生在创建`ViewRootImpl`的主线程中,但却独立于`ViewRootImpl.performTraversals()`之外,即输入事件的派发并不依赖于`ViewRootImpl`的`心跳`作为动力. **它的动力来源于`InputEventReceiver`的`Looper`,当一个输入事件被派发给`ViewRootImpl`所在的窗口时,`Looper`会被唤醒并触发`InputEventReceiver.onInputEvent()`回调,控件树的输入事件派发起始于这一回调.** 
+事件派发的过程发生在创建`ViewRootImpl`的主线程中,但却独立于`ViewRootImpl.performTraversals()`之外,即输入事件的派发并不依赖于`ViewRootImpl`的`心跳`作为动力.
+
+-  **它的动力来源于`InputEventReceiver`的`Looper`,当一个输入事件被派发给`ViewRootImpl`所在的窗口时,`Looper`会被唤醒并触发`InputEventReceiver.onInputEvent()`回调,控件树的输入事件派发起始于这一回调.** 
 
 
 # 2. 触摸模式和焦点
@@ -16,7 +18,10 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 可以获取焦点的控件分为俩类:
 
 1. 任何情况下都可以获取焦点的控件 ,如文本输入框
+
 2. 仅在键盘操作时可以获取焦点的控件,如菜单项,按钮等
+
+## 2.1 触摸模式介绍
 
 **触摸模式(TouchMode)**是为了管理俩者的差异而引入的概念,Android通过进入或退出触摸模式实现二者无缝切换 . 
 
