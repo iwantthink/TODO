@@ -47,6 +47,44 @@ Android系统提供了`getevent`和`sendevent`俩个工具供开发者从设备�
 
 - 注意将参数转成十进制使用
 
+## 2.3 模拟按键
+
+send event无法使用，可以用`adb shell input keyevent  xxx`代替
+
+其中xxx 代表Key code，参考：`/frameworks/base/core/java/android/view/KeyEvent.java`
+
+下面是`input keyevent`几个比较常用的用法：
+
+	input keyevent 3    // Home
+	
+	input keyevent 4    // Back
+	
+	input keyevent 19  //Up
+	
+	input keyevent 20  //Down
+	
+	input keyevent 21  //Left
+	
+	input keyevent 22  //Right
+	
+	input keyevent 23  //Select/Ok
+	
+	input keyevent 24  //Volume+
+	
+	input keyevent 25  // Volume-
+	
+	input keyevent 82  // Menu 菜单
+	
+	input keyevent 7 // 数字0
+	
+	input keyevent 8  // 数字1
+	
+	input keyevent 26   // Power key
+	
+	input keyevent 27   // Camera
+
+
+
 
 # 3. 输入系统简介
 
