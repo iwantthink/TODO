@@ -73,8 +73,9 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 
 - 当调用的控件为ViewGroup时,则会根据一定的焦点选择策略选择一个子控件或者ViewGroup本身作为焦点持有者
 
+### 3.1.1 初始焦点获取
 
-**当控件树被添加到`ViewRootImpl`之后,也会调用`ViewRootImpl.requestFocus()`设置初始的焦点**
+**当控件树被添加到`ViewRootImpl`之后,会调用`ViewRootImpl.requestFocus()`设置初始的焦点**
 
 ## 3.2 View的requestFocus()
 
@@ -82,7 +83,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
         return requestFocus(View.FOCUS_DOWN);
     }
 
-- `View.FOCUS_DOWN`表示焦点的寻找方向. 当本控件是一个`ViewGroup`时将会从自身的`View[] mChildren`成员变量中按照顺序去查找,由于当前分析的是控件为`View`的情况,所以该参数无效
+- `View.FOCUS_DOWN`表示焦点的寻找方向. 当**本控件是一个`ViewGroup`时将会从自身的`View[] mChildren`成员变量中按照顺序去查找**,由于当前分析的是控件为`View`的情况,所以该参数无效
 
 
     public final boolean requestFocus(int direction) {
@@ -96,7 +97,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
         return requestFocusNoSearch(direction, previouslyFocusedRect);
     }
 
-- 这个俩个参数的重载方法便是`View`和`ViewGroup`对焦点控件查找的分界点
+- ** 这个俩个参数的重载方法便是`View`和`ViewGroup`对焦点控件查找的分界点**
 
 	在`View`类型的控件中,直接调用了`View.requestFocusNoSearch()`,代表的含义就是无需查找,直接使本控件获取焦点
 
@@ -186,7 +187,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
         }
     }
 
-- `PFLAG_FOCUSED`是一个控件是否拥有焦点的最直接体现,但这一标记仅体现了焦点在个体级别上的特性,而`mParent.requestChildFocus()`则体现了焦点在控件树级别的特性
+- ** `PFLAG_FOCUSED`是一个控件是否拥有焦点的最直接体现**,但这一标记仅体现了焦点在个体级别上的特性,而`mParent.requestChildFocus()`则体现了焦点在控件树级别的特性
 
 ### 3.2.2 控件树中的焦点体系
 
@@ -208,7 +209,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
         // 如果上一个焦点控件就是这个ViewGroup,则通过`View.unFocus()`将`PFLAG_FOCUSED`标记移除,以释放焦点
         super.unFocus(focused);
 
-		// mFocused代表拥有焦点控件的父控件
+		// mFocused代表目前拥有焦点控件的父控件(child代表将要拥有焦点的控件,俩者肯定在不同时才需要进行焦点获取)
 		// child 在View调用requestChildFocus()时 为 View本身
 		//  	 在ViewGroup调用requestChildFocus()时为 ViewGroup本身
 		// 第一次调用时 mFocused 为空,肯定不等于View,那么mFocused直接被赋值为View本身
@@ -231,7 +232,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
         }
     }
 
-- `ViewGroup.requestChildFocus()`方法包含了新的焦点体系的建立过程,以及旧的焦点体系的销毁过程
+- **`ViewGroup.requestChildFocus()`方法包含了新的焦点体系的建立过程,以及旧的焦点体系的销毁过程**
 
 	新的焦点体系建立通过`ViewGroup.requestChildFocus()`方法的回溯过程中进行`mFocused=child`完成,这实际上是建立了一个单向链表,通过`mFocused`可以从根控件开始沿着这一单向链表找到实际拥有焦点的控件
 
@@ -288,7 +289,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 5. `ViewGroup2-2`销毁了旧的焦点体系之后,回到`ViewGroup2`将`mFocused`置为`View2-1`
 
 
-- `View`类有俩个查询控件焦点状态的方法,
+- **`View`类有俩个查询控件焦点状态的方法**:
 
 	1. `isFocused()`:是否拥有`PFLAG_FOCUSED`,控件直接拥有焦点
 
@@ -297,7 +298,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 
 ## 3.3 ViewGroup的requestFocus()
 
-已知`ViewGroup`会重写`requestFocus(int,Rect)`,拥有其自己的获取焦点的逻辑
+已知`ViewGroup`会重写`View.requestFocus(int,Rect)`,拥有其自己的获取焦点的逻辑
 
     public boolean requestFocus(int direction, Rect previouslyFocusedRect) {
 	
@@ -632,8 +633,8 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
     private void finishInputEvent(QueuedInputEvent q) {
 		// 回收输入事件,并向InputDispatcher发送反馈
         if (q.mReceiver != null) {
-			// 如果mReceiver 不为空,表示这是一个来自InputDispatcher的事件,需要向InputDispatcher发送反馈
-			// 事件实例的回收由InputDispatcher完成
+			// 如果mReceiver 不为空,表示这是一个来自InputEventReceiver 的事件,需要向InputEventReceiver 发送反馈
+			// 事件实例的回收由InputEventReceiver 完成
             boolean handled = (q.mFlags & QueuedInputEvent.FLAG_FINISHED_HANDLED) != 0;
             q.mReceiver.finishInputEvent(q.mEvent, handled);
         } else {
@@ -645,6 +646,22 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 		// 被回收的实例会组成一个 mQueuedInputEventPool 为头部的单向链表
 		// 方便下次obtainQueuedInputEvent()时进行复用
         recycleQueuedInputEvent(q);
+    }
+
+
+### 4.3.1 QueuedInputEvent.recycleQueuedInputEvent()
+
+**`QueuedInputEvent`类是`ViewRootImpl`类的内部类**
+
+    private void recycleQueuedInputEvent(QueuedInputEvent q) {
+        q.mEvent = null;
+        q.mReceiver = null;
+
+        if (mQueuedInputEventPoolSize < MAX_QUEUED_INPUT_EVENT_POOL_SIZE) {
+            mQueuedInputEventPoolSize += 1;
+            q.mNext = mQueuedInputEventPool;
+            mQueuedInputEventPool = q;
+        }
     }
 
 # 5. 事件的派发分析
