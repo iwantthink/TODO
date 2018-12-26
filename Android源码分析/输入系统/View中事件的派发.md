@@ -31,7 +31,7 @@
 
 	其低8位描述了实际的动作,如`ACTION_DOWN,ACTION_UP`等,其9~16位描述了引发此事件的触控点从0开始的索引号
 
-	因此在实际使用过程中,需要将这俩个信息进行分离.
+	**因此在实际使用过程中,需要将这俩个信息进行分离**.
 
 	1. 通过`MotionEvent.getActionMasked()`获取实际的动作
 
@@ -102,8 +102,7 @@
 
 如3.1节中的例子,触控点1的信息组成一条单点序列,触控点2和3 组成一条双点序列. 这俩条序列被称为原始序列的子序列,这一行为就被称为事件序列的拆分(Split)
 
-`MotionEvent`的拆分可以通过`MotionEvent.split()`方法完成,可以从当前`MotionEvent`中产生一个新的仅包含特定触控点信息的`MotionEvent`,而这个新的`MotionEvent`则称为子序
-列的一部分
+`MotionEvent`的拆分可以通过`MotionEvent.split()`方法完成,可以从当前`MotionEvent`中产生一个新的仅包含特定触控点信息的`MotionEvent`,而这个新的`MotionEvent`则称为子序列的一部分
 
 - `MotionEvent.split()`是一个被`@hide`修饰的方法
 
@@ -136,9 +135,11 @@
 
 - 在该方法中会判断当前事件是否是触摸事件,然后将触摸事件交给`dispatchTouchEvent()`进行处理
 
-- **`dispatchTouchEvent()`有`View`和`ViewGroup`俩种实现,`ViewGroup`的实现负责将触摸事件沿着控件树向子控件进行派发,而`View`的实现则主要用于事件接收与处理工作**
+- **`dispatchTouchEvent()`有`View`和`ViewGroup`俩种实现**
 
+	1. `ViewGroup`的实现负责将触摸事件沿着控件树向子控件进行派发
 
+	2. `View`的实现则主要用于事件接收与处理工作
 
 # 5. View对触摸事件的派发
 
