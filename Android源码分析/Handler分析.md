@@ -4,15 +4,17 @@
 
 [Android异步消息处理机制完全解析，带你从源码的角度彻底理解](https://blog.csdn.net/guolin_blog/article/details/9991569)
 
-
 [Handler Looper Message 官方源码地址](https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/os/)
+
+[Binder IPC的权限控制](http://gityuan.com/2016/03/05/binder-clearCallingIdentity/)
+
 # 1. 简介
 
-Handler,Looper,Message 组成了Android的异步消息处理机制，异步消息处理线程启动后会进入一个无限的循环体，每循环一次，就会从其内部的消息队列中取出一个消息，然后回调相应的消息处理函数，执行完一个消息后继续循环，**若消息队列为空，线程则会阻塞并等待**。
+`Handler,Looper,Message` 组成了Android的**异步消息处理机制**，异步消息处理线程启动后会进入一个无限的循环体，每循环一次，就会从其内部的消息队列中取出一个消息，然后回调相应的消息处理函数，执行完一个消息后继续循环，**若消息队列为空，线程则会阻塞并等待**。
 
-对应到Handler,Looper,Message.Looper负责创建一个MessageQueue，然后会开始一个永真循环，不断的从MessageQueue中读取消息，如果队列为空则阻塞并等待，Handler负责添加Message到Looper的MessageQueue中
+对应到`Handler,Looper`,`Message.Looper`负责创建一个`MessageQueue`，然后会开始一个永真循环，不断的从`MessageQueue`中读取消息，如果队列为空则阻塞并等待，Handler负责添加Message到Looper的`MessageQueue`中
 
-Handler,Looper,Message 都是在android.jar包下的。
+`Handler,Looper,Message` 都是在android.jar包下的。
 
 # 2. Looper
 
@@ -29,9 +31,11 @@ Handler,Looper,Message 都是在android.jar包下的。
     }
 
     private static void prepare(boolean quitAllowed) {
+		// 不允许重复创建
         if (sThreadLocal.get() != null) {
             throw new RuntimeException("Only one Looper may be created per thread");
         }
+		// 创建Looper
         sThreadLocal.set(new Looper(quitAllowed));
     }
 
@@ -42,11 +46,14 @@ Handler,Looper,Message 都是在android.jar包下的。
      * to call this function yourself.  See also: {@link #prepare()}
      */
     public static void prepareMainLooper() {
+		// 创建Looper
         prepare(false);
         synchronized (Looper.class) {
+			// 判断是否重复创建
             if (sMainLooper != null) {
                 throw new IllegalStateException("The main Looper has already been prepared.");
             }
+			// 给静态变量赋值
             sMainLooper = myLooper();
         }
     }
@@ -56,8 +63,11 @@ Handler,Looper,Message 都是在android.jar包下的。
      * null if the calling thread is not associated with a Looper.
      */
     public static @Nullable Looper myLooper() {
+		// 从ThreadLocal中获取
         return sThreadLocal.get();
     }
+
+- 在调用了`prepare()`之后,需要调用`loop()`方法开启循环
 
 - `prepare()`方法会为当前Thread创建一个Looper，然后保存到ThreadLocal中。该方法不能重复调用，否则会抛出异常
 
@@ -72,7 +82,7 @@ Handler,Looper,Message 都是在android.jar包下的。
 
 在Looper的构造函数中做了俩件事情：
 
-1. 创建了MessageQueue
+1. 创建`MessageQueue`
 
 	**在最新版本的Android 26 中，创建MessageQueue时需要传入一个布尔值，代表这个MessageQueue是否可以退出。主线程的Looper 是无法退出的，其他是可退出的**
 
@@ -87,14 +97,18 @@ Handler,Looper,Message 都是在android.jar包下的。
      * {@link #quit()} to end the loop.
      */
     public static void loop() {
+		// 获取当前线程对应的Looper
         final Looper me = myLooper();
         if (me == null) {
             throw new RuntimeException("No Looper; Looper.prepare() wasn't called on this thread.");
         }
+		// 从Looer中获取MessageQueue
         final MessageQueue queue = me.mQueue;
 
         // Make sure the identity of this thread is that of the local process,
         // and keep track of what that identity token actually is.
+		// 作用是清空远程调用端的uid和pid
+		// 用当前本地进程的uid和pid代替
         Binder.clearCallingIdentity();
         final long ident = Binder.clearCallingIdentity();
 
