@@ -358,11 +358,15 @@ onClick会发生的前提是当前的view可点击，并且它收到了down和up
 		    return intercept;
 		}
 
+- 注意: **采用外部拦截法时,只能修改父容器的`onInterceptTouchEvent()`,子类的各类方法不允许被修改,不然会导致 `mFirstTouchTarget` 被赋值 导致外部拦截法失败**
+
+	例如,子类的`onTouchEvent()`返回了true,表示子类处理了,那么`mFirstTouchTarget`被赋值为 子类View, 那么此时即使父类容器的`onInterceptTouchEvent()`返回true 也无效
+
 - `checkParentNeedEvent()`是待实现的逻辑,去判断父类是否需要拦截事件
 
 -  在`onInterceptTouchEvent()`方法中,`ACTION_DOWN`事件下发时,父容器必须返回false,因为这时如果父容器拦截了`ACTION_DOWN`,则这一事件序列都会交给父容器去处理,那么就没办法再传递给子元素了
 
-- 其次是`ACTION_MOVE`事件,这个事件可以根据需求来决定是否拦截 
+- `ACTION_MOVE`事件,在这个事件中可以根据需求来决定是否拦截. 因为此时才具备足够的信息去判断是否拦截.例如根据移动方向决定是否拦截需要计算移动的距离或速度
 
 - 最后是`ACTION_UP`事件,这里必须返回false,因为`ACTION_UP`本身没有什么意义,但是对于子元素来说可能会有用处
 
@@ -370,13 +374,13 @@ onClick会发生的前提是当前的view可点击，并且它收到了down和up
 	
 	 - 假设事件交给子元素处理,但父容器在`ACTION_UP`返回了true,这就会导致子元素无法收到`ACTION_UP`事件.这个时候子元素中的`onClick()`事件就无法触发
 
-		但是父容器比较特殊,一旦它开始拦截任何一个事件,那么后续的事件都会交给它来处理,即使`onInterceptTouchEvent()`方法在`ACTION_UP`时返回false
+		但是父容器比较特殊,一旦它开始拦截任何一个事件序列,那么后续的事件都会交给它来处理,即使`onInterceptTouchEvent()`方法在`ACTION_UP`时返回false
 	
 
 
 ### 5.2.2 内部拦截法
 
-内部拦截法父控件默认拦截任何事件，通过子控件的 `requestDisallowInterceptTouchEvent()`这个方法控制父控件不要去拦截）
+内部拦截法指的是**父控件默认拦截除了`DOWN`的任何事件**，**子控件通过其 `requestDisallowInterceptTouchEvent()`这个方法控制父控件不要去拦截**
 
 - 子元素中：
 
@@ -391,26 +395,26 @@ onClick会发生的前提是当前的view可点击，并且它收到了down和up
 	    int y = (int) ev.getY();
 	
 	    switch (ev.getAction()) {
-	
 	        case MotionEvent.ACTION_DOWN:
-	
-	            parent.requestDisallowInterceptTouchEvent();
-	
+				// 请求父容器禁止拦截DOWN事件
+	            parent.requestDisallowInterceptTouchEvent(true);
 	            break;
 	
 	        case MotionEvent.ACTION_MOVE:
 	
 	            int deltaX = x - mLastX;
 	            int deltaY = y - mLastY;
-	
+				// 如果此时父容器需要该类事件
 	            if(parentNeed){
-	               parent.requestDiallowInterceptTouchEvent();
-	               }
+					// 请求父容器拦截MOVE事件
+					// 即让父容器去处理MOVE事件
+	               parent.requestDiallowInterceptTouchEvent(false);
+				}
 	
 	            break;
 	
 	        case MotionEvent.ACTION_UP:
-	
+				// 不进行处理
 	            break;
 	
 	        default:
@@ -428,18 +432,23 @@ onClick会发生的前提是当前的view可点击，并且它收到了down和up
 
 - 父元素中:
 
-	     @Override
+		@Override
 		public boolean onInterceptTouchEvent(MotionEvent ev) {
 	    
 	    int action = ev.getAction();
 	    
 	    if (action == MotionEvent.ACTION_DOWN)
 	    {
-	        
+	        // 父容器默认不去拦截DOWN事件,因为一旦拦截了DOWN事件,那么接下来的事件序列就都会交给父容器来处理 , 这样 内部拦截就没有作用了
 	        return false;
 	    }else {
-	        
+	        // 其余事件都要拦截
 	        return true;
 	    }
 	    
 		}
+
+- `FLAG_DISALLOW_INTERCEPT`无法对`ACTION_DOWN`事件进行影响,所以一旦父容器决定拦截`ACTION_DOWN`,那么所有事件都无法传递到子元素中
+
+
+- 注意: **所有的修改都要在以上代码中,不能修改其他地方**
