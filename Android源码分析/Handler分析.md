@@ -113,6 +113,7 @@
         final long ident = Binder.clearCallingIdentity();
 
         for (;;) {
+			// 通过 C++ 去获取MessageQueue中的数据
             Message msg = queue.next(); // might block
             if (msg == null) {
                 // No message indicates that the message queue is quitting.
@@ -135,6 +136,7 @@
             final long start = (slowDispatchThresholdMs == 0) ? 0 : SystemClock.uptimeMillis();
             final long end;
             try {
+				// 具体执行msg的地方
                 msg.target.dispatchMessage(msg);
                 end = (slowDispatchThresholdMs == 0) ? 0 : SystemClock.uptimeMillis();
             } finally {
@@ -174,13 +176,15 @@
 
 2. 进入`for(;;)`形式的永真循环，通过MessageQueue的next()方法去获取 `Message`,如果取不到值 会阻塞
 
-3. 调用`msg.target.dispatchMessage(msg);`去执行message,`msg.target`实际上就是Handler
+3. 调用`msg.target.dispatchMessage(msg);`去执行message,`msg.target`实际上就是`Handler`
+
+	这里一点可以在`Handler`发送message时确认
 
 **注意：主线程中在AndroidThread中已经调用了Looper.loop()以及Looper.prepareMainLooper()**
 
 # 3. Hanlder
 
-Handler通常作为Message的发送体出现，会连接MessageQueue 和 Message
+Handler通常作为`Message`的发送体出现，会连接`MessageQueue `和 `Message`
 
 **Handler通常有三种形式：**
 
@@ -204,13 +208,13 @@ Handler通常作为Message的发送体出现，会连接MessageQueue 和 Message
 
 3. 普通初始化，在发送消息时传入一个Runnable类型的参数
 
-		  Handler handler = new Handler();
-		        handler.post(new Runnable() {
-		            @Override
-		            public void run() {
-		
-		            }
-		        });
+		Handler handler = new Handler();
+		handler.post(new Runnable() {
+			@Override
+			public void run() {
+			//TODO
+			}
+		});
 
 ## 3.1 构造函数
 
@@ -246,6 +250,7 @@ Handler通常作为Message的发送体出现，会连接MessageQueue 和 Message
         }
 
         mLooper = Looper.myLooper();
+		// 这里就是为什么Handler 无法在 未调用Looper.prepare()的线程中使用的原因
         if (mLooper == null) {
             throw new RuntimeException(
                 "Can't create handler inside thread that has not called Looper.prepare()");
@@ -262,7 +267,9 @@ Handler通常作为Message的发送体出现，会连接MessageQueue 和 Message
         mAsynchronous = async;
     }
 
-**如果Handler外部有传入Looper的话，会使用这个Looper**，否则会调用`Looper.myLooper()`去ThreadLocal中获取一个**当前线程的`Looper`**，从这里也可以看出必须要在初始化之前调用`Looper.prepare()`,否则会抛出异常。**注意：UI Thread 的Looper.prepare()方法 已经在AndroidThread 入口处被调用**
+**如果Handler外部有传入Looper的话，会使用这个Looper**，否则会调用`Looper.myLooper()`去ThreadLocal中获取一个**当前线程的`Looper`**，从这里也可以看出必须要在初始化之前调用`Looper.prepare()`,否则会抛出异常。
+
+- **注意：UI Thread 的Looper.prepare()方法 已经在`AndroidThread.main()` 入口处被调用**
 
 ## 3.2 发送消息
 
@@ -363,7 +370,9 @@ post形式 会将传入的Runnable 组装成一个msg 继续调用
 	        return queue.enqueueMessage(msg, uptimeMillis);
 	    }
 
-**注意：这里的`msg.target = this`，表示将当前Handler 赋值给了msg.target。**最终会调用MessageQueue.enqueueMessage()方法，将message插入到队列中
+- **注意：这里的`msg.target = this`，表示将当前Handler 赋值给了msg.target。**
+
+	最终会调用MessageQueue.enqueueMessage()方法，将message插入到队列中
 
 ## 3.3 dispatchMessage()
 
@@ -384,11 +393,11 @@ post形式 会将传入的Runnable 组装成一个msg 继续调用
         }
     }
 
-该方法是Looper.loop()中，取出message时 会传递给这个函数去执行。
+该方法是`Looper.loop()`中，取出message时会传递给`Handler`的这个函数去执行。
 
-1. 首先判断是否是以post()形式传递的消息，如果是成立 则取出其中的Runnable 去执行
+1. 首先判断是否是以`post()`形式传递的消息，如果是成立 则取出其中的`Runnable` 去执行
 
-2. 其次判断Handler是否是以 传入Callback的形式初始化的，如果成立，则调用Callback.handleMessage(msg)
+2. 其次判断`Handler`是否是以 传入Callback的形式初始化的，如果成立，则调用`Callback.handleMessage(msg)`
 
 3. 如果 Callback 为空，或者 Callback中没有处理该信息，那么会走到 `handleMessage`函数(重写handleMessage函数的形式进行初始化)
 
@@ -403,9 +412,9 @@ post形式 会将传入的Runnable 组装成一个msg 继续调用
         mPtr = nativeInit();
     }
 
-quitAllowed 表示当前消息队列是否可以退出
+- `quitAllowed`: 表示当前消息队列是否可以退出
 
-mPtr表示 本地代码的初始化
+- `mPtr`:表示 本地代码的初始化
 
 
 ## 4.2 enqueueMessage
@@ -429,11 +438,14 @@ mPtr表示 本地代码的初始化
 
             msg.markInUse();
             msg.when = when;
+			// 上一个msg
             Message p = mMessages;
             boolean needWake;
             if (p == null || when == 0 || when < p.when) {
                 // New head, wake up the event queue if blocked.
+				// 组成链表
                 msg.next = p;
+				// 将插入的msg 保存到成员变量中
                 mMessages = msg;
                 needWake = mBlocked;
             } else {
@@ -443,8 +455,11 @@ mPtr表示 本地代码的初始化
                 needWake = mBlocked && p.target == null && msg.isAsynchronous();
                 Message prev;
                 for (;;) {
+					// 将上一个msg 赋值给prev
                     prev = p;
+					// 上一个msg的next 赋值给 插入的msg
                     p = p.next;
+					// 如果存在下一个msg , 当前插入的msg 比p 迟点处理
                     if (p == null || when < p.when) {
                         break;
                     }
@@ -452,7 +467,10 @@ mPtr表示 本地代码的初始化
                         needWake = false;
                     }
                 }
+				// 如果 msg 需要比 p 早一点执行,就需要到这一步了
                 msg.next = p; // invariant: p == prev.next
+				// 上一个msg 的next 指向 插入的msg
+				// 即 添加到链表尾部
                 prev.next = msg;
             }
 
@@ -464,8 +482,8 @@ mPtr表示 本地代码的初始化
         return true;
     }
 
-MessageQueue 并没有使用一个集合把所有的消息保存起来。它只使用了一个mMessages表示当前待处理的消息，然后进行入队操作，即将所有的消息按时间进行排序(uptimeMillis参数)，然后调用`msg.next()` 去指定每一个消息的下一个消息
+- `MessageQueue `并没有使用一个集合把所有的消息保存起来。它只使用了一个mMessages表示当前待处理的消息，然后进行入队操作，即**将所有的消息按时间进行排序(uptimeMillis参数)**，然后调用`msg.next()` 去指定每一个消息的下一个消息
 
-如果是通过sendMessageAtFrontOfQueue()方法发送消息，也会代用`enqueueMessage()`来让消息入队，只是uptimeMillis参数为0，这样会插入到队列的头部，然后会赋值`mMessages`参数，用来让下一个Message 进行比较
+- 如果是通过`sendMessageAtFrontOfQueue()`方法发送消息，也会代用`enqueueMessage()`来让消息入队，只是uptimeMillis参数为0，这样会插入到队列的头部，然后会赋值`mMessages`参数，用来让下一个Message 进行比较
 
-最终通过 `nativeWake(mPtr);`方法，调用本地代码去唤醒阻塞的线程
+- 最终通过 `nativeWake(mPtr);`方法，调用本地代码去唤醒阻塞的线程
