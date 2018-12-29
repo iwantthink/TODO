@@ -150,9 +150,13 @@ web-socket学习
 
 - ViewRootImpl分析
 	
-	- 图形绘制的流程分析
+	- ~~图形绘制的流程分析~~
 
-	- 输入事件派发的分析
+	- ~~输入事件派发的分析~~
+
+- PackageManagerService分析
+
+	- LoadedApk 分析
 
 
 开源工具学习分析
