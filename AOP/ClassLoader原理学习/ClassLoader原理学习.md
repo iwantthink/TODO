@@ -27,47 +27,54 @@ ClassLoader就是类加载器，具体作用就是将class文件加载到jvm虚�
 
 简单来说ClassLoader就是加载class文件，提供给程序运行时使用。
 
-![](http://ac-qygvx1cc.clouddn.com/78e71017bdd24420.jpeg)
-
 ## 1.1 默认的ClassLoader
 
 Java提供俩种类型的类加载器(以JVM的角度)：启动类加载器(使用c++实现,是虚拟机的一部分)和所有其他的类加载器(全部由Java实现,独立于JVM,全部继承自`java.lang.ClassLoader`,且都是在启动类加载器之后加载的)。
 
 **如果以Java开发人员的角度,Java类加载器**可以分为三种ClassLoader类型:
 
-- **BootStrap ClassLoader：**称为 引导类加载器，是java类加载层次中最顶层的类加载器，负责加载JDK中的核心类库，如：rt.jar,resources.jar,charsets.jar等。默认加载路径在`/JAVA_HOME/jre/lib` 目录下，也可以通过启动Java虚拟机时指定`-Xbootclasspath/a:path`选项，来改变Bootstrap ClassLoader的加载目录。  存在于Launcher中。
+### 1.1.1 BootStrap ClassLoader
 
-	Java虚拟机的启动就是通过 Bootstrap ClassLoader创建一个初始类来完成的。**由于Bootstrap ClassLoader是使用C/C++语言实现的， 所以该加载器不能被Java代码访问到**。
+**BootStrap ClassLoader：**称为 引导类加载器，是java类加载层次中最顶层的类加载器，负责加载JDK中的核心类库，如：rt.jar,resources.jar,charsets.jar等。默认加载路径在`/JAVA_HOME/jre/lib` 目录下，也可以通过启动Java虚拟机时指定`-Xbootclasspath/a:path`选项，来改变Bootstrap ClassLoader的加载目录。
 
-	**需要注意的是Bootstrap ClassLoader并不继承java.lang.ClassLoader**。 
+~~**`BootStrap ClassLoader`存在于Launcher中**~~
 
-	可以通过`System.getProperty("sun.boot.class.path")`方法来获取BootStrap ClassLoader所加载的目录(JVM中运行才有效),打印结果如下：
+Java虚拟机的启动就是通过 `Bootstrap ClassLoader`创建一个初始类来完成的。**由于Bootstrap ClassLoader是使用C/C++语言实现的， 所以该加载器不能被Java代码访问到**。
 
-		C:\Program Files\Java\jdk1.8.0_102\jre\lib\resources.jar;
-		C:\Program Files\Java\jdk1.8.0_102\jre\lib\rt.jar;
-		C:\Program Files\Java\jdk1.8.0_102\jre\lib\sunrsasign.jar;
-		C:\Program Files\Java\jdk1.8.0_102\jre\lib\jsse.jar;
-		C:\Program Files\Java\jdk1.8.0_102\jre\lib\jce.jar;
-		C:\Program Files\Java\jdk1.8.0_102\jre\lib\charsets.jar;
-		C:\Program Files\Java\jdk1.8.0_102\jre\lib\jfr.jar;
-		C:\Program Files\Java\jdk1.8.0_102\jre\classes
+**需要注意的是Bootstrap ClassLoader并不继承java.lang.ClassLoader**。 
 
-- **Extension ClassLoader**:称为扩展类加载器，负责加载java的扩展类库，默认加载`JAVA_HOME/JRE/LIB/EXT`目录下的所有jar.可以通过`-Djava.ext.dirs`选项添加和修改Extensions ClassLoader加载的路径。 存在于Launcher中。
+可以通过`System.getProperty("sun.boot.class.path")`方法来获取BootStrap ClassLoader所加载的目录(JVM中运行才有效),打印结果如下：
 
-	可以通过`System.out.println(System.getProperty("java.ext.dirs"))`方法来获取Extensions ClassLoader所加载的目录（JVM中运行才有效），打印结果如下：
+	C:\Program Files\Java\jdk1.8.0_102\jre\lib\resources.jar;
+	C:\Program Files\Java\jdk1.8.0_102\jre\lib\rt.jar;
+	C:\Program Files\Java\jdk1.8.0_102\jre\lib\sunrsasign.jar;
+	C:\Program Files\Java\jdk1.8.0_102\jre\lib\jsse.jar;
+	C:\Program Files\Java\jdk1.8.0_102\jre\lib\jce.jar;
+	C:\Program Files\Java\jdk1.8.0_102\jre\lib\charsets.jar;
+	C:\Program Files\Java\jdk1.8.0_102\jre\lib\jfr.jar;
+	C:\Program Files\Java\jdk1.8.0_102\jre\classes
 
-		C:\Program Files\Java\jre1.8.0_151\lib\ext;
-		C:\WINDOWS\Sun\Java\lib\ext
+### 1.1.2 Extension ClassLoader
+**Extension ClassLoader**:称为扩展类加载器，负责加载java的扩展类库，默认加载`JAVA_HOME/JRE/LIB/EXT`目录下的所有jar.可以通过`-Djava.ext.dirs`选项添加和修改Extensions ClassLoader加载的路径。 存在于Launcher中。
 
-- **App ClassLoader**:称为系统类加载器，**负责加载应用程序classPath目录下的所有jar和Class文件**。
+可以通过`System.out.println(System.getProperty("java.ext.dirs"))`方法来获取Extensions ClassLoader所加载的目录（JVM中运行才有效），打印结果如下：
 
-	可以加载通过`-Djava.class.path`选项所指定的目录下的jar和Class文件
+	C:\Program Files\Java\jre1.8.0_151\lib\ext;
+	C:\WINDOWS\Sun\Java\lib\ext
 
-	**一般情况下,这个就是程序中默认的类加载器**
+
+### 1.1.3 App ClassLoader
+
+**App ClassLoader**:称为系统类加载器，**负责加载应用程序classPath目录下的所有jar和Class文件**。
+
+可以加载通过`-Djava.class.path`选项所指定的目录下的jar和Class文件
+
+**一般情况下,这个就是程序中默认的类加载器**
 
 
- **注意：**
->除了Java默认提供的三个ClassLoader之外，用户还可以根据需要定义自已的ClassLoader，而这些自定义的ClassLoader都必须继承自java.lang.ClassLoader类，也包括Java提供的另外二个ClassLoader（Extension ClassLoader和App ClassLoader）在内，但是Bootstrap ClassLoader不继承自ClassLoader，因为它不是一个普通的Java类，底层由C++编写，已嵌入到了JVM内核当中，当JVM启动后，Bootstrap ClassLoader也随着启动，负责加载完核心类库后，并构造Extension ClassLoader和App ClassLoader类加载器。
+
+**注意：**
+> 除了Java默认提供的三个ClassLoader之外，用户还可以根据需要定义自已的ClassLoader，而这些自定义的ClassLoader都必须继承自java.lang.ClassLoader类，也包括Java提供的另外二个ClassLoader（Extension ClassLoader和App ClassLoader）在内，但是Bootstrap ClassLoader不继承自ClassLoader，因为它不是一个普通的Java类，底层由C++编写，已嵌入到了JVM内核当中，当JVM启动后，Bootstrap ClassLoader也随着启动，负责加载完核心类库后，并构造Extension ClassLoader和App ClassLoader类加载器。
 
 ### 1.2 Java ClassLoader的继承关系
 
@@ -86,7 +93,8 @@ Java提供俩种类型的类加载器(以JVM的角度)：启动类加载器(使�
 ## 1.3 双亲委托模型(Parent Delegation Model)
 
 ### 1.3.1 原理介绍
-ClassLoader使用的双亲委托模式来搜索类，每个ClassLoader 实例都有一个父类加载的引用(不是继承关系，是一个包含关系),虚拟机内置的类加载器(Bootstrap ClassLoader)本身没有父类加载器，但是可以作为其它ClassLoader实例的父类加载器。
+
+`ClassLoader`使用的双亲委托模式来搜索类，每个`ClassLoader `实例都有一个父类加载的引用(不是继承关系，是一个包含关系),虚拟机内置的类加载器(Bootstrap ClassLoader)本身没有父类加载器，但是可以作为其它ClassLoader实例的父类加载器。
 
     protected ClassLoader(ClassLoader parent) {
         this(checkCreateClassLoader(), parent);
@@ -135,22 +143,28 @@ ClassLoader使用的双亲委托模式来搜索类，每个ClassLoader 实例都
 
 	 protected Class<?> loadClass(String var1, boolean var2) throws ClassNotFoundException {
 	        synchronized(this.getClassLoadingLock(var1)) {
+				// 查找是否存在已经加载的类
 	            Class var4 = this.findLoadedClass(var1);//1
+				// 如果已经存在 已经加载的类,那么就会直接返回了
 	            if(var4 == null) {
 	                long var5 = System.nanoTime();
 	
 	                try {
+						// 通过父类加载器 去查找
 	                    if(this.parent != null) {
 	                        var4 = this.parent.loadClass(var1, false);//2
 	                    } else {
+							// 直接通过 BootStrapClassLoader加载
 	                        var4 = this.findBootstrapClassOrNull(var1);//3
 	                    }
 	                } catch (ClassNotFoundException var10) {
 	                    ;
 	                }
-	
+
+					// 一直回溯到BootStrap ClassLoader 都未能找到	
 	                if(var4 == null) {
 	                    long var7 = System.nanoTime();
+					
 	                    var4 = this.findClass(var1);//4
 	                    PerfCounter.getParentDelegationTime().addTime(var7 - var5);
 	                    PerfCounter.getFindClassTime().addElapsedTimeFrom(var7);
@@ -168,33 +182,48 @@ ClassLoader使用的双亲委托模式来搜索类，每个ClassLoader 实例都
 
 - 注释1处会检查类是否已经加载,如果已经加载则后面的代码不会执行，最后会返回该类。没有加载则会继续执行
 
-- 注释2处会判断如果父类加载器不为null，则调用父类加载器的loadClass()方法。如果父类加载器null，会调用注释3处的 `findBootstrapClassOrNull()`方法。这个方法内部调用了Native方法`findLoadedClass0()`,其最终会用Bootstrap ClassLoader 来查找类。如果Bootstrap ClassLoader 也没有找到该类，则会调用注释4处的`findClass()`方法继续逐级向下进行查找。
+- 注释2处会判断如果父类加载器不为null，则调用父类加载器的loadClass()方法。
+
+- 如果父类加载器null，会调用注释3处的 `findBootstrapClassOrNull()`方法。这个方法内部调用了Native方法`findLoadedClass0()`,其最终会用`Bootstrap ClassLoader `来查找类。如果`Bootstrap ClassLoader `也没有找到该类，则会调用注释4处的`findClass()`方法继续逐级向下进行查找。
 
 ## 1.4 类的加载过程
 
+    protected Class<?> findClass(String name) throws ClassNotFoundException {
+        throw new ClassNotFoundException(name);
+    }
 
+- 该方法需要交给ClassLoader的实现类去实现
 
-#2 自定义ClassLoader
+# 2 自定义ClassLoader
 
 **JVM已经提供了默认的类加载器，为什么还需要自定义类加载器？**
 - 因为java中提供的默认ClassLoader，只加载指定目录下的jar和class，如果想加载其他位置的类或jar时，就需要用到自定义类加载器。
 - 举个栗子：加载网络上的一个class文件，通过动态加载到内存之后，要调用这个类中的方法。
 
 ## 2.1 自定义类加载器的步骤 
+
 1. 继承java.lang.ClassLoader
+
 2. 重写父类的findClass()方法。
-	- 为何仅重写findClass？因为JDK在loadClass方法中已经实现了ClassLoader搜索类的算法，当loadClass中搜索不到类时，loadClass就会调用findClass方法来搜索类。
+	- 为何仅重写findClass？
+	
+		因为JDK在loadClass方法中已经实现了ClassLoader搜索类的算法，当loadClass中搜索不到类时，loadClass就会调用findClass方法来搜索类。
 
 ## 2.2 loadClass方法
 
 	protected Class<?> loadClass(String name,
 	                 boolean resolve)
-	                      throws ClassNotFoundException
+	                      throws ClassNotFoundException{
+		.............
+	}
 
 - 使用指定的** 二进制名称 **加载时，此方法默认实现按以下顺序搜索类
-	1. 调用findLoadedClass(String)检查类是否已经加载
-	2. 调用loadClass父类加载器上的方法。如果父类加载器为空，则使用jvm内置的类加载器(Bootstrap ClassLoader)
-	3. 调用findClass(String)来查找类
+
+	1. 调用`findLoadedClass(String)`检查类是否已经加载,如果已经加载,则直接返回
+
+	2. 调用父类加载器上的`loadClass()`方法。如果父类加载器为空，则使用jvm内置的类加载器(Bootstrap ClassLoader)
+
+	3. 已经回溯到根类加载器仍未找到,那么调用`findClass(String)`来执行具体的加载类的逻辑
 
 - 二进制名称示例：
 
@@ -224,14 +253,18 @@ ClassLoader使用的双亲委托模式来搜索类，每个ClassLoader 实例都
 	  
 	    @Override  
 	    protected Class<?> findClass(String name) throws ClassNotFoundException {  
-	        Class clazz = null;//this.findLoadedClass(name); // 父类已加载     
-	        //if (clazz == null) {  //检查该类是否已被加载过  
-	            byte[] classData = getClassData(name);  //根据类的二进制名称,获得该class文件的字节码数组  
+	        Class clazz = null;
+			// this.findLoadedClass(name); 父类已加载   
+			//检查该类是否已被加载过    
+	        if (clazz == null) {  
+				//根据类的二进制名称,获得该class文件的字节码数组 
+	            byte[] classData = getClassData(name);   
 	            if (classData == null) {  
 	                throw new ClassNotFoundException();  
 	            }  
-	            clazz = defineClass(name, classData, 0, classData.length);  //将class的字节码数组转换成Class类的实例  
-	        //}   
+				//将class的字节码数组转换成Class类的实例  
+	            clazz = defineClass(name, classData, 0, classData.length);  
+	        }   
 	        return clazz;  
 	    }  
 	  
@@ -270,20 +303,28 @@ ClassLoader使用的双亲委托模式来搜索类，每个ClassLoader 实例都
 
 # 3 Android ClassLoader
 
-Android 的Dalvik/ART 虚拟机和标准 JVM 一样，也是需要加载class文件到内存中使用，**但是在ClassLoader的加载细节上会有些差别**
+Android 的`Dalvik/ART `虚拟机和标准 JVM 一样，也是需要加载class文件到内存中使用，**但是在ClassLoader的加载细节上会有些差别**
 
 - 无论是DVM还是ART 加载的都不是Class文件而是dex文件。
 
 - Android中的ClassLoader分为俩种类型，系统ClassLoader和自定义ClassLoader
 
-	- 系统ClassLoader包括：BootClassLoader(定义在android.jar 中的ClassLoader中),PathClassLoader和DexClassLoader
+	- 系统ClassLoader包括：
+
+	1. `BootClassLoader`(定义在`android.jar` 中的ClassLoader中)
+
+	2. `PathClassLoader`
+
+	3. `DexClassLoader`
 
 
-[`Android-ClassLoader`](https://developer.android.com/reference/java/lang/ClassLoader.html)是一个抽象类，它有俩个实现类BaseDexClassLoader和SecureClassLoader。其中一个实现类`BaseDexClassLoader`是由谷歌提供的，在oracle的文档中是没有的。
+[`Android-ClassLoader`](https://developer.android.com/reference/java/lang/ClassLoader.html)是一个抽象类，它有俩个实现类`BaseDexClassLoader`和`SecureClassLoader`。其中一个实现类`BaseDexClassLoader`是由谷歌提供的，在oracle的文档中是没有的。
 
-- **SecureClassLoader**:其子类只有一个URLClassLoader，用来加载jar文件，这在Android的Davlvik/ART上是没法使用的
+- **`SecureClassLoader`**:其子类只有一个URLClassLoader，用来加载jar文件，这在Android的Davlvik/ART上是没法使用的
 
-- **BaseDexClassLoader**:其直接子类 有 **DexClassLoader**,InMemoryDexClassLoader(API>26),**PathClassLoader**。
+- **`BaseDexClassLoader`**:其直接子类 有 **`DexClassLoader`**,`InMemoryDexClassLoader`(API>26),**`PathClassLoader`**。
+
+- [源码地址](https://android.googlesource.com/platform/libcore/+/refs/heads/master/dalvik/src/main/java/dalvik/system/)
 
 
 ## 3.1 Android 系统ClassLoader
@@ -319,9 +360,9 @@ Android 的Dalvik/ART 虚拟机和标准 JVM 一样，也是需要加载class文
 
 ### 3.1.2 PathClassLoader
 
-Android系统**使用PathClassLoader来加载系统类和应用程序的类**，如果是加载应用程序类，则会加载data/app/目录下的dex文件以及包含dex的apk文件或jar文件，不管是加载哪种类型的文件，最终都是加载dex文件，**在这里为了方便理解，我们将dex文件以及包含dex的apk文件或jar文件统称为dex相关文件**。
+Android系统**使用PathClassLoader来加载系统类和应用程序的类**，如果是加载应用程序类，则会加载`data/app/`目录下的dex文件以及包含dex的apk文件或jar文件，不管是加载哪种类型的文件，最终都是加载dex文件，**在这里为了方便理解，我们将dex文件以及包含dex的apk文件或jar文件统称为dex相关文件**。
 
-PathClassLoader不建议开发者直接使用。来查看它的代码： 
+`PathClassLoader`不建议开发者直接使用。来查看它的代码： 
 
 	public class PathClassLoader extends BaseDexClassLoader {
 	    public PathClassLoader(String dexPath, ClassLoader parent) {
@@ -332,25 +373,37 @@ PathClassLoader不建议开发者直接使用。来查看它的代码：
 	    }
 	}
 
-- **String dexPath**:dex文件以及包含dex的jar文件或apk文件的路径集合，多个文件路径之间以文件分隔符分隔，默认分隔符是":"。**dexPath一般是已经安装应用的apk文件路径，PathClassLoader在应用启动时创建，从`/data/app/.`安装目录下加载apk文件。**
+- **String dexPath**:
 
-- **String libraryPath**:包含native libraries(c/c++库)的文件夹路径集合，多个文件之间以文件分隔符分隔，默认":",可能为null
+	dex文件以及包含dex的jar文件或apk文件的路径集合，多个文件路径之间以文件分隔符分隔，默认分隔符是":"
+
+	**dexPath一般是已经安装应用的apk文件路径，PathClassLoader在应用启动时创建，从`/data/app/.`安装目录下加载apk文件。**
+
+- **String libraryPath**:
+
+	包含native libraries(c/c++库)的文件夹路径集合
+
+	多个文件之间以文件分隔符分隔，默认":",可能为null
 
 - **ClassLoader parent**:当前ClassLoader的父类加载器
 
 **PathClassLoader代码中只有俩个构造方法，具体实现都在BaseDexClassLoader.**
 
-- PathClassLoader 在源码中寻找其构造方法的调用地方
-	- ZygoteInit中的调用是用来启动相关的系统服务
-	- ApplicationLoaders中用来加载系统安装过的apk，用来加载apk内的class，其调用是在LoadApk类中getClassLoader()方法，得到的就是PathClassLoader
+- `PathClassLoader` 在源码中寻找其构造方法的调用地方
 
-- PathClassLoader并没有重写BaseDexClassLoader中的方法，类似findClass 之类的逻辑都是在BDCL中被实现，这点PathClassLoader和DexClassLoader都一样
+	- `ZygoteInit`中的调用是用来启动相关的系统服务
+
+	- `ApplicationLoaders`中用来加载系统安装过的apk，用来加载apk内的class，其调用是在LoadApk类中getClassLoader()方法，得到的就是PathClassLoader
+
+- `PathClassLoader`并没有重写`BaseDexClassLoader`中的方法，类似`findClass()` 之类的逻辑都是在`BaseDexClassLoader`中被实现，这点`PathClassLoader`和`DexClassLoader`都一样
 
 ### 3.1.3 DexClassLoader
 
 > A class loader that loads classes from .jar and .apk files containing a classes.dex entry. This can be used to execute code not installed as part of an application.
 
-对比PathClassLoader只能加载已安装应用的dex或apk文件，DexClassLoader没有此限制，可以从SD卡上加载包含classes.dex的.jar和.apk文件，**这也是插件化和热修复的基础，在不需要安装应用的情况下，完成需要使用的dex加载。**
+对比`PathClassLoader`只能加载已安装应用的dex或apk文件，`DexClassLoader`没有此限制，可以从SD卡上加载包含`classes.dex`的`.jar`和`.apk`文件
+
+- **这也是插件化和热修复的基础，在不需要安装应用的情况下，完成需要使用的dex加载。**
 
 **DexClassLoader只有一个构造方法，其具体实现在BaseDexClassLoader**
 
@@ -361,19 +414,27 @@ PathClassLoader不建议开发者直接使用。来查看它的代码：
 	    }
 	}
 
-- **String dexPath**:dex文件以及包含dex的jar文件或apk文件的路径集合，多个文件路径之间以文件分隔符分隔，默认分隔符是":"。
+- **String dexPath**:
 
-- **String optimizedDirectory**:~~API 26开始被废弃,表示优化过的 dex 文件(即ODEX)的缓存路径，即从 apk 或 jar 文件中提取出来的 dex 文件。PathClassLoader已经默认了这个参数为`/data/dalvik-cache/`。该路径不可以为空，且应该是应用私有的，有读写权限的路径（实际上也可以使用外部存储空间，但是这样的话就存在代码注入的风险），可以通过以下方式来创建一个这样的路径：~~
+	dex文件以及包含dex的jar文件或apk文件的路径集合，多个文件路径之间以文件分隔符分隔，默认分隔符是":"。
+
+- **String optimizedDirectory**:
+
+	~~API 26开始被废弃,表示优化过的 dex 文件(即ODEX)的缓存路径，即从 apk 或 jar 文件中提取出来的 dex 文件。PathClassLoader已经默认了这个参数为`/data/dalvik-cache/`。该路径不可以为空，且应该是应用私有的，有读写权限的路径（实际上也可以使用外部存储空间，但是这样的话就存在代码注入的风险），可以通过以下方式来创建一个这样的路径：~~
 
 		File dexOutputDir = context.getCodeCacheDir();//API>21
 
-- **String libraryPath**:存储 C/C++ 库文件的路径集
+- **String libraryPath**:
 
-- **Classloader parent**:父类加载器
+	存储 C/C++ 库文件的路径集
+
+- **Classloader parent**:
+
+	父类加载器
 
 ### 3.1.4 Android ClassLoader的继承关系
 
-**在Android中，App 安装到手机后，apk里面的classes.dex中的class都是通过PathClassLoader加载的。**
+**在Android中，App 安装到手机后，apk里面的`classes.dex`中的class都是通过`PathClassLoader`加载的。**
 
 - 举个栗子，可以使用如下方式 打印出使用的ClassLoader:
 
@@ -384,23 +445,24 @@ PathClassLoader不建议开发者直接使用。来查看它的代码：
 	    }
 	
 		W/System.err: dalvik.system.PathClassLoader[DexPathList[[zip file "/data/app/com.hmt.analytics.customizeplugin-1/base.apk"],nativeLibraryDirectories=[/data/app/com.hmt.analytics.customizeplugin-1/lib/arm64, /vendor/lib64, /system/lib64]]]
+
 		W/System.err: java.lang.BootClassLoader@1c3e199e
 
-	- 可以看到有俩种ClassLoader ，PathClassLoader和BootClassLoader.
+	- 可以看到有俩种`ClassLoader` : `PathClassLoader`和`BootClassLoader`
 
-	- DexPathList中包含了许多apk的路径，其中`/data/app/com.hmt.analytics.customizeplugin-1/base.apk`就是应用apk在手机中的位置。
+	- `DexPathList`中包含了许多apk的路径，其中`/data/app/com.hmt.analytics.customizeplugin-1/base.apk`就是应用apk在手机中的位置。
 
 - Android中的ClassLoader继承关系如下：
 
 	![](http://upload-images.jianshu.io/upload_images/1417629-00545613a9db8f6f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
-	- ClassLoader是一个抽象类，其中定义了ClassLoader的主要功能。BootClassLoader是它的内部类。
+	- `ClassLoader`是一个抽象类，其中定义了`ClassLoader`的主要功能。`BootClassLoader`是它的内部类。
 
-	- SecureClassLoader类和JDK8中的SecureClassLoader类的代码是一样的，它继承了抽象类ClassLoader。SecureClassLoader并不是ClassLoader的实现类，而是拓展了ClassLoader类加入了权限方面的功能，加强了ClassLoader的安全性。
+	- `SecureClassLoader`类和JDK8中的`SecureClassLoader`类的代码是一样的，它继承了抽象类`ClassLoader`。`SecureClassLoader`并不是`ClassLoader`的实现类，而是拓展了`ClassLoader`类加入了权限方面的功能，加强了`ClassLoader`的安全性。
 
-	- URLClassLoader类和JDK8中的URLClassLoader类的代码是一样的，它继承自SecureClassLoader，用来通过URl路径从jar文件和文件夹中加载类和资源。
+	- `URLClassLoader`类和JDK8中的`URLClassLoader`类的代码是一样的，它继承自`SecureClassLoader`，用来通过URl路径从jar文件和文件夹中加载类和资源。
 
-	- BaseDexClassLoader继承自ClassLoader，是抽象类ClassLoader的具体实现类，PathClassLoader和DexClassLoader都继承它。
+	- `BaseDexClassLoader`继承自`ClassLoader`，是抽象类`ClassLoader`的具体实现类，`PathClassLoader`和`DexClassLoader`都继承它。
 
 ### 3.1.5 Android ClassLoader的创建过程
 
@@ -416,36 +478,54 @@ Android应用打包成apk文件时，class文件会被dx.jar工具打包成 dex�
 
 优化后的ODEX文件存储在`/data/dalvik-cache`下，**后缀名还是 `.dex` **。具体可以查看 [相关文章链接一](http://www.mywiki.cn/hovercool/index.php/ART%E5%92%8CDalvik)。
 
-Android中的Dalvik/ART 无法像JVM那样直接加载class文件和jar文件中的class，需要通过dx工具来转换成 Dalvik byte code才行，**只能通过dex或者包含dex的jar、apk文件来加载**。（注意odex文件后缀可能是.dex或是.odex ，同属于dex文件），**因此Android中的ClassLoader就交给了BaseDexClassLoader。**
+**Android中的Dalvik/ART 无法像JVM那样直接加载class文件和jar文件中的class**，而是需要通过dx工具来转换成 Dalvik byte code才行，**只能通过dex或者包含dex的jar、apk文件来加载**。（注意odex文件后缀可能是.dex或是.odex ，同属于dex文件），**因此Android中的ClassLoader就交给了BaseDexClassLoader。**
 
 ODEX相关文章：
+
 - [ART 和 Dalvik](http://www.mywiki.cn/hovercool/index.php/ART%E5%92%8CDalvik)
+
 - [ODEX格式及生成过程](http://www.jianshu.com/p/242abfb7eb7f)
+
 - [What are ODEX files in Android](https://stackoverflow.com/questions/9593527/what-are-odex-files-in-android)
 
 
 ## 3.3 BaseDexClassLoader源码分析
-- BaseDexClassLoader的结构：
 
-	![](http://ww1.sinaimg.cn/large/6ab93b35gy1fqgnvp1vj6j20rh0aydh0.jpg)
+### 3.3.1 BaseDexClassLoader 结构
 
-- BaseDexClassLoader构造函数：
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fqgnvp1vj6j20rh0aydh0.jpg)
 
-		public class BaseDexClassLoader extends ClassLoader {
-		    ...
-		    public BaseDexClassLoader(String dexPath, File optimizedDirectory, String libraryPath, ClassLoader parent){
-		        super(parent);
-		        this.pathList = new DexPathList(this, dexPath, libraryPath, optimizedDirectory);
-		    }
-		    ...
+
+### 3.3.2 BaseDexClassLoader 构造函数
+
+	public class BaseDexClassLoader extends ClassLoader {
+		...
+		public BaseDexClassLoader(String dexPath, File optimizedDirectory, String libraryPath, ClassLoader parent){
+			super(parent);
+			this.pathList = new DexPathList(this, dexPath, libraryPath, optimizedDirectory);
 		}
+		...
+	}
 
-	- `dexPath`:待加载的程序文件(一般是dex文件，也可以是包含dex的jar/apk/zip文件)所在目录
-	- `optimizedDirectory`：dex文件的输出目录（因为在加载jar/apk/zip等压缩格式的程序文件时会解压出其中的dex文件，该目录就是专门用于存放这些被解压出来的dex文件的）。
-	- `libraryPath`：加载程序文件时需要用到的库路径。
-	- `parent`：父加载器
+- `dexPath`:
+	
+	待加载的程序文件(一般是dex文件，也可以是包含dex的jar/apk/zip文件)所在目录
 
-- `private final DexPathList pathList`这个字段非常重要，BDCL继承自ClassLoader实现了许多方法都是基于这个字段，例如:`findClass()`,`findResource()`,`findResources()`,`findLibrary()`。
+- `optimizedDirectory`：
+
+	dex文件的输出目录（因为在加载jar/apk/zip等压缩格式的程序文件时会解压出其中的dex文件，该目录就是专门用于存放这些被解压出来的dex文件的）。
+
+- `libraryPath`：
+
+	加载程序文件时需要用到的库路径。
+
+- `parent`：
+
+	父加载器
+
+- `private final DexPathList pathList`这个字段非常重要，`BaseDexClassLoader`继承自`ClassLoader`实现了许多方法都是基于这个字段
+
+	例如:`findClass()`,`findResource()`,`findResources()`,`findLibrary()`。
 
 	    @Override
 	    protected Class<?> findClass(String name) throws ClassNotFoundException {
@@ -467,79 +547,97 @@ ODEX相关文章：
 	        return pathList.findLibrary(name);
 	    }
 
-- [`DexPathList`](https://android.googlesource.com/platform/libcore-snapshot/+/ics-mr1/dalvik/src/main/java/dalvik/system/DexPathList.java)构造方法比较简单，接收了dexPath,libraryPath 和optimizedDirectory。并且调用`makeDexElements()`方法生成了一个`Element[] dexElements`数组,Element是DexPathList的一个嵌套类。
 
-		//DexPathList构造方法 8.0 的代码
-		DexPathList(ClassLoader definingContext, 
-			String dexPath,
-            String librarySearchPath, 
-			File optimizedDirectory, 
-			boolean isTrusted) {
-			``省略一些非空判断的代码``
-	        this.dexElements =
-	            makeDexElements(splitDexPath(dexPath), optimizedDirectory,
-				suppressedExceptions, 
-				definingContext, 
-				isTrusted));
+### 3.3.3 DexPathList 构造函数
+[`DexPathList`](https://android.googlesource.com/platform/libcore-snapshot/+/ics-mr1/dalvik/src/main/java/dalvik/system/DexPathList.java)构造方法比较简单，接收了dexPath,libraryPath 和optimizedDirectory。
+
+- 并且调用`makeDexElements()`方法生成了一个`Element[] dexElements`数组
+
+- Element是DexPathList的一个嵌套类。
+
+	
+	//DexPathList构造方法 8.0 的代码
+	DexPathList(ClassLoader definingContext, 
+		String dexPath,
+		String librarySearchPath, 
+		File optimizedDirectory, 
+		boolean isTrusted) {
+			// 省略一些非空判断的代码
+			// 创建一个Element数组
+			this.dexElements =
+	            makeDexElements(
+					splitDexPath(dexPath),
+				 	optimizedDirectory,
+					suppressedExceptions, 
+					definingContext, 
+					isTrusted));
 	        this.nativeLibraryDirectories = splitLibraryPath(libraryPath);
-	    }
+	}
 
-		//Element类
-		//Element of the dex/resource path
-		static class Element {
-			//A file denoting a zip file (in case of a resource jar or a dex jar), or a directory (only when dexFile is null).
-	        public final File file;
-	        public final ZipFile zipFile;
-	        public final DexFile dexFile;
-	        public Element(File file, ZipFile zipFile, DexFile dexFile) {
-	            this.file = file;
-	            this.zipFile = zipFile;
-	            this.dexFile = dexFile;
-	        }
-	        public URL findResource(String name) {
-	            if ((zipFile == null) || (zipFile.getEntry(name) == null)) {
-	                return null;
-	            }
-	            try {
-	                return new URL("jar:" + file.toURL() + "!/" + name);
-	            } catch (MalformedURLException ex) {
-	                throw new RuntimeException(ex);
-	            }
-	        }
-	    }
+#### 3.3.3.1 Element类
 
-### 3.3.1 DexPathList-makeDexElements()
+	//Element类
+	//Element of the dex/resource path
+	static class Element {
+
+		//A file denoting a zip file (in case of a resource jar or a dex jar), or a directory (only when dexFile is null).
+		public final File file;
+		public final ZipFile zipFile;
+		public final DexFile dexFile;
+		public Element(File file, ZipFile zipFile, DexFile dexFile) {
+			this.file = file;
+			this.zipFile = zipFile;
+			this.dexFile = dexFile;
+		}
+
+		public URL findResource(String name) {
+			if ((zipFile == null) || (zipFile.getEntry(name) == null)) {
+				return null;
+			}
+
+	        try {
+				return new URL("jar:" + file.toURL() + "!/" + name);
+			} catch (MalformedURLException ex) {
+				throw new RuntimeException(ex);
+			}
+		}
+	}
+
+#### 3.3.3.2 DexPathList-makeDexElements()
 
     private static Element[] makeDexElements(List<File> files, File optimizedDirectory,
             List<IOException> suppressedExceptions, ClassLoader loader, boolean isTrusted) {
-      Element[] elements = new Element[files.size()];
-      int elementsPos = 0;
-      /*
-       * Open all files and load the (direct or contained) dex files up front.
-       */
-      for (File file : files) {
-          if (file.isDirectory()) {
-              // We support directories for looking up resources. Looking up resources in
-              // directories is useful for running libcore tests.
-              elements[elementsPos++] = new Element(file);
-          } else if (file.isFile()) {
-              String name = file.getName();
-              DexFile dex = null;
-              if (name.endsWith(DEX_SUFFIX)) {
-                  // Raw dex file (not inside a zip/jar).
-                  try {
-                      dex = loadDexFile(file, optimizedDirectory, loader, elements);
-                      if (dex != null) {
-                          elements[elementsPos++] = new Element(dex, null);
-                      }
-                  } catch (IOException suppressed) {
-                      System.logE("Unable to load dex file: " + file, suppressed);
-                      suppressedExceptions.add(suppressed);
-                  }
-              } else {
-                  try {
-                      dex = loadDexFile(file, optimizedDirectory, loader, elements);
-                  } catch (IOException suppressed) {
+		// files 代表 dexPath 转换来的文件对象
+		Element[] elements = new Element[files.size()];
+		int elementsPos = 0;
+		/*
+		* Open all files and load the (direct or contained) dex files up front.
+		*/
+		for (File file : files) {
+			if (file.isDirectory()) {
+				// We support directories for looking up resources. Looking up resources in
+				// directories is useful for running libcore tests.
+				elements[elementsPos++] = new Element(file);
+			} else if (file.isFile()) {
+
+				String name = file.getName();
+				DexFile dex = null;
+				if (name.endsWith(DEX_SUFFIX)) {
+					// Raw dex file (not inside a zip/jar).
+					try {
+						dex = loadDexFile(file, optimizedDirectory, loader, elements);
+						if (dex != null) {
+							elements[elementsPos++] = new Element(dex, null);
+						}
+					} catch (IOException suppressed) {
+						System.logE("Unable to load dex file: " + file, suppressed);
+						suppressedExceptions.add(suppressed);
+					}
+				} else {
+
+					try {
+						dex = loadDexFile(file, optimizedDirectory, loader, elements);
+					} catch (IOException suppressed) {
                       /*
                        * IOException might get thrown "legitimately" by the DexFile constructor if
                        * the zip file turns out to be resource-only (that is, no classes.dex file
@@ -548,25 +646,30 @@ ODEX相关文章：
                        * when findClass returns null.
                        */
                       suppressedExceptions.add(suppressed);
-                  }
-                  if (dex == null) {
-                      elements[elementsPos++] = new Element(file);
-                  } else {
-                      elements[elementsPos++] = new Element(dex, file);
-                  }
-              }
-              if (dex != null && isTrusted) {
-                dex.setTrusted();
-              }
-          } else {
+					}
+
+					if (dex == null) {
+						elements[elementsPos++] = new Element(file);
+					} else {
+						elements[elementsPos++] = new Element(dex, file);
+					}
+				}
+
+				if (dex != null && isTrusted) {
+					dex.setTrusted();
+				}
+	
+			} else {
               System.logW("ClassLoader referenced unknown path: " + file);
-          }
-      }
-      if (elementsPos != elements.length) {
-          elements = Arrays.copyOf(elements, elementsPos);
-      }
-      return elements;
-    }
+			}
+		}
+
+		if (elementsPos != elements.length) {
+			elements = Arrays.copyOf(elements, elementsPos);
+		}
+
+		return elements;
+	}
 
 - **参数List<File> files**： 由 dexPath经过处理获取，进行拆分并封装成File
 
@@ -574,13 +677,13 @@ ODEX相关文章：
 
 - **参数ArrayList<IOException> suppressedExceptions**:集合 用来收集IOException
 
-- **参数ClassLoader definingContext**:上下文
+- **参数ClassLoader loader**: 类加载器
 
 - **参数boolean isTrusted:**
 
 - **总的功能就是将 dexPath路径中的 含有dex的文件 组装成一个Element[] 数组！**
 
-### 3.3.2 DexPathList-findClass()
+#### 3.3.3.3 DexPathList-findClass()
 
     public Class<?> findClass(String name, List<Throwable> suppressed) {
         for (Element element : dexElements) {
@@ -595,18 +698,21 @@ ODEX相关文章：
         return null;
     }
 
-- 根据传入的完整的类名来加载对应的class，这里有关于热修复的一个点，就是将补丁dex文件放到`DexPathList类的dexElements成员变量`中(dexElements是一个Element 数组，需要放到这个数组的最前面),这样在findClass之中 优先找到补丁dex文件，加载到之后就会停止寻找，达到了修复的目的。
+- 根据传入的完整的类名来加载对应的class
 
-### 3.3.3 BaseDexClassLoader寻找class的线路
+- 这里有关于热修复的一个点，就是将补丁dex文件放到`DexPathList类的dexElements成员变量`中(dexElements是一个Element 数组，需要放到这个数组的最前面),这样在findClass之中 优先找到补丁dex文件，加载到之后就会停止寻找，达到了修复的目的。
 
-1. 当传入一个完整的类名，调用 BaseDexClassLader 的 findClass(String name) 方法
+### 3.3.4 BaseDexClassLoader寻找class的线路
 
-2. BaseDexClassLader 的 findClass 方法会交给 DexPathList 的 findClass(String name, List<Throwable> suppressed 方法处理
+1. 当传入一个完整的类名，调用 `BaseDexClassLader` 的 `findClass(String name) `方法
 
-3. 在 DexPathList 方法的内部，会遍历 dexFile ，通过 DexFile 的 `dex.loadClassBinaryName(name, definingContext, suppressed) `来完成类的加载
+2. `BaseDexClassLader` 的 findClass 方法会交给` DexPathList `的 `findClass(String name, List<Throwable> suppressed)` 方法处理
+
+3. 在 `DexPathList` 方法的内部，会遍历 dexFile ，通过 DexFile 的 `dex.loadClassBinaryName(name, definingContext, suppressed) `来完成类的加载
 
 **注意：**
-实际在项目中使用BaseDexClassLoader或DexClassLoader去加载某个dex或者apk的class时，是无法调用`findClass()`因为它是被protected修饰的。实际上需要去调用`loadClass(String className)`方法，该方法在ClassLoader中具体实现。
+
+- 实际在项目中使用`BaseDexClassLoader`或`DexClassLoader`去加载某个dex或者apk的class时，是无法调用`findClass()`因为它是被protected修饰的。实际上需要去调用`loadClass(String className)`方法，该方法在ClassLoader中具体实现。
 
 
 # 4. 利用DexClassLoader实现加载本地 dex文件实例
