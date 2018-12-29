@@ -26,7 +26,6 @@
 
 **完整的构建和部署流程：**
 
-![](https://upload-images.jianshu.io/upload_images/1313748-36d4c846f79411a8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/691)
 
 流程： 构建->部署->安装->app登录->activity创建。
 
@@ -43,7 +42,7 @@
 
 # 3.热插拔，温插拔，冷插拔
 
-![](https://upload-images.jianshu.io/upload_images/1313748-ca1496925395d633.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/700)
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fynmxyh7n4j20l708kwgu.jpg)
 
 **`Instant Run`等同于 增量构建+热 或 温 或 冷插拔**
 
@@ -59,13 +58,10 @@
 
 ## 3.1 热插拔
 
-![](https://upload-images.jianshu.io/upload_images/1313748-e7c0b89defecdc1e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/417)
 
-Android Studio monitors： 运行着Gradle任务来生成增量.dex文件（这个dex文件是对应着开发中的修改类） Android Studio会提取这些.dex文件发送到`App Server`(通过socket)，交给自定义的类加载去加载.dex文件
+Android Studio monitors： 运行着Gradle任务来生成增量`.dex`文件（这个dex文件是对应着开发中的修改类） Android Studio会提取这些`.dex`文件发送到`App Server`(通过socket)，交给自定义的类加载去加载.dex文件
 
 **加载的原理：**
-
-![](https://upload-images.jianshu.io/upload_images/1313748-932358d7cce43515.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/404)
 
 `App Server`会不断监听是否需要重写类文件，如果需要，任务会被立马执行。新的更改便能立即被响应。可以通过打断点调试来发现它确实是这么做
 
@@ -89,14 +85,18 @@ Android Studio monitors： 运行着Gradle任务来生成增量.dex文件（这�
 # 4. Instant Run运行原理
 **Android普通构建流程：**
 
-![](https://upload-images.jianshu.io/upload_images/1313748-64826a1e2847e169.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/699)
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fynn7fy4t9j20jx0cigmi.jpg)
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fynn2ogmcfj20lc09vwgd.jpg)
 
 manifest文件合并、打包，和res一起被AAPT合并到APK中，同样项目代码被编译成字节码，然后转换成.dex 文件，也被合并到APK中。
 
 
-**首次运行Instant Run时 Gradle执行的操作:**
+**Instant Run编译和部署流程:**
 
-![](https://upload-images.jianshu.io/upload_images/1313748-b77963070354a0b7.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/696)
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fynmxyh7n4j20l708kwgu.jpg)
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1fynn8q42wzj20k60cxwg4.jpg)
 
 1. 在有Instant Run的环境下：一个新的`App Server`类会被注入到App中，与Bytecode instrumentation协同监控代码的变化
 
@@ -117,13 +117,13 @@ Instant Run 由一个插件和一个库文件组成(gradle plugin + instant-run.
 
 ### 5.2.1 程序如何运行：
 
-`Instant Run`将app 拆分成俩部分，分离了 业务代码。另外`IR`在安装时，通过查看AS的**RUN窗口**，可以发现安装命令变成如下：
+`Instant Run`将app 拆分成俩部分，分离了 业务代码。另外`instant run`在安装时，通过查看AS的**RUN窗口**，可以发现安装命令变成如下：
 	
 	$ adb install-multiple -r -t -p com.luck.ryan.hotfix E:\github\HOT_FIX\app\build\intermediates\split-apk\debug\slices\slice_1.apk E:\github\HOT_FIX\app\build\outputs\apk\debug\app-debug.apk 
 	
 同时，通过root过后的手机，进入`data/app/com.luck.ryan/`目录下，会发现存在多个.apk文件
 
-- `slice_1.apk`包含的是业务代码(即需要instant run的代码)。`app-debug.apk`包含的是支持Instant Run 的代码和一些资源文件清单文件等。
+- `slice_1.apk`包含的是业务代码(即需要`instant run`的代码)。`app-debug.apk`包含的是支持Instant Run 的代码和一些资源文件清单文件等。
 
 - `slice_1.apk`可以在`app\build\intermediates\split-apk\debug\slices`路径下找到，其中的代码可以在`app\build\intermediates\transforms\instantRun\debug\0`中找到，代码会被修改成如下形式：
 
