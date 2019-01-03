@@ -124,6 +124,8 @@ Android源码学习
 
 - ~~mixpanel 学习~~
 
+- mixpanel深入分析
+
 c++学习
 
 - ~~简单学习C++~~
