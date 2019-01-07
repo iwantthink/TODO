@@ -690,6 +690,9 @@ SystemServiceManager中会回调各个已经被创建的Service的`onBootPhase(6
 		```省略代码```
 	}
 
+    // Services that should receive lifecycle events.
+    private final ArrayList<SystemService> mServices = new ArrayList<SystemService>();
+
     public void startService(@NonNull final SystemService service) {
         // Register it.
         mServices.add(service);
