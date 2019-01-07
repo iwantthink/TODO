@@ -10,6 +10,7 @@
 
 [Android官方文档-JobScheduler 文档](https://github.com/googlesamples/android-JobScheduler)
 
+[SystemServer分析.md]()
 
 # 简介
 
@@ -175,3 +176,247 @@ Android 提供了`JobInfo.Builder`来设置`JobScheduler`的触发条件
 - 同时使用`setRequiredNetworkType(int networkType)`, `setRequiresCharging(boolean requireCharging) `和`setRequiresDeviceIdle(boolean requireIdle)`这三个条件，可能导致Job永远都不会执行。
 
 	这个时候需要`setOverrideDeadline(long time)`来确保Job肯定能被执行一次
+
+# 2. 源码分析
+
+`JobScheduler.schedule()`过程:
+
+1. 获取`JobScheduler`调度器的远程代理对象
+
+2. 创建继承于`JobService`的对象
+
+3. 创建`JobInfo`对象,Builder模式
+
+4. 调用`schedule()`来调度任务
+
+# 3. JobScheduler服务的创建
+参考[SystemServer分析.md]()
+
+`JobSchedulerService`的启动过程，最主要工作是从`jobs.xml`文件收集所有的`jobs`，放入到`JobStore`的成员变量`mJobSet`
+
+
+## 3.1 startOtherServices()
+
+	private void startOtherServices() {
+	  ...
+	  mSystemServiceManager.startService(JobSchedulerService.class);
+	  ...
+	}
+
+- `SystemServiceManager`会将会创建一个`JobSchedulerService`对象,并回调其`onStart()`方法
+
+	具体分析过程查看[SystemServer分析.md]
+
+### 3.1.1 JobScheduler构造函数
+
+    public JobSchedulerService(Context context) {
+        super(context);
+		// 创建主线程执行的Handler
+        mHandler = new JobHandler(context.getMainLooper());
+        mConstants = new Constants(mHandler);
+		// 创建Binder服务端对象
+        mJobSchedulerStub = new JobSchedulerStub();
+        mJobs = JobStore.initAndGet(this);
+
+        // Create the controllers.
+        mControllers = new ArrayList<StateController>();
+        mControllers.add(ConnectivityController.get(this));
+        mControllers.add(TimeController.get(this));
+        mControllers.add(IdleController.get(this));
+
+        mBatteryController = BatteryController.get(this);
+        mControllers.add(mBatteryController);
+
+        mStorageController = StorageController.get(this);
+        mControllers.add(mStorageController);
+        mControllers.add(AppIdleController.get(this));
+        mControllers.add(ContentObserverController.get(this));
+        mControllers.add(DeviceIdleJobsController.get(this));
+
+        // If the job store determined that it can't yet reschedule persisted jobs,
+        // we need to start watching the clock.
+		..........省略代码............
+    }
+
+- 创建了各种StateController,并添加到`mControllers`
+
+	1. `ConnectivityController`:注册监听网络连接状态的广播
+
+	2. `TimeController`:注册监听Job时间到期的广播
+
+	3. `IdleController`:注册监听屏幕亮/灭,dream进入/退出,状态改变的广播
+
+	4. `BatteryController`:注册监听电池是否充电,电量状态的广播
+
+	5. `AppIdleController`:监听app是否空闲
+
+## 3.2 JobHandler
+
+    final private class JobHandler extends Handler {
+
+        public JobHandler(Looper looper) {
+            super(looper);
+        }
+
+        @Override
+        public void handleMessage(Message message) {
+            synchronized (mLock) {
+				// 当系统启动到phase 600, mReadyToRock = true
+                if (!mReadyToRock) {
+                    return;
+                }
+                switch (message.what) {
+                    case MSG_JOB_EXPIRED: {
+                        JobStatus runNow = (JobStatus) message.obj;
+                        // runNow can be null, which is a controller's way of indicating that its
+                        // state is such that all ready jobs should be run immediately.
+                        if (runNow != null && isReadyToBeExecutedLocked(runNow)) {
+                            mJobPackageTracker.notePending(runNow);
+                            addOrderedItem(mPendingJobs, runNow, mEnqueueTimeComparator);
+                        } else {
+                            queueReadyJobsForExecutionLocked();
+                        }
+                    } break;
+                    case MSG_CHECK_JOB:
+                        if (mReportedActive) {
+                            // if jobs are currently being run, queue all ready jobs for execution.
+                            queueReadyJobsForExecutionLocked();
+                        } else {
+                            // Check the list of jobs and run some of them if we feel inclined.
+                            maybeQueueReadyJobsForExecutionLocked();
+                        }
+                        break;
+                    case MSG_CHECK_JOB_GREEDY:
+                        queueReadyJobsForExecutionLocked();
+                        break;
+                    case MSG_STOP_JOB:
+                        cancelJobImplLocked((JobStatus) message.obj, null,
+                                "app no longer allowed to run");
+                        break;
+                }
+                maybeRunPendingJobsLocked();
+                // Don't remove JOB_EXPIRED in case one came along while processing the queue.
+                removeMessages(MSG_CHECK_JOB);
+            }
+        }
+    }
+
+- `JobHandler`使用的是`system_server`进程中主线程的`Looper`,即该`Handler`运行在主线程
+
+## 3.3 JobSchedulerStub
+
+	final class JobSchedulerStub extends IJobScheduler.Stub {
+	    ...
+	}
+
+- 具体实现`JobSchedulerService`逻辑的地方
+
+## 3.4 JobStore.initAndGet(this);
+
+    static JobStore initAndGet(JobSchedulerService jobManagerService) {
+        synchronized (sSingletonLock) {
+            if (sSingleton == null) {
+                sSingleton = new JobStore(jobManagerService.getContext(),
+                        jobManagerService.getLock(), Environment.getDataDirectory());
+            }
+            return sSingleton;
+        }
+    }
+
+### 3.4.1 JobStore 构造函数
+
+    private JobStore(Context context, Object lock, File dataDir) {
+		// 同步锁
+        mLock = lock;
+        mContext = context;
+        mDirtyOperations = 0;
+
+        File systemDir = new File(dataDir, "system");
+        File jobDir = new File(systemDir, "job");
+        jobDir.mkdirs();
+		// 创建 /data/system/job/jobs.xml
+        mJobsFile = new AtomicFile(new File(jobDir, "jobs.xml"));
+
+        mJobSet = new JobSet();
+
+        mXmlTimestamp = mJobsFile.getLastModifiedTime();
+        mRtcGood = (System.currentTimeMillis() > mXmlTimestamp);
+
+        readJobMapFromDisk(mJobSet, mRtcGood);
+    }
+
+- 创建`job`目录,以及`jobs.xml`文件,读取文件中所有的`JobStatus`
+
+### 3.4.2 JobStore.readJobMapFromDisk()
+
+    @VisibleForTesting
+    public void readJobMapFromDisk(JobSet jobSet, boolean rtcGood) {
+        new ReadJobMapFromDiskRunnable(jobSet, rtcGood).run();
+    }
+
+- 通过`ReadJobMapFromDiskRunnable`这个`Runnable`,去`/data/system/job/jobs.xml`读取信息并创建`JobStatus`进行存储
+
+	`JobStatus`对象记录着任务的`jobID`,`ComponentName`,`uid`以及标签和失败次数信息
+
+
+
+# 4. JobService
+
+	public abstract class JobService extends Service {
+	    private static final String TAG = "JobService";
+	
+	    public static final String PERMISSION_BIND =
+	            "android.permission.BIND_JOB_SERVICE";
+	
+	    private JobServiceEngine mEngine;
+	
+	    /** @hide */
+	    public final IBinder onBind(Intent intent) {
+	        if (mEngine == null) {
+				// 实现了 IJobService.Stub 
+	            mEngine = new JobServiceEngine(this) {
+	                @Override
+	                public boolean onStartJob(JobParameters params) {
+	                    return JobService.this.onStartJob(params);
+	                }
+	
+	                @Override
+	                public boolean onStopJob(JobParameters params) {
+	                    return JobService.this.onStopJob(params);
+	                }
+	            };
+	        }
+			// 获取了 IJobService.Stub对象
+	        return mEngine.getBinder();
+	    }
+	
+		// 具体的实现过程 交给子类去实现
+	    public abstract boolean onStartJob(JobParameters params);
+	
+	
+	    public abstract boolean onStopJob(JobParameters params);
+	
+	
+	    public final void jobFinished(JobParameters params, boolean needsReschedule) {
+	        mEngine.jobFinished(params, needsReschedule);
+	    }
+	}
+
+
+# 4. JobScheduler执行过程
+
+	JobScheduler mJobScheduler = (JobScheduler)getSystemService( Context.JOB_SCHEDULER_SERVICE );
+
+	mJobScheduler.schedule(jobInfo)
+
+- `getSystemService()`是`ContextImpl`中的方法,该方法会调用`SystemServiceRegistry`去获取
+
+## 4.1 SystemServiceRegistry
+
+	registerService(Context.JOB_SCHEDULER_SERVICE, JobScheduler.class,
+	        new StaticServiceFetcher<JobScheduler>() {
+	    public JobScheduler createService() {
+	        IBinder b = ServiceManager.getService(Context.JOB_SCHEDULER_SERVICE);
+	        return new JobSchedulerImpl(IJobScheduler.Stub.asInterface(b));
+	    }});
+
