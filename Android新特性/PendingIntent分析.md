@@ -83,3 +83,178 @@
 
 - 比如，我们的 Activity 如果设置了 exported = false，其他应用如果使用 Intent 就访问不到这个 Activity，但是使用 PendingIntent 是可以的。
 
+
+
+# 3. 常见的PendingIntent静态方法分析
+
+	PendingIntent.getActivity()
+	PendingIntent.getService()
+	PendingIntent.getBroadcast()
+
+- 以上三个方法最终都会调用到`AlarmManagerService.getIntentSender()`
+
+
+## 3.1 PendingIntent.getActivity()
+
+    public static PendingIntent getActivity(Context context, int requestCode,
+            @NonNull Intent intent, @Flags int flags, @Nullable Bundle options) {
+		// 包名
+        String packageName = context.getPackageName();
+        String resolvedType = intent != null ? intent.resolveTypeIfNeeded(
+                context.getContentResolver()) : null;
+        try {
+            intent.migrateExtraStreamToClipData();
+            intent.prepareToLeaveProcess(context);
+            IIntentSender target =
+                ActivityManager.getService().getIntentSender(
+                    ActivityManager.INTENT_SENDER_ACTIVITY, packageName,
+                    null, null, requestCode, new Intent[] { intent },
+                    resolvedType != null ? new String[] { resolvedType } : null,
+                    flags, options, UserHandle.myUserId());
+            return target != null ? new PendingIntent(target) : null;
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+## 3.2 PendingIntent.getService()
+
+    public static PendingIntent getService(Context context, int requestCode,
+            @NonNull Intent intent, @Flags int flags) {
+        return buildServicePendingIntent(context, requestCode, intent, flags,
+                ActivityManager.INTENT_SENDER_SERVICE);
+    }
+
+    private static PendingIntent buildServicePendingIntent(Context context, int requestCode,
+            Intent intent, int flags, int serviceKind) {
+        String packageName = context.getPackageName();
+        String resolvedType = intent != null ? intent.resolveTypeIfNeeded(
+                context.getContentResolver()) : null;
+        try {
+            intent.prepareToLeaveProcess(context);
+            IIntentSender target =
+                ActivityManager.getService().getIntentSender(
+                    serviceKind, packageName,
+                    null, null, requestCode, new Intent[] { intent },
+                    resolvedType != null ? new String[] { resolvedType } : null,
+                    flags, null, UserHandle.myUserId());
+            return target != null ? new PendingIntent(target) : null;
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+## 3.3 PendingIntent.getBroadcast()
+
+    public static PendingIntent getBroadcastAsUser(Context context, int requestCode,
+            Intent intent, int flags, UserHandle userHandle) {
+        String packageName = context.getPackageName();
+        String resolvedType = intent != null ? intent.resolveTypeIfNeeded(
+                context.getContentResolver()) : null;
+        try {
+            intent.prepareToLeaveProcess(context);
+            IIntentSender target =
+                ActivityManager.getService().getIntentSender(
+                    ActivityManager.INTENT_SENDER_BROADCAST, packageName,
+                    null, null, requestCode, new Intent[] { intent },
+                    resolvedType != null ? new String[] { resolvedType } : null,
+                    flags, null, userHandle.getIdentifier());
+            return target != null ? new PendingIntent(target) : null;
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+
+## 3.4 AMS.getIntentSender()
+
+    public static IActivityManager getService() {
+        return IActivityManagerSingleton.get();
+    }
+
+    private static final Singleton<IActivityManager> IActivityManagerSingleton =
+            new Singleton<IActivityManager>() {
+                @Override
+                protected IActivityManager create() {
+                    final IBinder b = ServiceManager.getService(Context.ACTIVITY_SERVICE);
+					// 转换成Proxy
+                    final IActivityManager am = IActivityManager.Stub.asInterface(b);
+                    return am;
+                }
+            };
+
+- 在`SystemServer`类中,`AMS`被注册到`ServiceManager`中
+
+
+	public IIntentSender getIntentSender(int type, String packageName, IBinder token, String resultWho, int requestCode, Intent[] intents, String[] resolvedTypes, int flags, Bundle options, int userId) {
+	    //重新拷贝一次intent对象内容
+	    if (intents != null) {
+	        for (int i=0; i<intents.length; i++) {
+	            Intent intent = intents[i];
+	            if (intent != null) {
+	                intents[i] = new Intent(intent);
+	            }
+	        }
+	    }
+	    ...
+	
+	    synchronized(this) {
+	        int callingUid = Binder.getCallingUid();
+	        int origUserId = userId;
+	        userId = handleIncomingUser(Binder.getCallingPid(), callingUid, userId,
+	                type == ActivityManager.INTENT_SENDER_BROADCAST,
+	                ALLOW_NON_FULL, "getIntentSender", null);
+	        if (origUserId == UserHandle.USER_CURRENT) {
+	            userId = UserHandle.USER_CURRENT;
+	        }
+
+	        return getIntentSenderLocked(type, packageName, callingUid, userId,
+	              token, resultWho, requestCode, intents, resolvedTypes, flags, options);
+	    }
+	}
+
+- 此处的`packageName`为创建`PendingIntent`所在进程的包名,后续会把该信息保存到`PendingIntentRecord.Key`
+
+
+## 3.5 AMS.getIntentSenderLocked()
+
+	IIntentSender getIntentSenderLocked(int type, String packageName, int callingUid, int userId, IBinder token, String resultWho, int requestCode, Intent[] intents, String[] resolvedTypes, int flags, Bundle options) {
+	    ActivityRecord activity = null;
+	    ...
+	    //创建Key对象
+	    PendingIntentRecord.Key key = new PendingIntentRecord.Key(
+	            type, packageName, activity, resultWho,
+	            requestCode, intents, resolvedTypes, flags, options, userId);
+	    WeakReference<PendingIntentRecord> ref;
+	    ref = mIntentSenderRecords.get(key);
+	    PendingIntentRecord rec = ref != null ? ref.get() : null;
+	    if (rec != null) {
+	        if (!cancelCurrent) {
+	            if (updateCurrent) {
+	                if (rec.key.requestIntent != null) {
+	                    rec.key.requestIntent.replaceExtras(intents != null ?
+	                            intents[intents.length - 1] : null);
+	                }
+	                if (intents != null) {
+	                    intents[intents.length-1] = rec.key.requestIntent;
+	                    rec.key.allIntents = intents;
+	                    rec.key.allResolvedTypes = resolvedTypes;
+	                } else {
+	                    rec.key.allIntents = null;
+	                    rec.key.allResolvedTypes = null;
+	                }
+	            }
+	            return rec;
+	        }
+	        rec.canceled = true;
+	        mIntentSenderRecords.remove(key);
+	    }
+	    if (noCreate) {
+	        return rec;
+	    }
+	    //创建PendingIntentRecord对象
+	    rec = new PendingIntentRecord(this, key, callingUid);
+	    mIntentSenderRecords.put(key, rec.ref);
+	    ...
+	    return rec;
+	}
