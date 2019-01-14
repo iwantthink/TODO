@@ -203,6 +203,7 @@ SystemServer进程由`Zygote fork`生成,**进程名为`system_server`**,该进�
 
 
         // 当设备正在加密时,仅运行`核心`
+		// 即判断是否只扫描系统库(不包含apk和jar包)
         String cryptState = SystemProperties.get("vold.decrypt");
         if (ENCRYPTING_STATE.equals(cryptState)) {
             Slog.w(TAG, "Detected encryption in progress - only parsing core apps");
@@ -217,8 +218,11 @@ SystemServer进程由`Zygote fork`生成,**进程名为`system_server`**,该进�
             MetricsLogger.histogram(null, "boot_package_manager_init_start",
                     (int) SystemClock.elapsedRealtime());
         }
+		// 调用main函数, 第三个参数用于判断是否是工厂测试
         mPackageManagerService = PackageManagerService.main(mSystemContext, installer,
                 mFactoryTestMode != FactoryTest.FACTORY_TEST_OFF, mOnlyCore);
+		// 是否是第一次启动
+		// 当Zygote或 SystemServer退出时,init会再次启动它们,所以这里的firstBoot是指开机后的第一次启动
         mFirstBoot = mPackageManagerService.isFirstBoot();
         mPackageManager = mSystemContext.getPackageManager();
 
@@ -312,6 +316,7 @@ SystemServer进程由`Zygote fork`生成,**进程名为`system_server`**,该进�
         mDisplayManagerService.windowManagerAndInputReady();
         ...
         mSystemServiceManager.startService(MOUNT_SERVICE_CLASS); // mount
+		// 做dex优化. dex是针对java字节码的一种优化技术,提高运行效率
         mPackageManagerService.performBootDexOpt();  // dexopt操作
         ActivityManagerNative.getDefault().showBootMessage(...); //显示启动界面
         ...
@@ -329,6 +334,7 @@ SystemServer进程由`Zygote fork`生成,**进程名为`system_server`**,该进�
         // 准备好window, power, package, display服务
         wm.systemReady();
         mPowerManagerService.systemReady(...);
+		// 通知系统进入就绪状态 
         mPackageManagerService.systemReady();
         mDisplayManagerService.systemReady(...);
         
