@@ -182,6 +182,7 @@ Android 27
 		// mSharedUsers 是一个 ArrayMap
         SharedUserSetting s = mSharedUsers.get(name);
         if (s != null) {
+			// 重复添加,且值相同
             if (s.userId == uid) {
                 return s;
             }
@@ -208,6 +209,7 @@ Android 27
 		// uid不能超出限制范围
 		// Android 对uid进行了分类 ,应用APK 所在进程的uid从 10000 开始到19999结束,而系统APk所在进程的uid 小于10000 
         if (uid > Process.LAST_APPLICATION_UID) {
+			// 无效的应用uid
             return false;
         }
 		// uid 从10000 开始才属于应用的uid
@@ -223,19 +225,15 @@ Android 27
             }
 			// 非空则报错,重复添加
             if (mUserIds.get(index) != null) {
-                PackageManagerService.reportSettingsProblem(Log.ERROR,
-                        "Adding duplicate user id: " + uid
-                        + " name=" + name);
                 return false;
             }
 			// 保存应用 Package的 uid
             mUserIds.set(index, obj);
         } else {
 			// 剩下的属于系统的uid 添加到 mOtherUserIds
+
+			// 重复添加....
             if (mOtherUserIds.get(uid) != null) {
-                PackageManagerService.reportSettingsProblem(Log.ERROR,
-                        "Adding duplicate shared id: " + uid
-                                + " name=" + name);
                 return false;
             }
             mOtherUserIds.put(uid, obj);
@@ -396,29 +394,12 @@ Android 27
         // Read configuration from the old permissions dir
         readPermissions(Environment.buildPath(
                 Environment.getRootDirectory(), "etc", "permissions"), ALLOW_ALL);
-        // Allow Vendor to customize system configs around libs, features, permissions and apps
-        int vendorPermissionFlag = ALLOW_LIBS | ALLOW_FEATURES | ALLOW_PERMISSIONS |
-                ALLOW_APP_CONFIGS;
-        readPermissions(Environment.buildPath(
-                Environment.getVendorDirectory(), "etc", "sysconfig"), vendorPermissionFlag);
-        readPermissions(Environment.buildPath(
-                Environment.getVendorDirectory(), "etc", "permissions"), vendorPermissionFlag);
-        // Allow ODM to customize system configs around libs, features and apps
-        int odmPermissionFlag = ALLOW_LIBS | ALLOW_FEATURES | ALLOW_APP_CONFIGS;
-        readPermissions(Environment.buildPath(
-                Environment.getOdmDirectory(), "etc", "sysconfig"), odmPermissionFlag);
-        readPermissions(Environment.buildPath(
-                Environment.getOdmDirectory(), "etc", "permissions"), odmPermissionFlag);
-        // Only allow OEM to customize features
-        readPermissions(Environment.buildPath(
-                Environment.getOemDirectory(), "etc", "sysconfig"), ALLOW_FEATURES);
-        readPermissions(Environment.buildPath(
-                Environment.getOemDirectory(), "etc", "permissions"), ALLOW_FEATURES);
+		........省略剩下的读取权限信息.......
     }
 
-- `Environment.getOdmDirectory()`,`Environment.getRootDirectory()`,`Environment.getVendorDirectory`,`Environment.getOemDirectory`  四个方法就是从指定的目录下读取xml文件信息
+- `Environment.getOdmDirectory()`,`Environment.getRootDirectory()`,`Environment.getVendorDirectory`,`Environment.getOemDirectory`  四个方法就是获取不同的根目录
 
-- 例如`Environment.buildPath(Environment.getRootDirectory(), "etc", "sysconfig")`, 就是从`system/etc/permission`目录
+- 例如`Environment.buildPath(Environment.getRootDirectory(), "etc", "permissions")`, 就是从`system/etc/permissions`目录中读取
 
 ### 4.1.2 SystemConfig.readPermissions()
 
@@ -469,6 +450,8 @@ Android 27
 ### 4.1.3 SystemConfig.readPermissionsFromXml()
 
 代码过长,不展示了,实际的作用就是:将XML文件中的标签以及他们之间的关系转换成代码中的相应数据结构
+
+`platform.xml`的详细内容:
 	
 	<?xml version="1.0" encoding="utf-8"?>
 	<permissions>
@@ -481,23 +464,10 @@ Android 27
 	    </permission>
 		.......省略剩下的permission标签......
 	
-	    <!-- The following tags are assigning high-level permissions to specific
-	         user IDs.  These are used to allow specific core system users to
-	         perform the given operations with the higher-level framework.  For
-	         example, we give a wide variety of permissions to the shell user
-	         since that is the user the adb shell runs under and developers and
-	         others should have a fairly open environment in which to
-	         interact with the system. -->
-	
-	    <assign-permission name="android.permission.MODIFY_AUDIO_SETTINGS" uid="media" />
-	    <assign-permission name="android.permission.ACCESS_SURFACE_FLINGER" uid="media" />
+		// 赋予指定uid 相应的权限,就是把它加入到对应的用户组中  
+		// 例如,如果uid 为 media,就给予它 android.permission.WAKE_LOCK 权限
 	    <assign-permission name="android.permission.WAKE_LOCK" uid="media" />
-	    <assign-permission name="android.permission.UPDATE_DEVICE_STATS" uid="media" />
-	    <assign-permission name="android.permission.UPDATE_APP_OPS_STATS" uid="media" />
-	    <assign-permission name="android.permission.CAMERA" uid="media" />
-	    <assign-permission name="android.permission.ACCESS_FM_RADIO" uid="media" />
-	
-	    <assign-permission name="android.permission.ACCESS_SURFACE_FLINGER" uid="graphics" />
+
 	
 	    <!-- This is a list of all the libraries available for application
 	         code to link against. -->
