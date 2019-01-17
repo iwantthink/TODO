@@ -12,7 +12,9 @@
 
 	[GDK API 示例(具体例子)](http://www.groovy-lang.org/groovy-dev-kit.html)
 
-# 1.与Java的差异
+	[Differences with Java](http://www.groovy-lang.org/differences.html)
+
+# 1. Groovy与Java的差异
 
 ## 1.1 default imports
 默认导入如下包和类：
@@ -34,7 +36,7 @@
 - groovy.util.*
 
 ## 1.2 Multi-methods
-在Groovy中，在运行时才决定哪个方法被执行，这被称为Multi-methods 或 runtime dispatch，这意味着方法将在运行时根据参数类型被选择。
+在Groovy中，在运行时才决定哪个方法被执行，这被称为`Multi-methods` 或 `runtime dispatch`，这意味着方法将在运行时根据参数类型被选择。
 
 - **在Java中，方法在编译时期根据声明的类型进行选择**。
 
@@ -54,7 +56,8 @@
 - 在Groovy环境下 `assertEquals(1, result);`，这是因为Groovy中，当方法被调用时会在运行时期决定，实际调用方法的参数是String类型。
 
 ## 1.3 Array initializers
-**在Groovy中,`{.....}`被保留用作closures**
+
+**在Groovy中,`{.....}`被保留用作`closures`**
 
 以下的语法无法用来创建数组：
 
@@ -65,6 +68,7 @@
 	int [] array = [1,2,3,4]
 
 ## 1.4 Package scope visibility
+
 在Java中，字段上省略修饰符会将该字段修饰成**包私有字段**
 
 	class Person {
@@ -80,6 +84,7 @@
 	}
 
 ## 1.5 ARM blocks
+
 Java 中的`ARM(Automatic Resource Management)block `在Groovy中并不支持。Groovy中用依赖于closures的方法实现同样的效果.
 
 	Path file = Paths.get("/path/to/file");
@@ -114,7 +119,7 @@ Groovy实现方式：
 
 ## 1.6 Inner classes
 
-匿名内部类和嵌套类遵循Java规则，but you should not take out the Java Language Spec and keep shaking the head about things that are different. The implementation done looks much like what we do for groovy.lang.Closure, with some benefits and some differences. Accessing private fields and methods for example can become a problem, but on the other hand local variables don’t have to be final.
+匿名内部类和嵌套类遵循Java规则，但是执着于Java的规则. 内部类的实现与Groovy相似,有好处也有一些区别, 例如`Closure`访问私有字段和方法会存在问题,但是好处是局部变量不必一定是final
 
 ### 1.6.1 Static inner classes
 
@@ -170,7 +175,9 @@ Groovy不支持`y.new X()`这种语法，作为替代，必须使用`new X(y)`�
 	    }
 	}
 
-- Caution though, Groovy supports calling methods with one parameter without giving an argument. The parameter will then have the value null. Basically the same rules apply to calling a constructor. There is a danger that you will write new X() instead of new X(this) for example. Since this might also be the regular way we have not yet found a good way to prevent this problem.
+- **警告**: Groovy支持在调用一个参数的方法时,不给出参数,该参数会默认传入null. 这种规则在调用构造函数时同样适用
+
+	There is a danger that you will write new X() instead of new X(this) for example. Since this might also be the regular way we have not yet found a good way to prevent this problem.
 
 ## 1.7 Lambdas
 Java 8 支持 lambdas和方法引用
@@ -184,6 +191,7 @@ Groovy不支持这种语法，但是提供了closures:
 	list.each { println it } // or list.each(this.&println)
 
 ## 1.8 GStrings
+
 被双引号包括的字符串会被认为是`GString`类型，如果`GString`带有`$`符号，可以会造成编译错误或生成不同的值。
 
 正常情况下，如果一个API声明了参数类型为GString和String，俩者会被自动转换。注意Java API中接收的对象类型。
@@ -225,7 +233,12 @@ Groovy支持俩种转换风格(直接添加`(char)`或添加 `as char`),俩种�
 	assert ('cx' as char) == 'c'
 	assert 'cx'.asType(char) == 'c'
 
+
+- `(char)`形式进行强转,会抛出异常
+
+
 ## 1.10 Primitives and wrappers
+
 Groovy使用对象处理一切事物，**会自动包装原始类型**。Because of this, it does not follow Java’s behavior of widening taking priority over boxing. Here’s an example using int
 
 	int i
@@ -239,9 +252,9 @@ Groovy使用对象处理一切事物，**会自动包装原始类型**。Because
 	  println "in m(Integer)"
 	}
 
-- m方法1，是java会调用的，since widening has precedence over unboxing.
+- m方法1，是java会调用的，因为扩展优先于拆箱
 
-- m方法2，是Groovy会调用的,因为原始类型引用使用了其包装类
+- m方法2，是Groovy会调用的,因为所有的原始引用都使用了它们自身的包装器类
 
 ## 1.11 Behaviour of ==
 在Java中`==`意味着对象的引用类型相同，`equals`判断字符串的值是否相同。 **在Groovy中`==`翻译为`a.compareTo(b)==0`,相当于`equals`方法**
@@ -250,7 +263,7 @@ Groovy使用对象处理一切事物，**会自动包装原始类型**。Because
 
 ## 1.12 Conversions
 
-## 1.13 Extra keywords
+## 1.13 Groovy中额外保留的关键字
 
 - as  
 - def  
@@ -258,7 +271,7 @@ Groovy使用对象处理一切事物，**会自动包装原始类型**。Because
 - trait   
 
 # 2 The Groovy Delelopment Kit
-例如:File,List,Map,
+例如:File,List,Map的用法
 [GDK API 示例(具体例子)](http://www.groovy-lang.org/groovy-dev-kit.html)
 
 # 3.基础知识
