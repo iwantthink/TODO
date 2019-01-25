@@ -372,6 +372,9 @@ Groovy使用对象处理一切事物，**会自动包装原始类型**。Because
 			def name = 'abc'
 			map."${name}"
 
+
+- **Groovy默认的类以及变量 默认都是`public`的**
+
 ## 3.1 字符串
 ### 3.1.1 单引号`'content'`
 内容严格对应Java中的String，不对`$`符号进行转义
@@ -769,7 +772,7 @@ Groovy中容器类有三种:
 
 - Groovy创建的Map 实际上是`java.util.LinkedHashMap`
 
-- 可以使用String或int 作为key，但是key类型为int时，取值不能直接用`.key`，而必须使用`map[key]`。另外添加新的key时，也可以是数字 但是需要用`''`包裹
+- 可以使用String或int 作为key，但是key类型为int时，取值不能直接用`.key`去获取值，而必须使用`map[key]`方式进行获取。另外添加新的key时，也可以是数字 但是需要用`''`包裹
 
 		aMap.'3' = 2
 		assert aMap.containsKey('3')
@@ -891,7 +894,7 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 		vargsFunc3(1,'1','2')
 
 
-- 函数中的最后一个参数如果是闭包，则可以省略函数调用的那个括号`()`
+- **函数中的最后一个参数如果是闭包，则可以省略函数调用的那个括号`()`**
 
 		def func(int i,Closure c){
 	    	c.call(i)
@@ -902,7 +905,7 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 
 - **在Gstring中使用Closure  **
 
-	Gstring只会在创建的时候去估值,**${x}不能代表一个Closure**
+	Gstring只会在创建的时候去估值,**`${x}`不能代表一个Closure**
 
 		def x = 1
 		def gs = "x=${x}"
@@ -932,7 +935,7 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 		def curry4 = curry3.rcurry('lucy')
 		assert curry4(1)=='lucy has 1 kids'
 
-- index based curry,如果Closure接收大于俩个参数，可以使用ncurry()去设定指定索引位置的参数值
+- `index based curry`,如果Closure接收大于俩个参数，可以使用`ncurry()`去设定指定索引位置的参数值
 
 		def curry5 = {a,b,c->a+b+c}
 		def curry6 = curry5.ncurry(1,1)
@@ -996,16 +999,22 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 	形式3：
 	
 		def aClosure = {
-		-> doSomething...//这种写法表示不能给closure传参数
+			-> doSomething...//这种写法表示不能给closure传参数
 		}
 
 - `Owner,delegate and this`
 
-	- this:对应于定义Closure的闭合类
+	- `this`:
 
-	- owner:对应于定义Closure的闭合对象，这个闭合对象可以是 class也可以是Closure
+		对应于定义Closure的闭合类
 
-	- delegate:对应于第三方对象，在没有定义消息接收者时，方法会通过第三方对象调用
+	- `owner`:
+
+		对应于定义Closure的闭合对象，这个闭合对象可以是 class也可以是Closure
+
+	- `delegate`:
+
+		对应于第三方对象，在没有定义消息接收者时，方法会通过第三方对象调用
 
 #### 3.2.5.1 Closure中的this
 
@@ -1068,9 +1077,9 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 
 
 #### 3.2.5.2 Closure中的owner
-`owner`与`this`类似,**区别是`owner`会返回一个直接包含当前闭包的对象，仅限`Closure`或`Class`**
+`owner`与`this`类似,**区别是`owner`会返回一个直接包含当前闭包的对象，包括`Closure`或`Class` (但是`this`仅会返回类对象)**
 
-- `Closure`位于类中
+- `Closure`位于类中,`owner`就指向该类对象
 
 		class EnclosingOwner{
     		void run(){
@@ -1083,7 +1092,7 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 		def e1 = new EnclosingOwner()		
 		e1.run()
 
-- `Closure`位于内部类
+- `Closure`位于内部类,`owner`就指向该内部类对象
 
 		class InnerOwnerClass{
    	 		class Inner{
@@ -1097,7 +1106,7 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 		def e2 = new InnerOwnerClass()
 		e2.run()
 
-- `Closure`位于嵌套`Closure`
+- `Closure`位于嵌套`Closure`,`owner`指向包裹该`Closure`的外层`Closure`
 
 		class NestedClosure2{
     		void run(){
@@ -1129,10 +1138,12 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
         		assert func2()==this
         
         		def enclosed = {
+					// 返回的是外层closure
             		{-> delegate}.call()
         		}
        
         		def ownerMethod = {
+					// 返回的是外层closure
             		{->owner}.call()
         		}
         		//这里应该可以判断出 delegate 此时是 owner
@@ -1210,54 +1221,59 @@ Groovy重用了List的表示符用来表示数组，此外**为了创建数组�
 
 - `Closure.TO_SELF`:
 
-# 4 Groovy的表现形式
+# 4 Groovy的 Scripts 与 classes
 
-Groovy支持`class`形式和`script`形式
+Groovy支持`classes`形式和`scripts`形式
 
-**`class`形式:**
+**`classes`形式:**
 
-	class Main {                                    
+	// 定义类,名称是任意的
+	class Main {        
+		//  作为类的入口方法                           
 	    static void main(String... args) {          
 	        println 'Groovy world!'                 
 	    }
 	}
 
-**`script`形式**
+- 这是常用的Java形式的代码,业务代码将会被嵌入到class中,然后被执行
+
+**`scripts`形式**
 
 	println 'Groovy world!'
 
-- **Groovy默认的类以及变量 默认都是`public`的**
 
-- 可以通过`groovyc`命令将`.groovy`文件编译成`.class`文件
+**可以通过`groovyc`命令将`.groovy`文件编译成`.class`文件**
 
-## 4.1什么是脚本？ 
+## 4.1 Script class
 
-Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
+Groovy 编译器会将一个`script`编译生成`.class`文件,`Script`中的实体部分会被移动到`run()`方法中
 
 	import groovy.lang.Binding;
 	import groovy.lang.Script;
 	import org.codehaus.groovy.runtime.InvokerHelper;
 	import org.codehaus.groovy.runtime.callsite.CallSite;
 	
-	public class sample
-	  extends Script
-	{
-	  public sample() {}
+	public class Sample extends Script{
+
+		public Sample() {
+			CallSite[] var1 = $getCallSiteArray();
+		}
 	  
-	  public sample(Binding context)
-	  {
-	    super(context);
-	  }
+		public Sample(Binding context){
+			CallSite[] var2 = $getCallSiteArray();
+	    	super(context);
+		}
 	  
 	  public static void main(String... args)
 	  {
 	    CallSite[] arrayOfCallSite = $getCallSiteArray();
-	    arrayOfCallSite[0].call(InvokerHelper.class, sample.class, args);
+	    arrayOfCallSite[0].call(InvokerHelper.class, Sample.class, args);
 	  }
 	  
 	  public Object run()
 	  {
-	    CallSite[] arrayOfCallSite = $getCallSiteArray();int i = 1;return Integer.valueOf(i);return null;
+	    CallSite[] arrayOfCallSite = $getCallSiteArray(); 
+		return var1[1].callCurrent(this, "Groovy world!");
 	  }
 	}
 
@@ -1274,9 +1290,45 @@ Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
 
 - **每一个脚本都会生成一个static main函数**。这样，当`groovy test.groovy`的时候，其实就是用java去执行这个main函数
 
+
+
+### 4.1.1 Methods within Scripts
+
+Groovy 允许在Scripts中定义方法,如下所示:
+
+	int fib(int n) {
+	    n < 2 ? 1 : fib(n-1) + fib(n-2)
+	}
+	assert fib(10)==89
+
+另外,还可以将方法和代码混合使用,那么所编译所生成的`script`类会将所有的方法都移动到`script`类中,并在`run()`方法中组装
+
+	println 'Hello'                                 
+	
+	int power(int n) { 2**n }                       
+	
+	println "2^6==${power(6)}"   
+
+转换后的形式:
+
+	import org.codehaus.groovy.runtime.InvokerHelper
+	class Main extends Script {
+	    int power(int n) { 2** n}                   
+	    def run() {
+	        println 'Hello'                         
+	        println "2^6==${power(6)}"              
+	    }
+	    static void main(String[] args) {
+	        InvokerHelper.runScript(Main, args)
+	    }
+	}
+
+- 脚本被转换成字节码之后,其原始代码的行号会被保留. 这样是为了方便异常被抛出时查找异常所在的代码
+
 - 脚本中的所有代码都会放到run函数中。比如，println 'Groovy world'，这句代码实际上是包含在run函数里的。
 
 - 如果脚本中定义了函数，则函数会被定义在类中。
+
 
 ## 4.2 脚本中的变量和作用域
 
@@ -1396,7 +1448,7 @@ Groovy 编译器会将脚本编译成如下内容(生成`.class`文件):
 # 6 XML操作
 查看文档。。。
 
-# 7 groovy中包
+# 7 groovy中程序结构
 
 ## 7.1 包名
 Groovy中包名和Java中一致，用来分离代码避免产生冲突,Groovy需要在类定义之前指定包，否则使用默认包。
@@ -1406,12 +1458,13 @@ Groovy中包名和Java中一致，用来分离代码避免产生冲突,Groovy需
 例如使用不在同一个包中的某个类，需要使用类的全限定名(即包名+类名).或者通过`import`关键字 导入指定包中的类
 
 ## 7.2 导包
-import 手动导入包
+使用`import` 手动导入包
 
 	//MarkupBuilder 这个类位于 groovy.xml目录下
 	import groovy.xml.MarkupBuilder
 
-## 7.3 默认导入
+### 7.2.1 默认导入
+
 Groovy会默认导入一些包
 
 	import java.lang.*
@@ -1423,12 +1476,12 @@ Groovy会默认导入一些包
 	import java.math.BigInteger
 	import java.math.BigDecimal	
 
-## 7.4 star import
-**通过`*`通配符导入,表示导入包中所有的类**
+### 7.2.2 star import
+**与Java一样,Groovy提供了通过`*`通配符导入,表示导入包中所有的类**
 		
 	import groovy.xml.*
 
-## 7.5 静态导入
+### 7.2.3 静态导入
 Groovy 允许静态导入，相当于包中的静态方法或字段当做自己类中的静态方法/字段使用。
 
 	import static Boolean.FALSE
@@ -1449,15 +1502,41 @@ Groovy 的静态导入与java相似 ，但是更加的动态，Groovy允许你�
     	}
 	}
 
-## 7.6 static star import
-static star import 类似于常规star import 将从给定的类中导入所有的静态方法
+- 如果具有相同的类型,那么导入的类优先!
+
+### 7.2.4  Static import aliasing
+
+静态导入搭配关键字`as`一起使用,可以优雅的解决命名空间的问题
+
+假设需要获取到`Calendar`实例,通过使用其静态方法`getInstance()`. 那么这时可以通过静态导入该方法,并通过`getInstance()`调用即可
+
+但是除了每次都调用`getInstance()`之外,还有一种更简洁的方式就是通过使用`as`关键字给该方法设置一个别名,之后调用别名即可
+
+	import static Calendar.getInstance as now
+	
+	assert now().class == Calendar.getInstance().class
+
+
+### 7.2.5 static star import
+static star import 类似于常规star import ,**将从给定的类中导入所有的静态方法**
 
 	import static java.lang.Math.*
 	
 	assert sin(0) == 0.0
 	assert cos(0) == 1.0
 
-## 7.7 导入别名
+### 7.2.6 导入别名
+
+通过使用类型别名,可以使用自定义的名称去引用类.这需要通过`as`关键字完成
+
+	import java.util.Date
+	import java.sql.Date as SQLDate
+	
+	Date utilDate = new Date(1000L)
+	SQLDate sqlDate = new SQLDate(1000L)
+	
+	assert utilDate instanceof java.util.Date
+	assert sqlDate instanceof java.sql.Date
 
 静态导入和普通导入都可以使用`as`设置别名.
 
