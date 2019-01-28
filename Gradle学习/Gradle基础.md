@@ -4,6 +4,17 @@
 
 [Gradle DSL 教程](https://docs.gradle.org/current/dsl/)
 
+[深入理解Android之Gradle](http://blog.csdn.net/innost/article/details/48228651)
+
+[Gradle之完整指南](http://www.jianshu.com/p/9df3c3b6067a)
+
+[Android-Script Block-DSL](https://developer.android.com/tools/building/plugin-for-gradle.html)
+
+[Gradle-旧版本文档](https://sites.google.com/a/android.com/tools/tech-docs/new-build-system/user-guide#TOC-Advanced-Build-Customization)
+
+[Android-Dsl-APi](https://google.github.io/android-gradle-dsl/current/index.html)
+
+[Gradle深入与实战（六）Gradle的背后是什么？](http://benweizhu.github.io/blog/2015/03/31/deep-into-gradle-in-action-6/)
 
 # Gradle学习
 
@@ -13,28 +24,81 @@ Gradle 就是一个构建工具，发展历史从`ANT->MAVEN->GRADLE`
 
 Gradle 因为采用的Groovy语言，所以具备Groovy的特点DSL(`Domain Specific Language`)
 
-学习Gradle需要掌握俩个点：1是Groovy的语法，2是Gradle的使用方法
+学习Gradle需要掌握俩个点：
 
-Gradle版本在AS中的位置：项目名`\gradle\wrapper\gradle-wrapper.properties`
+1. Groovy的语法
+
+2. Gradle的使用方法
+
+Gradle版本在`AndroidStudio`中的位置：项目名`\gradle\wrapper\gradle-wrapper.properties`
 
 
-## 1.Gradle基本概念
+# 1. Gradle基本概念
 
-Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的类型
+**Gradle是一个框架，作为框架，它负责定义流程和规则。而具体的编译工作则是通过插件的方式来完成的**
 
-- `build.gradle` 又被称作构建脚本
+Gradle是一种基于Groovy的动态DSL，而Groovy是一种基于jvm的动态语言
 
-- 每一个待编译的工程都可以成为一个Project，每一个Project在构建的时候都包含一系列的Task，例如：一个Android APK的编译可能包含：Java源码编译Task，资源编译Task，JNI编译Task，Lint检查Task，打包生成apk的Task，签名的Task
+`Gradle`提供了许多默认的配置以及通常的默认值,此外构建脚本也是一个Groovy脚本,所以构建脚本允许那些在`Groovy`脚本中存在的元素(例如,方法定义和类定义)
+
+
+## 1.1 构建脚本结构
+
+Gradle Script 由零条或多条语句以及脚本块(script block)组成
+
+- 语句可以包括方法调用,属性赋值 和 局部变量定义
+
+- 脚本块就是一种方法调用,其将闭包当做参数
+
+	闭包被当做配置闭包,闭包在执行时会配置一些代理对象
+
+- 顶级脚本块可以通过如下地址查看[Gradle Build Language Reference - Build script structure](https://docs.gradle.org/current/dsl/)
+
+每一个`build.gradle`都会配置一个`Project`，每一个`Project`在构建的时候都包含一系列的`Task`，例如：一个Android APK的编译可能包含：Java源码编译Task，资源编译Task，JNI编译Task，Lint检查Task，打包生成apk的Task，签名的Task
 
 - 一个Project包含多少个Task是由编译脚本添加的插件所决定的，插件就是定义了Task，并具体执行这些Task的东西
 
-- **Gradle是一个框架，作为框架，它负责定义流程和规则。而具体的编译工作则是通过插件的方式来完成的**
+## 1.2 Gradle默认导入
 
-- gradle为我们提供了许多默认的配置以及通常的默认值
+Gradle 自动帮开发者导入了 一大堆的库，Gradle 可以通过 tooling api 来标记不同的任务结果
 
-- Gradle是一种基于Groovy的动态DSL，而Groovy是一种基于jvm的动态语言
+- 标签： `no label or EXECUTED`     说明：任务已经执行完成
 
-- **方法中最后一个参数为Closure时，可以把闭包放在方法调用之后！（这是groovy特性）**
+	情况： 
+
+	1. 当任务有动作且gradle确定task 是作为构建的一部分
+
+- 标签：`UP-TO-DATE`    说明：任务输出没有改变
+
+	情况： 
+
+	1. 当一个任务有输入有输出并且这些没有改变
+	2. 当一个任务有action，并且task输出没有改变
+	3. 当一个任务没有action，但是又 dpendencies 。并且这些dependencies 已经是UP-TO-DATE,SKIPPED or from CACHE
+	4. 当一个任务没有acton，也没有dependencies
+
+- 标签:`FROM-CACHE`  说明：任务的输出是从之前的执行结果中获得
+
+	情况:
+
+	1. 当任务存有构建输出缓存
+
+- 标签：`SKIPPED` 说明：任务action'被跳过
+
+	情况:
+
+	1. 当一个任务被明确的从 命令行中排除在外
+	2. 当一个任务 返回了 false
+
+- 标签：`NO-SOURCE` 说明：任务无需执行其action
+
+	情况: 
+		
+	1. 任务有输入有输出，但是没有source ，例如：source files are .java files for JavaCompile
+
+## 1.3 构建脚本与Groovy相关的特性
+
+**方法中最后一个参数为Closure时，可以把闭包放在方法调用之后！（这是groovy特性）**
 		
 		//方法定义，以下三种方法都是一样的效果
 		def method(Closure cl){
@@ -50,51 +114,23 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 		method{println 'method--3'}
 
 
-- gradle 自动帮开发者导入了 一大堆的库，gradle可以通过 tooling api 来标记不同的任务结果
 
-	- 标签： no label or EXECUTED     说明：任务已经执行完成
-	情况： 
+**Groovy支持函数调用传入`map`,会自动转换格式**
 
-		1. 当任务有动作且gradle确定task 是作为构建的一部分
+	apply plugin:'com.android.library'
 
-	- 标签：UP-TO-DATE    说明：任务输出没有改变
-	情况： 
-
-	 	1. 当一个任务有输入有输出并且这些没有改变
-	 	2. 当一个任务有action，并且task输出没有改变
-	 	3. 当一个任务没有action，但是又 dpendencies 。并且这些dependencies 已经是UP-TO-DATE,SKIPPED or from CACHE
-	 	4. 当一个任务没有acton，也没有dependencies
-
-	- 标签:FROM-CACHE 说明：任务的输出是从之前的执行结果中获得
-	情况:
-
-		1. 当任务存有构建输出缓存
-
-	- 标签：SKIPPED 说明：任务action'被跳过
-	情况:
-
-		1. 当一个任务被明确的从 命令行中排除在外
-		2. 当一个任务 返回了 false
-
-	- 标签：NO-SOURCE 说明：任务无需执行其action
-	情况: 
-		
-		1. 任务有输入有输出，但是没有source ，例如：source files are .java files for JavaCompile
+- `参数名1：参数值1，参数名2：参数值2` 会被转成map
 
 
-- Gradle文件包含了一些`Script Block`(Build script structure) 用来配置相关的信息。这些SB通常都是一个函数，并要求传入一个`Closure`
-
-- **Groovy支持函数调用传入`map`,会自动转换格式**
-
-		apply plugin:'com.android.library'
-
-	- `参数名1：参数值1，参数名2：参数值2` 会被转成map
+根据Groovy的语法，一个Property会自动生成get/set方法
 
 
-- 根据Groovy的语法，一个Property会自动生成get/set方法
+局部变量 用def 声明，且只能在被定义的地方可见(Groovy特征)
 
-### 1.1 Project和tasks和action
-- 每个项目的编译至少有一个project
+
+## 1.4 Project和tasks和action
+
+`Project`接口作为主要API,用于构建文件与Gradle的交互.通过`Project`,可以访问Gradle的所有功能
 
 - 每个project至少有一个task,task里面又包含了很多action，action就是一个代码块，里面包含了需要被执行的代码
 
@@ -105,13 +141,13 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 - task在build.gradle中被定义
 
 
-### 1.2 Gradle工作流程
+## 1.5 Gradle工作流程
 
 在编译过程中， Gradle 会根据 build 相关文件，聚合所有的project和task，执行task 中的 action。因为` build.gradle`文件中的task非常多，先执行哪个后执行那个需要一种逻辑来保证。这种逻辑就是依赖逻辑，几乎所有的Task 都需要依赖其他 task 来执行，没有被依赖的task 会首先被执行。所以到最后所有的 Task 会构成一个 有向无环图（DAG Directed Acyclic Graph）的数据结构。
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fjnug3z25hj20q7065t9d.jpg)
 
-#### 1.2.1编译过程分为三个阶段
+### 1.5.1 编译过程分为三个阶段
 
 1.  **初始化阶段**：执行`settings.gradle`.**创建 Project 对象**，如果有多个`build.gradle`，也会创建多个project.
 
@@ -151,64 +187,84 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 	}
 
 
-#### 1.2.2 Gradle编程模型
-- Gradle Build Language Reference ：[Gradle各种模型的介绍](https://docs.gradle.org/current/dsl/)
+## 1.6 Gradle编程模型
+
+[Gradle Build Language Reference,介绍Gradle的模型](https://docs.gradle.org/current/dsl/)
+
+`Gradle Script`是配置型脚本. Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的类型
+
+Type of Script | Delegates to instance of
+---|---
+Build script | Project
+Init script | Gradle
+Settings script | Settings
+
+- 例如,当一个`build`脚本 (`build.gradle`)执行时,会配置一个`Project`类型的对象,作为该脚本的`delegate object`(委托对象)
+
+	- `build.gradle` 又被称作构建脚本
+
+- 每种Gradle脚本都不同的`delegate object`(委托对象),委托对象的属性和方法可以在脚本中使用
+
+	每个Gradle 脚本都实现了`Script`接口,该接口定义了许多可以在脚本中使用的属性和方法
+
 
 - Gradle基于Groovy，Groovy基于java。所以Gradle执行的时候和Groovy一样，会把脚本转换成Java对象。
 
 - Gradle主要有三种对象，这三种对象和三种不同的脚本文件对应，在gradle执行的时候，会将脚本转换成对应的对象：
 
-	- **Gradle对象**：当我们执行gradle xxx或者什么的时候，gradle会从默认的配置脚本中构造出一个Gradle对象。在整个执行过程中，只有这么一个对象。Gradle对象的数据类型就是Gradle。我们一般很少去定制这个默认的配置脚本。
+	- **Gradle对象**：当我们执行gradle xxx或者什么的时候，gradle会从默认的配置脚本中构造出一个Gradle对象。**在整个执行过程中，只有这么一个对象**。Gradle对象的数据类型就是Gradle。我们一般很少去定制这个默认的配置脚本。
 
-	- **Project对象**：每一个`build.gradle`会转换成一个Project对象。
+	- **Project对象**：每一个`build.gradle`都会设置一个Project委托对象。
 
-	- **Setting对象**：每一个`settings.gradle`都会转换成一个Settings对象
+	- **Setting对象**：每一个`settings.gradle`都会设置一个Settings委托对象
 	
-	>**对于其他的gradle文件，除非定义了class,否则会转换成一个实现了Script接口的对象(与Groovy类似)**
+>**对于其他的`.gradle`文件，除非定义了class,否则会转换成一个实现了Script接口的对象(与Groovy类似)**
 
-##### 1.2.2.1 Gradle对象
+### 1.6.1 Gradle对象
 
 	//在settings.gradle中，则输出"In settings,gradle id is"  
 	println "In settings.gradle, gradle id is " +gradle.hashCode()  
-	println "Home Dir:" + gradle.gradleHomeDir  
-	println "User Home Dir:" + gradle.gradleUserHomeDir  
+	println "Home Dir:" + gradle.gradleHomeDir.path  
+	println "User Home Dir:" + gradle.gradleUserHomeDir.path  
 	println "Parent: " + gradle.parent  
 
 - `settings.gradle`和module下的`build.gradle` ,得到的gradle实例对象是一样的(根据hashCode判断)
 
-- HomeDir是gradle可执行程序的路径
+- **Gradle对象 默认是Settings和Project的成员变量.可以直接通过`gradle`获取 或者`getGradle()`获取**
 
-- User Home Dir:gradle配置的目录,存储了一些配置文件,以及编译过程中的缓存文件，生成的类文件，编译过程中依赖的插件等
+- Gradle对象是根据`init.gradle`生成的,并且整个Gradle构建执行过程中,只有一个`Gradle`对象
 
-- **Gradle对象 默认是Settings和Project的成员变量.**
+- `Gradle`对象的有用多种属性,[Gradle文档](https://docs.gradle.org/current/dsl/org.gradle.api.invocation.Gradle.html)
 
-- Gradle对象是根据`init.gradle`生成的
+	- `gradle.gradleHomeDir` : `Gradle`可执行程序的路径
 
-##### 1.2.2.2 Project对象
-- 每个`build.gradle`文件会转换成一个Project对象.
+	- `gradle.gradleUserHomeDir` : `Gradle`配置的目录,存储了一些配置文件,以及编译过程中的缓存文件，生成的类文件，编译过程中依赖的插件等
 
-- 在Gradle术语中，Project对象对应的是`BuildScript`
+### 1.6.2 Project对象
 
-- Project包含若干Task.由于Project对应具体的工程，所以需要为Project加载所需要的插件，比如为Java工程加载Java插件。其实，**一个Project包含多少Task往往是插件决定的**。
+每个`build.gradle`文件会转换成一个`Project`对象.
 
-- `build.gradle`中所有未定义的方法/属性，都会委派给Project对象去使用
+- 项目本质上是Task对象的集合,每个任务执行一些基本工作,例如编译类,运行单元测试等.
+
+	由于项目对应具体的工程，所以需要为项目加载所需要的插件，比如为Java工程加载Java插件。其实**一个Project包含多少Task往往是插件决定的**。
+
+- `build.gradle`中所有未定义的方法/属性，都会委派给`Project`对象去使用
+
 		println "name = $name"
-
--  局部变量 用def 声明，且只能在被定义的地方可见(Groovy特征)
-
 
 - **通常Project需要执行的内容：**
 
 	1. 加载插件
 
-	通过Project的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
+	通过`Project`对象的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
 	
 		- 除了加载二进制文件,还可以加载gradle文件
-		> **from**: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
-		>
-		> **plugin**: Plugin的Id或者是插件的具体实现类 
 
-		> **to**: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
+		1. **from**: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
+		
+		2. **plugin**: Plugin的Id或者是插件的具体实现类 
+
+		3. **to**: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
 	
 	2. 配置插件。例如设置哪里读取源文件。
 	
@@ -249,7 +305,8 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 
 		- utils中的ext 就是对应project的ext。
 
-#### 1.2.2.4 Lifecycle
+#### 1.6.3 生命周期
+
 >There is a one-to-one relationship between a Project and a build.gradle file. During build initialisation, Gradle assembles a Project object for each project which is to participate in the build, as follows:
 
 - Create a **Settings instance** for the build.
@@ -262,7 +319,8 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 
 
 
-#### 1.2.3 Task介绍
+## 1.7 Task介绍
+
 >Task 是Gradle中的一种数据类型，代表了一些要执行或todo的工作。不同插件可以添加不同的Task。每一个Task都需要和一个Project关联
 
 - 一个Task包含若干Action.所以Task提供了`doFirst`和`doLast`俩个函数 方便开发者使用，这俩个函数分别是用于最先执行的和最后执行的action。**Action就是一个闭包**
@@ -286,7 +344,7 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 		taskA.description = 'desc'
 
 
-##### 1.2.3.1 定义Task
+### 1.7.1 定义Task
 - Task是和Project关联的，所以要利用Project的task函数来创建一个Task  
 
 - 在创建task时，通常可以传入一个`Closure`,**这个Closure是用来配置task的，会在task返回之前执行。**
@@ -330,7 +388,7 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 		TaskContainer getTasks();
 		
 
-##### 1.2.3.2 Task依赖
+### 1.7.2 Task依赖
 - task 可以依赖于另外一个task 通过`dependsOn`
 
 		task funcX()
@@ -381,7 +439,7 @@ Gradle脚本在被执行时,根据脚本作用不同会被配置一个特定的�
 		}
 
 
-##### 1.2.3.3 设置默认Task
+### 1.7.3 设置默认Task
 Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(当没有其他task明确被执行时),例如:`gradle -q`时，会去执行task `clean`
 		
 	defaultTasks 'clean'
@@ -390,7 +448,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 		println 'default cleaning'
 	}
 
-##### 1.2.3.4 Task额外属性
+### 1.7.4 Task额外属性
 通过`ext.xxxx`来替task设置额外属性
 
 	task func{
@@ -401,7 +459,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 		println "hello my name is $func.nameProperty"
 	}
 
-##### 1.2.3.5 Task的使用
+### 1.7.5 Task的使用
 
 - 可以通过`tasks.getByPath()`方法 来获取  使用任务名称 ，相对路径 或者绝对路径调用该方法
 
@@ -422,7 +480,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 		println tasks.tasks1.name
 		println tasks['tasks1'].name
 
-##### 1.2.3.6 配置Task
+### 1.7.6 配置Task
 
 - 方式1
 
@@ -447,7 +505,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 			include '**.gradle'
 		}
 
-##### 1.2.3.7 Task的Action
+### 1.7.7 Task的Action
 可以通过API来访问task，用来添加action
 
 	task func<<{
@@ -468,7 +526,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 		}
 	}
 
-##### 1.2.3.8 覆盖任务
+### 1.7.8 覆盖任务
 
 可以通过`overwrite`覆盖任务，如果任务已经存在且不添加`overwrite`,会抛出一个异常，表示任务已经存在
 
@@ -480,7 +538,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 		println 'overwrite hello'
 	}
 
-##### 1.2.3.9 设置任务执行条件
+### 1.7.9 设置任务执行条件
 
 	task taskA<<{
 		println 'hello gradle'
@@ -490,7 +548,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 		!project.hasProperty('xxxx')
 	}
 
-##### 1.2.3.10 中断Task
+### 1.7.10 中断Task
 
 - 通过`throw new StopExcutionException()`抛出异常
 
@@ -503,7 +561,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 		taskA.enabled = false
 
 
-### 1.3 项目结构
+# 2. 项目结构
 
  	MyApp
 		├── build.gradle
@@ -521,7 +579,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
                    	├── layout
                    	└── etc.
 
-### 1.4 Gradle Wrapper
+## 1.4 Gradle Wrapper
 
 Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle版本会被下载下来 并使用，避免了开发者去下载不同版本的gradle，解决兼容性！
 
@@ -544,7 +602,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 	
 	- **可以改变distributionUrl 来改变gradle版本**
 
-### 1.5 基本构建命令
+## 1.5 基本构建命令
 - gradle projects 
 
 	**查看工程信息**,直接查看setting.gradle也可以得到结果
@@ -589,7 +647,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 很多命令除了会输出结果到命令行，还会在`build`文件夹下下生成运行报告，例如`check`命令会生成lint-result.html在`build/outputs`
 
 
-### 1.6 构建脚本的构成
+## 1.6 构建脚本的构成
 
 	MyApp
    	├── build.gradle
@@ -627,7 +685,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 - **每个项目单独的build.gradle**:仅针对每个module的配置,这里的配置优先级最高
 
-#### 1.6.1 module中的build.gradle介绍
+### 1.6.1 module中的build.gradle介绍
 
 		apply plugin: 'com.android.application'
 	
@@ -803,7 +861,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 		}
 	
 
-#### 1.6.2 Speeding up multimodule build
+### 1.6.2 Speeding up multimodule build
 通过以下方式加快gradle的编译
 
 - **开启并行编译：** 在项目根目录下的`gradle.properties`中设置
@@ -816,7 +874,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 
 
-#### 1.6.3 Reducing apk file
+### 1.6.3 Reducing apk file
 在编译的时候，有许多的资源并没有用到，可以通过`shrinkResources`来优化资源文件，除去不必要的资源。
 
 	android{
@@ -843,7 +901,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 		}
 	}
 
-#### 1.6.4 命令参数(指令)
+### 1.6.4 命令参数(指令)
 - 执行`task`的时候可以通过添加`--profile`参数生成一份执行报告在`reports/profile`中
 
 - `-q`可以抑制gradle日志消息
@@ -853,8 +911,8 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 - 通过`-P`设置属性，注意大小写
 		gradle -q taskA -P xxxx
 
-## 2.文件
-### 2.1 获取File对象
+# 2.文件
+## 2.1 获取File对象
 - 使用相对路径
 
 		File file1 = file('hello.txt')
@@ -870,7 +928,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 		File file3 = file(new File('hello.txt'))
 		println "file3 = ${file3.getText()}"
 
-### 2.2 获取FileCollection
+## 2.2 获取FileCollection
 
 - 通过`files()`获取，可以将 集合，迭代 映射 和数组传给此方法。这些将会被展开并转换成实例
 		FileCollection collection1 = files('hello.txt',new File('other.gradle'))
@@ -904,7 +962,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 - 通过`listFiles()`方法可以将`dir` 转换成`FileCollection`
 
 
-### 2.3 文件树 FileTree
+## 2.3 文件树 FileTree
 
 - 文件树是按照层次排列文件的集合,由FileTree 表示，其扩展了FileCollection ,`Project.fileTree(Map)`
 
@@ -980,7 +1038,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
  
 
 
-### 2.4 Copying file
+## 2.4 Copying file
 
 - 复制文件时，可以过滤内容 ，**需要提供 from   into  ** 
 
@@ -1070,7 +1128,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 			}
 		}
 
-### 2.5 Sync
+## 2.5 Sync
 - Sync 是扩展自Copy
 - 与copy的区别就是， Sync 会将文件先全部复制到 目标目录下，然后再将不需要的删除
 
@@ -1081,7 +1139,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 
 
-### 2.6 zip
+## 2.6 zip
 - 创建zip，默认 应该是生成在buiild下，命名规则应该是 `projectName-version.type` 
 	- version 可以在task中指定。。 貌似在 全局设置version 没用！
 	- baseName 可以替换掉 projectName 
@@ -1097,7 +1155,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 
 
-### 2.7 Settings file
+## 2.7 Settings file
 - 除了构建脚本 build.gradle之外，gradle 还提供了一个 settings.gradle 
 
 - settings.gradle 在初始化阶段执行。另外 多项目构建 必须有settings.gradle 
@@ -1105,8 +1163,8 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 - build.gradle中属性访问 和 方法调用 被project 代理. 同理 属性访问 和 方法调用 在settings.gradle 中 被 settings 代理
 
 
-## 3.实例
-### 3.1 keystore 保护
+# 3.实例
+## 3.1 keystore 保护
 如果我们将store的密码明文的写在signingConfigs里面，对安全性不好，所以需要构建一个动态加载任务，在编译release源码的时候从本地文件(git忽略名单中的文件)获取keystore信息
 
 	task getReleasePsw << {
@@ -1132,7 +1190,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 	}
 
 
-### 3.2 hook Android编译插件 重命名apk
+## 3.2 hook Android编译插件 重命名apk
 
 	android.applicationVariants.all{variant->
 		variant.outputs.each{output->
@@ -1146,7 +1204,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 生成类似 `app-debug-1.0.apk`
 
 
-### 3.3 设置默认值
+## 3.3 设置默认值
 
 - 通过以下设置 可以在 task被添加到project时立刻接收到通知
 - 这可以用来设置一些默认值或行为（task在Build file中可用之前）
@@ -1160,14 +1218,14 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 		println "task22 srcDir =$srcDir "
 	}
 
-### 3.4 配置结束回调
+## 3.4 配置结束回调
 - task 执行图绘制完毕，应该是配置结束
 
 		gradle.taskGraph.whenReady{
 			println "taskGraph.whenReady =  $it"
 		}
 
-### 3.5 buildTypesScriptBlock
+## 3.5 buildTypesScriptBlock
 
 - buildTypes和上面的signingConfigs，当我们在build.gradle中通过{}配置它的时候， 其背后的所代表的对象是NamedDomainObjectContainer< BuildType>和NamedDomainObjectContainer < SigningConfig> 
 
@@ -1189,18 +1247,4 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 - 在buildTypes中，Android默认为这几个NamedDomainObjectContainer添加了debug和release对应的对象。如果我们再添加别的名字的东西，那么gradleassemble的时候也会编译这个名字的apk出来。比如，我添加一个名为test的buildTypes，那么gradle assemble 就会编译一个xxx-test-yy.apk。在此，test就好像debug、release一样。 
 
-### 3.6 NamedDomainObjectContainer使用说明
-
-
-## 4 引用说明
-[深入理解Android之Gradle](http://blog.csdn.net/innost/article/details/48228651)
-
-[Gradle之完整指南](http://www.jianshu.com/p/9df3c3b6067a)
-
-[Android-Script Block-DSL](https://developer.android.com/tools/building/plugin-for-gradle.html)
-
-[Gradle-旧版本文档](https://sites.google.com/a/android.com/tools/tech-docs/new-build-system/user-guide#TOC-Advanced-Build-Customization)
-
-[Android-Dsl-APi](https://google.github.io/android-gradle-dsl/current/index.html)
-
-[Gradle深入与实战（六）Gradle的背后是什么？](http://benweizhu.github.io/blog/2015/03/31/deep-into-gradle-in-action-6/)
+## 3.6 NamedDomainObjectContainer使用说明
