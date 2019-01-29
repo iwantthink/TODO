@@ -8,3 +8,15 @@
  */
 
 rootProject.name = 'Sample'
+gradle.beforeProject{
+	project->
+	println "beforeProject"
+}
+
+gradle.taskGraph.whenReady {
+	println "whenReady"
+}
+
+gradle.buildFinished{
+	println "buildFinished"
+}

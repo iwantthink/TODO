@@ -14,6 +14,36 @@ task zip(type:Zip ,group:"Test"){
 	setArchiveName "base-demo-1.0.zip"
 }
 
-println "gradleHomeDir = "+ gradle.gradleHomeDir.path
-println "gradle version  = ${getGradle().gradleVersion}"
-println "gradle parent  = ${gradle.parent}"
+task("task1")
+
+task "task2"
+
+task("task3",{
+	println "config task3"
+	})
+
+task "task4",{
+	println "config task4"
+}
+
+task task5 {
+	println "config task5"
+}
+
+def action = new Action<Task>(){
+    @Override
+    void execute(Task s) {
+
+    }
+}
+
+task task6
+task6.doFirst{
+	println "task6 do doFirst"
+}
+
+task6.doLast{
+	println "task6 doLast"
+}
+
+println "task6 actions size = "+task6.actions.size
