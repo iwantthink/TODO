@@ -8,11 +8,8 @@
 
 [Gradle之完整指南](http://www.jianshu.com/p/9df3c3b6067a)
 
-[Android-Script Block-DSL](https://developer.android.com/tools/building/plugin-for-gradle.html)
-
 [Gradle-旧版本文档](https://sites.google.com/a/android.com/tools/tech-docs/new-build-system/user-guide#TOC-Advanced-Build-Customization)
 
-[Android-Dsl-APi](https://google.github.io/android-gradle-dsl/current/index.html)
 
 [Gradle深入与实战（六）Gradle的背后是什么？](http://benweizhu.github.io/blog/2015/03/31/deep-into-gradle-in-action-6/)
 
@@ -149,21 +146,21 @@ Gradle 自动帮开发者导入了 一大堆的库，Gradle 可以通过 tooling
 
 ### 1.5.1 编译过程分为三个阶段
 
-1.  **初始化阶段**：执行`settings.gradle`.**创建 Project 对象**，如果有多个`build.gradle`，也会创建多个project.
+1.  **初始化阶段**：执行`settings.gradle`.**创建 `Project` 对象**，如果有多个`build.gradle`，也会创建多个`Project`对象.
 
-	- Hook:gradle.beforeProject{project->}
+	- Hook: `gradle.beforeProject{project->}`
 
 2.  **配置阶段**：在这个阶段，会解析每个Project中的`build.gradle`(执行所有的编译脚本)，同时还会创建project的所有的task，并创建一个有向图来描述Task之间的依赖关系.作为构建一部分的构建脚本会被执行
 
-	- Hook:gradle.taskGraph.whenReady{graph->}
+	- Hook: `gradle.taskGraph.whenReady{graph->}`
 
 3.  **执行阶段**：在这个阶段，gradle 会根据传入的参数决定如何执行这些task（在配置阶段被创建和配置的）,真正action的执行代码就在这里`.gradle`按顺序执行每个任务。
 
-	- Hook:gradle.buildFinished{result ->}
+	- Hook: `gradle.buildFinished{result ->}`
 
 - Gradle有一个初始化流程,这个时候`settings.gradle`会执行
 
-- 在配置阶段，每个Project都会被解析，其内部任务也被添加到一个有向图里，用于解决执行过程中的依赖关系
+- 在配置阶段，每个`build.gradle`都会被解析，其内部任务也被添加到一个有向图里，用于解决执行过程中的依赖关系
 
 - 执行阶段，执行任务，gradle会将这个任务链上的所有任务按依赖顺序执行一遍
 
@@ -244,13 +241,12 @@ Settings script | Settings
 
 每个`build.gradle`文件会转换成一个`Project`对象.
 
-- 项目本质上是Task对象的集合,每个任务执行一些基本工作,例如编译类,运行单元测试等.
-
-	由于项目对应具体的工程，所以需要为项目加载所需要的插件，比如为Java工程加载Java插件。其实**一个Project包含多少Task往往是插件决定的**。
+- 由于`Project`对应具体的工程，所以需要为`Project`加载所需要的插件，比如为Java工程加载Java插件。其实**一个Project包含多少Task往往是插件决定的**。
 
 - `build.gradle`中所有未定义的方法/属性，都会委派给`Project`对象去使用
 
-		println "name = $name"
+		 defaultTasks('some-task')  // Delegates to Project.defaultTasks()
+		 reportsDir = file('reports') // Delegates to Project.file() and the Java Plugin
 
 - **通常Project需要执行的内容：**
 
@@ -318,294 +314,10 @@ Settings script | Settings
 - Finally, evaluate each Project by executing its build.gradle file, if present, against the project. The projects are evaluated in breadth-wise order, such that a project is evaluated before its child projects. This order can be overridden by calling Project.evaluationDependsOnChildren() or by adding an explicit evaluation dependency using Project.evaluationDependsOn(java.lang.String).
 
 
-
-## 1.7 Task介绍
-
->Task 是Gradle中的一种数据类型，代表了一些要执行或todo的工作。不同插件可以添加不同的Task。每一个Task都需要和一个Project关联
-
-- 一个Task包含若干Action.所以Task提供了`doFirst`和`doLast`俩个函数 方便开发者使用，这俩个函数分别是用于最先执行的和最后执行的action。**Action就是一个闭包**
-
-- Task创建的时候可以指定Type，通过`type:typeName`表达。作用就是告诉Gradle，该Task是从哪个基类Task 派生。 则新建的Task也具有基类Task的功能。例如：`task mTask(type:Copy)`，mTask也是一个Copy Task
-
--  **`task mTask{configure closure}`。花括号代表一个Closure，会在Gradle创建这个Task之后返回给用户之前，先执行这个Closure的内容,这个Closure可以被当做一个配置项的存在，去做一些配置，例如设置分组，添加描述等**
-
--  `task mTask<<{xxx}`,意思是把closure作为一个action添加到Task的action队列，并且最后才去执行它(`<<`符号是doLast的代表)
-
-- doLast的快捷键`<<`,会在Gradle5.0中遗弃
-
-- 通过group设置分组，通过description 设置描述
-
-		task taskB{
-			group = 'test'
-			description = 'desc'
-		}
-	
-		taskA.group = 'test'
-		taskA.description = 'desc'
-
-
-### 1.7.1 定义Task
-- Task是和Project关联的，所以要利用Project的task函数来创建一个Task  
-
-- 在创建task时，通常可以传入一个`Closure`,**这个Closure是用来配置task的，会在task返回之前执行。**
-
-		task myTask  <==myTask是新建Task的名字  
-		
-		task myTask { configure closure } //closure用来设置配置
-		
-		task myType << { task action } <==注意，<<符号是doLast的缩写 ，用来添加action
-		
-		task myTask(type: SomeType)  
-		
-		task myTask(type: SomeType) { configure closure }
-
-		task('task1')<< { println 'task1 is created'}
-
-		task(task2,type:Copy){
-			from 'xxxx'
-			into 'yyyy'
-		}
-
-		task task3<<{println 'task3 is created'}
-
-- **Task另外一种创建方式**
-
-		tasks.create(name:'task4'){
-			group 'test'
-			description 'i am task4'
-			doLast{
-				println 'task4 is created'
-			}	
-		}
-		
-		tasks.create(name:'task5',type:Copy){
-			group 'test'
-			from 'xxx'
-			into 'yyy'
-		}
-	
-		// 实际上是通过TaskContainer创建
-		TaskContainer getTasks();
-		
-
-### 1.7.2 Task依赖
-- task 可以依赖于另外一个task 通过`dependsOn`
-
-		task funcX()
-		task funcY(dependsOn:funcX)		
-
-- **`Lazy DependsOn` task依赖task时可以在task定义之前**
-
-		task funcX(dependsOn:funcY)<<{
-		}
-
-		task funcY()<<{
-		}
-
-- Gradle可以动态创建 Task
-
-		4.times{
-			task "task$it"{
-				doLast{
-					println "i am task $it"
-				}
-			}
-		}
-
-- 创建任务之后,可以在运行时动态添加依赖关系
-
-		task0.dependsOn(task1,task2,task3)
-
-- 可以为task添加来自其他project的依赖
-	
-		project(':moduleA'){
-			task task1(dependsOn:':moduleB:tasks2')<<{
-				println 'moduleA task1 is run'
-			}
-		}
-
-		project(':moduleB'){
-			task task2<<{
-				println 'moduleB task2 is run'
-			}
-		}
-
-- 依赖可以使用一个闭包来返回Task
-
-		task6.dependsOn {
-			tasks.findAll{
-				it.name.startWidth('task')
-			}
-		}
-
-
-### 1.7.3 设置默认Task
-Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(当没有其他task明确被执行时),例如:`gradle -q`时，会去执行task `clean`
-		
-	defaultTasks 'clean'
-
-	task clean<<{
-		println 'default cleaning'
-	}
-
-### 1.7.4 Task额外属性
-通过`ext.xxxx`来替task设置额外属性
-
-	task func{
-		ext.nameProperty = 'ryan'
-	}
-
-	task func1<<{
-		println "hello my name is $func.nameProperty"
-	}
-
-### 1.7.5 Task的使用
-
-- 可以通过`tasks.getByPath()`方法 来获取  使用任务名称 ，相对路径 或者绝对路径调用该方法
-
-		project(':moduleA'){
-			task taskA
-		}
-
-		println tasks.getByPath('tasksA').path
-		println tasks.getByPath(':script:tasksA').path
-
-- 可以将Task作为属性来使用
-
-		println task1.name
-		println project.task1.name
-
-- 可以通过tasks collection来访问Task
-		
-		println tasks.tasks1.name
-		println tasks['tasks1'].name
-
-### 1.7.6 配置Task
-
-- 方式1
-
-		Copy copy1 = task(task10,type:Copy)
-		copy1.from '/'
-		copy1.into 'task10'
-		copy1.include('**.txt')
-
-- 方式2
-		task task11(type:Copy)
-
-		task11{
-			from '/'
-			into 'task11'
-			include '**.txt'
-		}
-
-- 方式3
-		task (task12,type:Copy){
-			from '/'
-			into 'task12'
-			include '**.gradle'
-		}
-
-### 1.7.7 Task的Action
-可以通过API来访问task，用来添加action
-
-	task func<<{
-		println 'normal'
-	}
-
-	func.doFirst{
-		println 'before normal'
-	}
-
-	func.doLast{
-		println 'after normal'
-	}
-
-	func{
-		doLast{
-			println 'after after normal'
-		}
-	}
-
-### 1.7.8 覆盖任务
-
-可以通过`overwrite`覆盖任务，如果任务已经存在且不添加`overwrite`,会抛出一个异常，表示任务已经存在
-
-	task taskA<<{
-		println 'hello'
-	}
-
-	task taskA(overwrite:true)<<{
-		println 'overwrite hello'
-	}
-
-### 1.7.9 设置任务执行条件
-
-	task taskA<<{
-		println 'hello gradle'
-	}
-
-	tasksA.onlyIf{
-		!project.hasProperty('xxxx')
-	}
-
-### 1.7.10 中断Task
-
-- 通过`throw new StopExcutionException()`抛出异常
-
-		taskA.doFirst{
-			throw new StopExcutionException()
-		}
-
-- Task用有一个`enabled` 的属性
-
-		taskA.enabled = false
-
-
-# 2. 项目结构
-
- 	MyApp
-		├── build.gradle
-		├── settings.gradle
-		└── app
-			├── build.gradle
-			├── build
-			├── libs
-			└── src
-				└── main
-               	├── java
-               	│   └── com.package.myapp
-               	└── res
-                   	├── drawable
-                   	├── layout
-                   	└── etc.
-
-## 1.4 Gradle Wrapper
-
-Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle版本会被下载下来 并使用，避免了开发者去下载不同版本的gradle，解决兼容性！
-
-	 myapp/
-   	├── gradlew
-   	├── gradlew.bat
-   	└── gradle/wrapper/
-       	├── gradle-wrapper.jar
-       	└── gradle-wrapper.properties
-
-- bat文件针对window系统，shell脚本针对mac系统，一个jar文件，一个配置文件。配置文件如下：  
-
-		#Sat May 30 17:41:49 CEST 2015
-   	distributionBase=GRADLE_USER_HOME
-   	distributionPath=wrapper/dists
-   	zipStoreBase=GRADLE_USER_HOME
-   	zipStorePath=wrapper/dists
-   	distributionUrl=https\://services.gradle.org/distributions/
-   	gradle-2.4-all.zip
-	
-	- **可以改变distributionUrl 来改变gradle版本**
-
-## 1.5 基本构建命令
+## 1.7 基本的Gradle构建命令
 - gradle projects 
 
-	**查看工程信息**,直接查看setting.gradle也可以得到结果
+	**查看工程信息**
 
 - gradle tasks
 	**获取所有有分组的可运行task**
@@ -619,7 +331,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 	- `gradlew tasks`会列出每个任务的描述
 
-	- 添加--all参数  来查看task的依赖关系
+	- 添加`--all`参数  来查看task的依赖关系
 
 - gradlew task-name
 	执行指定名称的任务
@@ -647,221 +359,8 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 很多命令除了会输出结果到命令行，还会在`build`文件夹下下生成运行报告，例如`check`命令会生成lint-result.html在`build/outputs`
 
 
-## 1.6 构建脚本的构成
+## 1.8 Speeding up multimodule build
 
-	MyApp
-   	├── build.gradle
-   	├── settings.gradle
-   	└── app
-       	└── build.gradle
-
-- **setting.gradle **
-
-	这个 setting 文件定义了哪些module 应该被加入到编译过程，对于单个module 的项目可以不用需要这个文件，但是对于 multimodule 的项目我们就需要这个文件，否则gradle 不知道要加载哪些项目。这个文件的代码在初始化阶段就会被执行。
-
-- **根目录的build.gradle**
-
-	顶层的build.gradle文件的配置最终会被应用到所有项目中。它典型的配置如下：
-		buildscript {
-    		repositories {
-        		jcenter()
-    		}
-
-    		dependencies {
-        		classpath 'com.android.tools.build:gradle:1.2.3'
-    		}
-		}
-
-		allprojects{
-    		repositories{
-        		jcenter()
-    		}
-		}
-
-	- **buildscript**:定义了Adnroid编译工具的类路径.repositories中，jCenter是一个仓库
-
-	- **allprojects**:定义的属性会被应用到所有的module中，但是为了保证每个项目的独立性，我们一般不会在这里操作太多共有的东西
-
-
-- **每个项目单独的build.gradle**:仅针对每个module的配置,这里的配置优先级最高
-
-### 1.6.1 module中的build.gradle介绍
-
-		apply plugin: 'com.android.application'
-	
-		android {
-    		compileSdkVersion 25
-    		buildToolsVersion "25.0.3"
-
-    		defaultConfig {
-        		applicationId "com.hmt.analytics.customizeplugin"
-        		minSdkVersion 16
-        		targetSdkVersion 25
-        		versionCode 1
-        		versionName "1.0"
-        		testInstrumentationRunner 	"android.support.test.runner.AndroidJUnitRunner"
-    			}
-
-    		buildTypes {
-        		release {
-            		minifyEnabled false
-            		proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        				}
-    			}
-		}
-
-		dependencies {
-    		compile fileTree(dir: 'libs', include: ['*.jar'])
-    		compile 'com.android.support:appcompat-v7:25.3.1'
-		}
-
-
-
-- **apply plugin:**添加了Android程序的gradle插件,plugin提供了Android编译，测试，打包等等task
-
-
-- **android：** 编译文件中最大的代码块，关于android的所有特殊配置都在这里，这里就是前面plugin所提供的
-
-- **defaultConfig**：程序的默认配置,如何和AndroidMainfest.xml定义了重复的属性，会以这里为主
-
-
-- **applicationId**:在我们曾经定义的AndroidManifest.xml中，那里定义的包名有两个用途：一个是作为程序的唯一识别ID,防止在同一手机装两个一样的程序；另一个就是作为我们R资源类的包名。在以前我们修改这个ID会导致所有用引用R资源类的地方都要修改。但是现在我们如果修改applicationId只会修改当前程序的ID,而不会去修改源码中资源文件的引用。
-
-- **buildTypes:**定义了编译类型,针对每个类型可以有不同的编译配置,不同的编译配置对应不同的编译命令。默认debug,release
-
-
-- **dependencies:**属于gradle的依赖配置。定义当前module需要依赖的三方库
-	- 引用库时,每个库名称包含三个元素:`组名`：`库名称`：`版本号`
-	- 可以通过添加通配符来保证依赖库处于最新状态，但是建议不要这么做，因为这样每次编译都要去请求网络判断是否有最新版本
-	- 通过`files()`方法可以添加文件依赖，如果有很多文件，可以通过`fileTree()`方法
-- **native libraries**
-	配置本地.so库。在配置文件中做如下配置，然后在对应位置建立对应文件夹，并加入对应平台的.so文件即可
-		android{
-			sourceSets.main{
-				jniLibs.srcDir  'src/main/jniLibs'
-			}
-		}
-
-- **BuildConfig**
-	这个类是根据gradle配置文件生成的，其中的参数例如BuildConfig.DEBUG 可以用来判断当前版本是否是debug版本。
-
-	我们可以在defaultConfig中 或buildTypes中具体的类型中 定义一些key-value对，这些key-value对在不同的编译类型的apk下的值不同，例如我们可以为debug,release设置不同的请求地址
-		buildTypes{
-			debug{
-				buildConfigField "String","API_URL","www.google.com"
-			}
-
-			release{
-				buildConfigField "String","API_URL","www.irs01.com"
-			}
-		}
-
-	此外还可以为不同编译类型设置不同的资源文件
-		buildTypes{
-			debug{
-				resValue "String","app_name","example_demo"
-			}
-
-			release{
-				resValue "String","app_name","demo"
-			}
-		}
-		
-
-- **repositories**
-	Repositories 就是代码仓库,平时的添加的一些 dependency 就是从这里下载的，Gradle 支持三种类型的仓库：Maven,Ivy和一些静态文件或者文件夹。在编译的执行阶段，gradle 将会从仓库中取出对应需要的依赖文件，当然，gradle 本地也会有自己的缓存，不会每次都去取这些依赖。
-
-	gradle支持多种Maven仓库，一般为公共的Jcenter，可以通过手动添加一些私人库并添加账号密码
-		repositories{
-			maven{
-				url "http://repo.xxx.xx/maven"
-				creadentials{
-					username 'user'
-					password 'password'
-				}
-			}
-		}
-
-	也可以使用相对路径配置本地仓库，可以通过配置项目中存在的静态文件夹作为本地仓库
-		repositories{
-			flatDir{
-				dirs 'aars'
-			}
-		}
-
-
-- **library projects**
-	需要写一个library项目给其他项目引用，那么apply plugin 就需要改成 'com.android.library',另外还需要在setting.gradle 中include。 默认生成的话as会做好这些
-
-	如果不方便直接引用module ，可以将module打包成aar形式，然后通过文件的形式引用。这种情况需要在项目下新建aars文件夹，并在根目录下的build.gradle配置**本地仓库**，然后在dependencies中添加`compile name:'libraryname',ext:'aar'`
-
-- **build variants-build type**
-	在编译的时候动态根据当前的编译类型输出不同样式的apk文件等情况时就需要用到了buiildtypes
-
-		buildTypes{
-			staging.initWith buildTypes.debug
-			staging{
-				applicationIdSuffix '.staging'
-				versionNameSuffix '-staging'
-				debuggable = false
-			}
-		}
-- **Source sets**
-	每当新建一个build type时，gradle默认会创建一个新的source set。可以建立与`main`同级的文件夹，这样在编译时 会根据不同的编译类型 选择某些对应文件夹下的源码。不止文件夹可以替换，资源也可以替换
-
-	另外dependencies中也可以通过 `buildType+compile` 来指定 编译类型去添加指定三方框架
-
-
-- **product flavors**
-	如果我们需要针对同一份代码编译不同的程序(包名不同)，就需要`product flavors`
-	- 注意product flavors和build type是不一样的，而且他们的属性也不一样。所有的product flavor和defaultConfig共享属性
-
-	像Build type 一样，product flavor 也可以有自己的source set文件夹。除此之外，product flavor 和 build type 可以结合，他们的文件夹里面的文件优先级甚至高于 单独的built type 和product flavor 文件夹的优先级。如果你想对于 blue类型的release 版本有不同的图标，我们可以建立一个文件夹叫blueRelease，注意，这个顺序不能错，一定是 flavor+buildType 的形式。
-
-	更复杂的情况下，我们可能需要多个product 的维度进行组合，比如我想要 color 和 price 两个维度去构建程序。这时候我们就需要使用flavorDimensions：
-
-			android{
-				flavorDimensions 'color','price'
-
-				productFlavors{
-					red{
-						flavorDimension 'color'
-					}
-					blue{
-						flavorDimension 'color'
-					}
-					free{
-						flavorDimension 'price'
-					}
-					paid{
-						flavorDimension 'price'
-					}
-				}
-			}
-	这样gradle会自动进行组合，得出类似blue+free+debug blue+paid+release red+free+debug red+paid+release
-
-	BuildType中定义资源优先级最大，Library中定义的资源优先级最低
-
-- **signing configurations**
-	首先我们需要在android{}中配置
-		android{
-			signingConfigs{
-				storeFile file("release.jks")
-				storePassword "password"
-				keyAlias 'rellease-jks'
-				keyPassword "123456"
-			}
-		}
-
-	配置之后需要在build type中使用
-		buildTypes{
-			release{
-				signingConfig signingConfigs.release
-			}
-		}
-	
-
-### 1.6.2 Speeding up multimodule build
 通过以下方式加快gradle的编译
 
 - **开启并行编译：** 在项目根目录下的`gradle.properties`中设置
@@ -874,42 +373,17 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
 
 
 
-### 1.6.3 Reducing apk file
-在编译的时候，有许多的资源并没有用到，可以通过`shrinkResources`来优化资源文件，除去不必要的资源。
+## 1.9 命令参数(指令)
 
-	android{
-		buildTypes{
-			release{
-				minifyEnabled = true //只有当俩者都为true 才会真正的删除无效代码和无银用资源
-				shrinkResources = true//
-			}
-		}
-	}
+执行`task`的时候可以通过添加`--profile`参数生成一份执行报告在`reports/profile`中
 
-在某些情况下，一些资源是通过动态加载的方式载入的，这时候需要像Progard一样对资源进程**keep**操作。操作方式就是：在`res/raw/`下创建一个`keep.xml`文件，使用如下方式keep资源
+参数`-q`可以抑制gradle日志消息
 
-	<?xml version="1.0" encoding="utf-8"?>  
-	<resources xmlns:tools="http://schemas.android.com/tools"  tools:keep="@layout/activity_four,@drawable/no_reference_but_keep"/>  
+执行Task时， 添加`--continue` 可以在任务失败之后 继续执行
 
+通过`-P`设置属性，注意大小写
 	
-
-对于一些尺寸文件，我们可以这么做去防止被去除：
-
-	android{
-		defaultConfig{
-			resConfigs "hdpi","xhdpi","xxhdpi"
-		}
-	}
-
-### 1.6.4 命令参数(指令)
-- 执行`task`的时候可以通过添加`--profile`参数生成一份执行报告在`reports/profile`中
-
-- `-q`可以抑制gradle日志消息
-
-- 执行Task时， 添加`--continue` 可以在任务失败之后 继续执行
-
-- 通过`-P`设置属性，注意大小写
-		gradle -q taskA -P xxxx
+	gradle -q taskA -P xxxx
 
 # 2.文件
 ## 2.1 获取File对象
