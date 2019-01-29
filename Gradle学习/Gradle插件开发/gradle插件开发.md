@@ -11,7 +11,6 @@
 [Gradle低于4.2的版本如何实现嵌套DSL](https://stackoverflow.com/questions/28999106/define-nested-extension-containers-in-gradle?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa)
 
 
-
 **一定要注意Android studio 中gradle的版本,gradle插件和gradle是不同的。前者用来配置环境使得AS支持gradle，后者是用于Gradle开发**
 
 # 1.自定义任务类
