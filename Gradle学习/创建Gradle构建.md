@@ -643,7 +643,7 @@ Gradle可以通过 `defaultTasks 'tasks1','tasks2'`来设置默认执行的task(
 
 Gradle包含一系列的插件,更多可用的插件可以在[Gradle插件门户网站](https://plugins.gradle.org/)
 
-例如,`base`插件中包含一个核心类型`Zip`,利用这个`Zip`去创建一个压缩的task
+例如,`base`插件中包含一个核心类型`Zip`,利用这个`Zip`类型去创建一个压缩的task
 
 1. 首先需要使项目应用`base`插件
 
