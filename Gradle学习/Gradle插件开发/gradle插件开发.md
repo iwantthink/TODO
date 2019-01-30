@@ -6,45 +6,55 @@
 
 [使用BuildSrc形式创建插件-2](http://www.heqiangfly.com/2016/03/15/development-tool-gradle-customized-plugin/)
 
-[Gradle 使用指南 -- Plugin DSL 扩展](http://www.heqiangfly.com/2016/03/16/development-tool-gradle-customized-plugin-dsl-extension/)
+[Gradle 使用指南 -- Plugin DSL 扩展](http://www.heqiangfly.com/2016/04/16/development-tool-gradle-customized-plugin-dsl-extension/)
 
 [Gradle低于4.2的版本如何实现嵌套DSL](https://stackoverflow.com/questions/28999106/define-nested-extension-containers-in-gradle?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa)
 
+[**Gradle编写自定义任务-4.10版本-官方文档**](https://docs.gradle.org/4.10/userguide/custom_tasks.html)
 
-**一定要注意Android studio 中gradle的版本,gradle插件和gradle是不同的。前者用来配置环境使得AS支持gradle，后者是用于Gradle开发**
+[**Gradle编写自定义插件-4.10版本-官方文档**](https://docs.gradle.org/4.10/userguide/custom_plugins.html)
 
-# 1.自定义任务类
+# 注意事项
+
+**Android studio 中gradle的版本,gradle插件和gradle是不同的。**
+
+- 前者用来配置环境使得AS支持gradle，后者是用于Gradle开发
+
+# 1. 自定义任务类
 
 Gradle支持俩种类型的Task：
 
-1. 简单类型的Task，可以通过一些`action Closure` 定义。`action closure`确定了Task的行为
+1. 简单类型的Task，可以通过一些`action closure` 定义,`action closure`确定了Task的行为. 此类任务适用于在构建脚本中实现一次性任务.
 
-2. 增强型的Task，行为是内置到Task里的，另外Task提供了属性用于配置行为。大多数的Gradle plugin 都是使用的增强型Task，只需要声明任务并使用其属性配置任务
+2. 增强型的Task，行为是内置到任务中，并且Task提供了属性用于配置行为。大多数的Gradle plugin 都是使用的增强型Task，只需要声明任务并使用其属性配置任务,通过这种方式,增强型任务允许在许多不同的位置重复使用某种行为,并且允许在不同的构建中使用
 
 ## 1.1 增强型任务
-- 增强型任务的属性或行为通过一个类来定义，需要指定Task的type或class
 
-## 1.2 Task class 源码存放位置
+增强型任务的属性或行为通过任务的类来定义,声明增强任务时,可以指定任务的类型或类
 
-- **Build script：**可以直接在构建脚本中定义任务类。有利于任务类自动编译并，并且这个任务类自动的会被包含在构建脚本的类路径中。缺点就是任务类在构建脚本外部不可见，所以就无法在没有定义任务类的地方去使用
+## 1.2 任务类源码的存放位置
 
-- **buildScr Project：**可以将任务类的源码放在 `rootProjectDir/buildSrc/src/main/groovy`目录下（即和app文件夹在同一级下）。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外任务类对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+- **Build script：**可以直接在构建脚本中定义任务类。有利于任务类自动编译，并且这个任务类自动的会被包含在构建脚本的类路径中。缺点就是任务类在构建脚本外部不可见，所以就无法在定义任务类之外的地方去使用
 
-- **Standalone project：**在独立的项目里编写任务类,打成Jar包使用 或发布到仓库，之后可以直接引用。
+- **buildScr Project：**可以将任务类的源码放在 `rootProjectDir/buildSrc/src/main/groovy`目录下（即和app文件夹在同一级下）。Gradle会编译和测试任务类，并使其在构建脚本的类路径上可用。另外这种位置的任务类对构建中的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+
+- **Standalone project：**在独立的项目里编写任务类,打成Jar包使用 或发布到仓库，之后可以直接引用。通常,这种Jar包会包含一些自定义插件,或者将多个相关任务类捆绑到单个库中
 
 
 ## 1.3 编写简单的任务类
-- 要实现自定义任务类，需要创建一个类并继承`DefaultTask`类
 
-- 通过`TaskAction`注解 向任务类添加方法，当任务执行时，Gradle会自动调用该action
+**要实现自定义任务类，需要创建一个类并继承`DefaultTask`类**
 
-- 定义的时候可以不使用方法+注解的 方式 替 任务类添加行为。可以在创建任务类对象的时候调用doFirst()或doLast()的cloasure 来添加
+- 通过添加`@TaskAction`注解,标记任务类中的某个方法为action，当任务执行时，Gradle会自动调用该action
+
+- 定义的时候可以不使用方法+注解的形式替任务类添加行为。可以在创建任务类对象的时候在配置closure中通过添加 `doFirst()`或`doLast()`方法来添加行为
 
 - 可以替任务类 添加属性，这样在定义任务类的时候 就可以设置这个属性的值
 
 
-	class GreetingTask extends DefaultTask{
-		String name = 'name from greetingTask'
+	public class GreetingTask extends DefaultTask{
+		// 定义了一个属性,使用默认值
+		public String name = 'name from greetingTask'
 
 		@TaskAction
 		def greet(){
@@ -57,28 +67,57 @@ Gradle支持俩种类型的Task：
 
 	//customize the greeting
 	task greeting(type:GreetingTask){
+		// 配置时,修改name属性的值
 		name = 'hello from greeting'
 	}
 
+- **慎用name这个属性名...会导致任务执行错误(找不到该任务,实际上是存在的)**
+
 ## 1.4 独立项目中的任务类
+
+把任务类放到单独的一个项目中，可以发布出来 让别人引用。
+
 ### 1.4.1 定义
-- 把任务类放到单独的一个项目中，可以发布出来 让别人引用。
 
-- 项目的build.gradle 写法,需要引入groovy插件，添加Gradle Api为编译时依赖
-		apply plugin: 'groovy'
+项目的`build.gradle`写法,需要引入groovy插件，添加Gradle Api为编译时依赖. [俩种不同的添加依赖的方式](https://stackoverflow.com/questions/32352816/what-the-difference-in-applying-gradle-plugin)
 
-		dependencies {
-    		compile gradleApi()
-    		compile localGroovy()
-		}
+	apply plugin: 'groovy'
+	
+	//plugins{
+	//	id 'groovy'
+	//}
 
-- `src/main/groovy/org/gradle/GreetingTask.groovy`下放置任务类
+	dependencies {
+		compile gradleApi()
+		compile localGroovy()
+	}
 
-### 1.4.2 引用
+
+
+### 1.4.2 创建Task
+
+`src/main/groovy/org/gradle/GreetingTask.groovy`下放置任务类
+
+	package org.gradle
+	
+	import org.gradle.api.DefaultTask
+	import org.gradle.api.tasks.TaskAction
+	
+	class GreetingTask extends DefaultTask {
+	    String greeting = 'hello from GreetingTask'
+	
+	    @TaskAction
+	    def greet() {
+	        println greeting
+	    }
+	}
+
+### 1.4.3 引用Task
 
 		buildscript {
     		repositories {
         		maven {
+					// 仓库地址为..本地
             		url uri('../repo')
         		}
     		}
@@ -92,24 +131,27 @@ Gradle支持俩种类型的Task：
     		greeting = 'howdy!'
 		}
 
-
-
-
-
 # 2.自定义插件
+
+
+## 2.1 插件源码的存放位置
+
 **插件源码放置位置：**
-- Build Script :直接在构建脚本文件（build.gradle）中编写，缺点是无法复用插件代码(在其他项目中使用的话 需要复制gradle文件)
 
-- buildSrc Project:将插件源码放到 `rootProjectDir/buildSrc/src/main/groovy `目录下。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外插件对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+- `Build Script` :直接在构建脚本文件（`build.gradle`）中编写，缺点是无法复用插件代码(在其他项目中使用的话 需要复制gradle文件)
 
-- Standalone project:在独立的项目里编写插件,打成Jar包使用 或发布到仓库，之后可以直接引用。
+- `buildSrc Project`:将插件源码放到 `rootProjectDir/buildSrc/src/main/groovy `目录下。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外插件对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+
+- `Standalone project`:在独立的项目里编写插件,打成Jar包使用 或发布到仓库，之后可以直接引用。
 
 
+## 2.2 构建脚本中编写插件
 
-## 2.1 编写简单的插件
-以下的例子都是在build.gradle中编写的,有些GradleAPI 在AndroidStudio中 不存在，因为Gradle的版本问题。。一些API 在特定版本之后才出现
----
-给出的例子中设置的插件类型是Project类型的，可以在Plugin<>泛型中设置更多的类型参数（现在已经支持 Gradle/Setting/Project等）
+**以下的例子都是在`build.gradle`中编写的,有些GradleAPI 在AndroidStudio中 不存在，因为Gradle的版本问题。。一些API 在特定版本之后才出现**
+
+要创建Gradle插件,需要编写一个类去实现`Plugin`接口.**当插件应用于项目时,Gradle会创建插件类的实例,并调用实例的`Plugin.apply()`方法**, 项目对应的`Project`对象会作为参数传递给`apply()`方法,插件可以使用它来对项目进行设置
+
+
 
 		apply plugin:GreetingPlugin //直接依赖 去使用！
 	
@@ -123,45 +165,70 @@ Gradle支持俩种类型的Task：
 	    	}
 		}
 
-- build script形式的插件，需要直接在编写 插件的build.gradle中去apply插件，然后在项目中apply这个文件
+- 给出的例子中设置的插件类型是`Project`类型的，可以在`Plugin<>`泛型中设置更多的类型参数（现在已经支持 Gradle/Setting/Project等）
 
-## 2.2 从构建中获取输入信息
-- 其实就是从apply插件的 build.gradle 中 传递参数给插件！
+	如果设置为`Project`,那么该插件可以应用于`build.gradle`
 
-- 大多数插件需要从构建脚本获取一些配置，可以通过`extension objects`方法实现。具体就是与Gradle Project 相关联的一个 `ExtensionContainer`对象实现参数的传递。
+	如果设置为`Settings`,那么该插件可以应用于`settings.gradle`
 
-	- 插件中定义 
-			class GreetingPlugin implements Plugin<Project> {
-    			void apply(Project project) {
-        			// 添加扩展对象
-        			project.extensions.create("greeting", GreetingPluginExtension)
-        			// 添加一个使用配置的任务
-        			project.task('hello') {
-            			doLast {
-                			println project.greeting.message
-            			}
-        			}
-    			}
+	如果设置为`Gradle`,那么插件可以应用于`init.gradle`
+
+- `build script`形式的插件，需要直接在编写插件的`build.gradle`中去apply插件，然后在项目中apply这个文件
+
+## 2.3 从项目中获取输入信息
+
+大多数插件需要从构建脚本中获取一些配置，其中一种实现方式是通过`extension objects`方法实现。`Gradle Project`与`ExtensionContainer`对象相关联,该对象包含已应用于项目的插件的所有设置和属性. **可以通过此容器添加扩展对象来为插件提供配置**
+
+- 其实就是从apply插件的 `build.gradle`文件中传递参数给插件！
+
+插件定义:
+		
+	class GreetingPlugin implements Plugin<Project> {
+		void apply(Project project) {
+			// 添加扩展对象
+			project.extensions.create("greeting", GreetingPluginExtension)
+			// 添加一个使用配置的任务
+			project.task('hello') {
+				doLast {
+					println project.greeting.message
+				}
 			}
+		}
+	}
 
-			class GreetingPluginExtension {
-    			def String message = 'Hello from GreetingPlugin'
+	class GreetingPluginExtension {
+		def String message = 'Hello from GreetingPlugin'
 				
-				Closure cl
-			}
-	- 使用插件
-			apply plugin:GreetingPlugin
-			//方式1
-			greeting.message = 'hello from gradle'
-			greeting.cl = {println 'hello plugin'}
-			//方式2 通过Closure 配置
-			greeting{
-				cl {println 'xxxxx'}
-				message 'xxxxx'
-			}
+		Closure cl
+	}
 
-## 2.3 处理自定义任务类和插件用到 文件的情况
-- 当定义任务类和插件时，如果用到了file 最好能够比较灵活的去使用，例如解析文件 越迟越好。 大概意思就是 这种赖加载的方式有助于先设置属性值，等到真正执行时才去读取这个属性值。
+
+
+使用插件
+	
+	// 引用插件
+	apply plugin:GreetingPlugin
+	
+	//方式1
+	greeting.message = 'hello from gradle'
+	greeting.cl = {println 'hello plugin'}
+
+	//方式2 通过Closure 配置
+	greeting{
+		cl {println 'xxxxx'}
+		message 'xxxxx'
+	}
+
+- 构建脚本中的闭包块名称需要与扩展对象名称匹配
+
+- 通过`Groovy`闭包的代理功能,当闭包执行时,扩展对象的字段会映射到闭包中的字段
+
+## 2.4 自定义任务类和插件中使用文件
+
+当定义任务类和插件时，如果用到了文件对象,最好能够比较灵活的去使用. 这时,就可以使用`Project.file(java.lang.Object)`方法尽可能迟的解析文件地址
+
+- 解析文件越迟越好。 大概意思就是 这种赖加载的方式有助于先设置属性值，等到真正执行时才去读取这个属性值。
+
 		//定义
 		class GreetingToFileTask extends DefaultTask {
 
@@ -191,7 +258,7 @@ Gradle支持俩种类型的Task：
 
 		ext.greetingFile = "$buildDir/hello.txt"
 
-## 2.4 将extension properties 映射到 task properties
+## 2.5 将extension properties 映射到 task properties
 - Gradle API 提供了可变类型，`PropertyState`表示可以在执行时间内进行懒加载。`PropertyState.set(T)`设置值，`Provider.get()`获取值
 
 - 定义
@@ -246,7 +313,7 @@ Gradle支持俩种类型的Task：
 		    outputFiles = files('a.txt', 'b.txt')
 		}
 
-## 2.5 独立项目
+## 2.6 独立项目中编写插件
 
 1. 首先需要在build.gradle中应用groovy插件，并添加Gradle API
 		apply plugin: 'groovy'
@@ -349,6 +416,8 @@ Gradle会编译和测试插件，并使其在构建脚本的类路径上可用�
 
 
 **成功编译之后，在当前目录 即可通过 `apply plugin:com.ryan.log.LOG`的形式进行添加插件，注意：不要使用字符串形式 **
+
+
 
 # 3.Gradle插件开发实例
 本文基于 Android studio 开发，其实也可以通过idea 开发。
