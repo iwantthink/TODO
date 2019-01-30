@@ -5,45 +5,29 @@
  * Learn how to create Gradle builds at https://guides.gradle.org/creating-new-gradle-builds/
  */
 
+import org.gradle.api.DefaultTask;
+import org.gradle.api.tasks.TaskAction;
+
 plugins{
 	id "base"
 }
+
+apply plugin:org.example.greeting.GreetingPlugin
 
 task zip(type:Zip ,group:"Test"){
 	from "src"
 	setArchiveName "base-demo-1.0.zip"
 }
 
-task("task1")
+class GreetingTask extends DefaultTask{
+	String name = "sayhi2"
 
-task "task2"
-
-task("task3",{
-	println "config task3"
-	})
-
-task "task4",{
-	println "config task4"
+	@TaskAction
+	def action(){
+		println ".xcfdsjalkfjaslkdjf>>>>>>>>>????????"
+	}
 }
 
-task task5 {
-	println "config task5"
-}
 
-def action = new Action<Task>(){
-    @Override
-    void execute(Task s) {
 
-    }
-}
-
-task task6
-task6.doFirst{
-	println "task6 do doFirst"
-}
-
-task6.doLast{
-	println "task6 doLast"
-}
-
-println "task6 actions size = "+task6.actions.size
+task sayhi2(type:GreetingTask)
