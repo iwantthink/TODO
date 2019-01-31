@@ -225,9 +225,11 @@ Gradle支持俩种类型的Task：
 
 ## 2.4 自定义任务类和插件中使用文件
 
-当定义任务类和插件时，如果用到了文件对象,最好能够比较灵活的去使用. 这时,就可以使用`Project.file(java.lang.Object)`方法尽可能迟的解析文件地址
+当定义任务类和插件时，如果用到了文件对象,最好能够比较灵活的去使用,例如,尽量迟的生成文件对象. 
 
-- 解析文件越迟越好。 大概意思就是 这种赖加载的方式有助于先设置属性值，等到真正执行时才去读取这个属性值。
+- 这时,就可以使用`Project.file(java.lang.Object)`方法尽可能迟的解析文件地址
+
+- 尽可能迟的解析文件。大概意思是指这种赖加载的方式有助于先设置属性值，等到真正执行时才去读取这个属性值。
 
 		//定义
 		class GreetingToFileTask extends DefaultTask {
@@ -258,79 +260,123 @@ Gradle支持俩种类型的Task：
 
 		ext.greetingFile = "$buildDir/hello.txt"
 
-## 2.5 将extension properties 映射到 task properties
-- Gradle API 提供了可变类型，`PropertyState`表示可以在执行时间内进行懒加载。`PropertyState.set(T)`设置值，`Provider.get()`获取值
+- 上述例子中,声明`greetingFile`属性在指定其用在`greet`任务之后
 
-- 定义
-		class GreetingPlugin implements Plugin<Project> {
-		    void apply(Project project) {
-		        def extension = project.extensions.create('greeting', GreetingPluginExtension, project)
-		        project.tasks.create('hello', Greeting) {
-		            message = extension.message
-		            outputFiles = extension.outputFiles
-		        }
-		    }
+## 2.5 将扩展属性映射到任务属性
+
+通过扩展捕获用户来自构建脚本中的输入,并将其映射到自定义任务的输入/输出属性.用户仅与由扩展定义并暴露出的DSL进行交互,具体的逻辑隐藏在插件的实现中.
+
+构建脚本中的扩展声明以及扩展属性和自定义任务属性之间的映射发生在构建生命周期的Gradle**配置阶段**.为了避免评估顺序问题,必须在**执行阶段**解析映射属性的实际值
+
+
+Gradle API 提供了可变类型，`PropertyState`表示可以在执行时间内进行懒加载。`PropertyState.set(T)`设置值，`Provider.get()`获取值
+
+示例(将扩展属性映射到任务属性):
+ 
+	class GreetingPlugin implements Plugin<Project> {
+		void apply(Project project) {
+			// 创建扩展DSL
+			def extension = project.extensions.create('greeting', GreetingPluginExtension, project)
+
+			// 创建任务,使用扩展属性
+			project.tasks.create('hello', Greeting) {
+				// 直接将hello任务中的属性指向扩展
+				message = extension.message
+				outputFiles = extension.outputFiles
+			}
+		}
+	}
+
+- `project.extensions.create(String name,Class<T> type,Object...constructionArguments)`: 将使用给予的`constructionArguments`参数 创建`type`类型的对象. 注意`type`类型的类中的构造函数需要接收参数
+		
+
+	class GreetingPluginExtension {
+		final PropertyState<String> message
+		final ConfigurableFileCollection outputFiles
+		
+		// 结合 插件中的扩展创建方法使用
+		GreetingPluginExtension(Project project) {
+		
+			// objects 就是用来创建各种模型对象
+			message = project.objects.property(String)
+			// 为上面创建的message属性设置值
+			message.set('Hello from GreetingPlugin')
+			outputFiles = project.layout.configurableFiles()
 		}
 		
-		class GreetingPluginExtension {
-		    final PropertyState<String> message
-		    final ConfigurableFileCollection outputFiles
-		
-		    GreetingPluginExtension(Project project) {
-		        message = project.property(String)
-		        message.set('Hello from GreetingPlugin')
-		        outputFiles = project.files()
-		    }
-		
-		    void setOutputFiles(FileCollection outputFiles) {
-		        this.outputFiles.setFrom(outputFiles)
-		    }
+		// 提供setter方法
+		void setOutputFiles(FileCollection outputFiles) {
+			this.outputFiles.setFrom(outputFiles)
 		}
+	}
+
+- `project.layout`:Provides access to several important locations for a project
+
+- `project.objects`:A factory for creating various kinds of model objects.
+
 		
-		class Greeting extends DefaultTask {
-		    final PropertyState<String> message = project.property(String)
-		    final ConfigurableFileCollection outputFiles = project.files()
-		
-		    void setOutputFiles(FileCollection outputFiles) {
-		        this.outputFiles.setFrom(outputFiles)
-		    }
-		
-		    @TaskAction
-		    void printMessage() {
-		        outputFiles.each {
-		            logger.quiet "Writing message 'Hi from Gradle' to file"
-		            it.text = message.get()
-		        }
-		    }
-		}
+	class Greeting extends DefaultTask {
+		// 创建属性
+	 	final Property<String> message = project.objects.property(String)
+	    final ConfigurableFileCollection outputFiles = project.layout.configurableFiles()
+	
+		// 提供setter方法
+	    void setOutputFiles(FileCollection outputFiles) {
+	        this.outputFiles.setFrom(outputFiles)
+	    }
+	
+	    @TaskAction
+	    void printMessage() {
+			// 处理每一个输出文件
+	        outputFiles.each {
+	            logger.quiet "Writing message 'Hi from Gradle' to file"
+	            it.text = message.get()
+	        }
+	    }
+	}
 	
 
-- 使用
-		apply plugin: GreetingPlugin
+	apply plugin: GreetingPlugin
 		
-		greeting {
-		    message = 'Hi from Gradle'
-		    outputFiles = files('a.txt', 'b.txt')
-		}
+	greeting {
+		message = 'Hi from Gradle'
+		outputFiles = files('a.txt', 'b.txt')
+	}
 
 ## 2.6 独立项目中编写插件
 
-1. 首先需要在build.gradle中应用groovy插件，并添加Gradle API
+将插件一到一个独立的项目中并发布就可以与其他人共享
+
+示例:使用一个`Groovy`项目,将插件生成一个Jar包
+
+1. 首先需要在`build.gradle`中应用groovy插件，并添加Gradle API
+
 		apply plugin: 'groovy'
 		
 		dependencies {
 		    compile gradleApi()
 		    compile localGroovy()
 		}
-2. 提供一个`.properties`文件放到`META-INF/gradle-plugins`文件夹下,**文件名就是插件的id**(就是在build.gradle时 apply plugin:'文件名',建议与自己设置的gourpId+artifactId相符合)，implementation-class 指向具体的实现类(请填写完整的类名)
+2. 提供一个`.properties`属性文件到`src/main/resources/META-INF/gradle-plugins/org.samples.greeting.properties`文件夹下
+
+	**文件名就是插件的id**(就是在`build.gradle`时 `apply plugin:'文件名'`,建议与自己设置的`gourpId+artifactId`相符合)，`implementation-class` 指向具体的实现类(请填写完整的类名)
+
 		implementation-class=org.gradle.GreetingPlugin
+
+	- 属性文件名称要与插件ID匹配,其会被用作添加插件时的插件名称
+
+		该文件是需要放在`resources`目录下
+
+		需要使用`implementation-class`标识插件的实现类
 
 	- `gradle-plugins`，可以指定多个properties文件，定义多个插件
 
-	- properties文件名 被用作添加插件时的插件名称
+	- properties文件名 
 
 3. 在其他项目中使用自定义的插件
-	- 这是发布到maven的情况
+
+	- 发布到`maven`的情况
+
 	 		apply plugin: 'org.samples.greeting'
 	
 			buildscript {
@@ -348,14 +394,110 @@ Gradle支持俩种类型的Task：
 			}
 
 	- 还可以将插件发布到[Gradle plugin portal](https://plugins.gradle.org/),就可以使用以下引用方式
+
 			plugins {
 			    id 'com.jfrog.bintray' version '0.4.1'
 			}
 
+### 2.6.1 测试自定义插件
+
+使用`ProjectBuilder`类提供测试插件类所需要的`Project`实例
+
+在此目录下编写测试类`src/test/groovy/org/gradle/GreetingPluginTest.groovy`
+
+	class GreetingPluginTest {
+	    @Test
+	    public void greeterPluginAddsGreetingTaskToProject() {
+	        Project project = ProjectBuilder.builder().build()
+	        project.pluginManager.apply 'org.samples.greeting'
+	
+	        assertTrue(project.tasks.hello instanceof GreetingTask)
+	    }
+	}
+
+### 2.6.2 使用Java Gradle插件开发插件(孵化中)
+
+[使用Java Gradle插件开发插件](https://docs.gradle.org/4.10/userguide/java_gradle_plugin.html#java_gradle_plugin),该插件可以消除构建脚本中的一些样板声明,并提供对插件元数据的验证
+
+该插件会自动应用`Java`插件,添加`gradleApi()`到依赖中,并将元数据校验作为`jar`任务的一部分,最后还会在Jar的`META_INF`目录下生成插件描述符
+
+	plugins {
+	    id 'java-gradle-plugin'
+	    id 'groovy'
+	}
+	
+	gradlePlugin {
+	    plugins {
+	        simplePlugin {
+	            id = 'org.samples.greeting'
+	            implementationClass = 'org.gradle.GreetingPlugin'
+	        }
+	    }
+	}
 
 
-### 2.6.2 配置对象集合
-Managing a collection of objects
+### 2.6.2 为插件提供配置DSL
+
+Gradle可以通过扩展对象为插件提供配置, 扩展Gradle DSL 为插件添加项目属性和DSL块. 扩展对象只是一个常规对象,因此可以通过向扩展对象添加属性和方法来提供DSL嵌套元素
+
+
+### 2.6.3 嵌套DSL元素
+
+当Gradle创建任务或扩展对象,Gradle装饰的实现类混合了DSL支持. 要创建嵌套的DSL元素,可以使用`ObjectFactory`创建类似装饰的对象,然后通过插件扩展的属性和方法使这些被装饰的对象对DSL可见
+
+
+	class Person {
+	    String name
+	
+	}
+	
+	class GreetingPluginExtension {
+	    String message
+	    final Person greeter
+	
+	    @javax.inject.Inject
+	    GreetingPluginExtension(ObjectFactory objectFactory) {
+	        // 通过ObjectFactory 创建对象
+	        greeter = objectFactory.newInstance(Person)
+	    }
+	
+	    void greeter(Action<? super Person> action) {
+	        action.execute(greeter)
+	    }
+	}
+	
+	class GreetingPlugin implements Plugin<Project> {
+	    void apply(Project project) {
+	        // 创建扩展对象`greeting`,并将 ObjectFactory当做参数传入
+	        def extension = project.extensions.create('greeting', GreetingPluginExtension, project.objects)
+
+	        project.task('hello') {
+	            doLast {
+	                println "${extension.message} from ${extension.greeter.name}"
+	            }
+	        }
+	    }
+	}
+
+- `project.objects: ObjectFactory`:A factory for creating various kinds of model objects.
+
+	可以将 `ObjectFactory`对象通过构造函数直接注入,或者借助`javax.inject.Inject`注解将`ObjectFactory`对象注入到指定方法
+
+	
+	apply plugin: GreetingPlugin
+	
+	greeting {
+	    message = 'Hi'
+		// 这里实际上调用的是 扩展对象的greeter方法
+	    greeter {
+	        name = 'Gradle'
+	    }
+	}
+
+
+
+
+### 2.6.4 DSL的嵌套元素-管理一组对象
 
 	class Book {
 	    final String name
@@ -368,12 +510,13 @@ Managing a collection of objects
 	
 	class DocumentationPlugin implements Plugin<Project> {
 	    void apply(Project project) {
-	        // Create a container of Book instances
+	        // 创建包含Book对象的容器
 	        def books = project.container(Book)
 	        books.all {
+				// 设置sourceFile属性
 	            sourceFile = project.file("src/docs/$name")
 	        }
-	        // Add the container as an extension object
+	        // 将容器添加到扩展对象中
 	        project.extensions.books = books
 	    }
 	}
@@ -401,8 +544,13 @@ Managing a collection of objects
 	    }
 	}
 
-- 使用`Project.container()`方法创建了一些`NamedDomainObjectContainer`类的实例,这个类 具有许多方法来管理和配置对象。
-- 为了使用任何具有`project.container`方法的类型，它必须将名为`name`的属性公开为对象的唯一名称和常量名称。 容器方法的project.container（Class）变体通过尝试调用具有单个字符串参数的类的构造函数来创建新的实例，该参数是对象的所需名称。 查看允许自定义实例化策略的project.container方法变体的上述链接。
+- 使用`Project.container()`方法可以创建用于管理制定类型对象的容器(`NamedDomainObjectContainer`).该类型的类必须具有公共构造函数,该构造函数将名称作为String参数. 
+
+	任何能够使用`project.container`方法创建容器的类型，都必须将名为`name`的属性公开为对象的唯一名称和常量名称。 
+
+	`project.container（Class）`通过尝试调用具有单个字符串参数的类的构造函数来创建新的实例，这个参数就是对象的所需名称。 查看允许自定义实例化策略的project.container方法变体的上述链接。
+
+
 
 ## 2.7 buildSrc形式的插件
 
