@@ -146,7 +146,9 @@ Gradle 自动帮开发者导入了 一大堆的库，Gradle 可以通过 tooling
 
 ### 1.5.1 编译过程分为三个阶段
 
-1.  **初始化阶段**：执行`settings.gradle`.**创建 `Project` 对象**，如果有多个`build.gradle`，也会创建多个`Project`对象.
+1.  **初始化阶段**：Gradle支持单项目和多项目构建.在初始化阶段,Gradle将会确定哪些项目参与构建,并为每个项目创建一个`Project`对象. 
+
+	解析`settings.gradle`文件.**为每个项目创建`Project` 对象**，如果有多个项目，也会创建多个`Project`对象.
 
 	- Hook: `gradle.beforeProject{project->}`
 
@@ -384,6 +386,12 @@ Settings script | Settings
 通过`-P`设置属性，注意大小写
 	
 	gradle -q taskA -P xxxx
+
+## 1.10 多项目构建
+
+Gradle允许在单次执行中构建多个项目,这需要在`settings.gradle`对项目进行声明
+
+[](https://docs.gradle.org/4.10/dsl/org.gradle.api.initialization.Settings.html#org.gradle.api.initialization.Settings:include(java.lang.String[]))
 
 # 2.文件
 ## 2.1 获取File对象
