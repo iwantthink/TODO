@@ -8,131 +8,16 @@
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 
+
 plugins{
-	id "base"
+    id 'org.gradle.sample.simple-plugin'
+    id 'base'
 }
 
-// apply plugin:org.example.greeting.GreetingPlugin
+TestExt{
+    serverUrl = "www.baidu.com"
 
-task zip(type:Zip ,group:"Test"){
-	from "src"
-	setArchiveName "base-demo-1.0.zip"
+    age = "2222"
 }
 
-class GreetingTask extends DefaultTask{
-	String name = "sayhi2"
-
-	@TaskAction
-	def action(){
-		println ".xcfdsjalkfjaslkdjf>>>>>>>>>????????"
-	}
-}
-
-
-
-
-class GreetingPlugin implements Plugin<Project> {
-    void apply(Project project) {
-        def extension = project.extensions.create('greeting', GreetingPluginExtension, project)
-        project.tasks.create('hello', Greeting) {
-        	println "GreetingPlugin hello Task Configuration!"
-            message = extension.message
-            outputFiles = extension.outputFiles
-        }
-    }
-}
-
-class GreetingPluginExtension {
-    final Property<String> message
-    final ConfigurableFileCollection outputFiles
-
-    GreetingPluginExtension(Project project) {
-    	println "GreetingPluginExtension Construction!"
-        message = project.objects.property(String)
-        message.set('Hello from GreetingPlugin')
-        outputFiles = project.layout.configurableFiles()
-    }
-
-    void setOutputFiles(FileCollection outputFiles) {
-    	println "GreetingPluginExtension setOutputFiles method is called ${outputFiles==null}"
-    	println "${outputFiles.class}"
-        this.outputFiles.setFrom(outputFiles)
-    }
-}
-
-class Greeting extends DefaultTask {
-    public  Property<String> message = project.objects.property(String)
-    public  ConfigurableFileCollection outputFiles = project.layout.configurableFiles("a.txt")
-
-    // void setOutputFiles(FileCollection outputFiles) {
-    // 	println "Greeting setOutputFiles method is called ${outputFiles==null}"
-    // 	println "${outputFiles.class}"
-    //     this.outputFiles.setFrom(outputFiles)
-    // }
-
-    @TaskAction
-    void printMessage() {
-        outputFiles.each {
-            logger.quiet "Writing message 'Hi from Gradle' to file"
-            it.text = message.get()
-        }
-    }
-}
-
-apply plugin: GreetingPlugin
-
-greeting {
-    message = 'Hi from Gradle'
-    outputFiles = layout.files('a.txt', 'b.txt')
-}
-
-
-
-class Person {
-    String name
-}
-
-class GreetingPluginExtension2 {
-    String message
-    final Person greeter
-
-    @javax.inject.Inject
-    GreetingPluginExtension2(ObjectFactory objectFactory) {
-        // Create a Person instance
-        greeter = objectFactory.newInstance(Person)
-        println "ObjectFactory new instance =   ${greeter.class}"
-        greeter.
-    }
-
-    void greeter2(Action<? super Person> action) {
-        println "greeter2 action .......${action.class}"
-        action.execute(greeter)
-    }
-}
-
-class GreetingPlugin2 implements Plugin<Project> {
-    void apply(Project project) {
-        // Create the extension, passing in an ObjectFactory for it to use
-        def extension = project.extensions.create('greeting2', GreetingPluginExtension2, project.objects)
-        project.task('hello2') {
-            doLast {
-                println "${extension.message} from ${extension.greeter.name}"
-            }
-        }
-    }
-}
-
-apply plugin: GreetingPlugin2
-
-
-
-greeting2 {
-    message = 'Hi'
-    def p = new Person()
-    p.name = "jack"
-
-    greeter2 ({
-        println "greeter2 is configured"
-        name = 'Gradle'
-    })
-}
+println "TestExt =  ${TestExt.class}"
