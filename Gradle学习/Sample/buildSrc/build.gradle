@@ -1,0 +1,12 @@
+plugins{
+    id 'java-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'org.gradle.sample.simple-plugin'
+            implementationClass = 'org.example.TestPlugin'
+        }
+    }
+}
