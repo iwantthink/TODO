@@ -14,10 +14,23 @@ plugins{
     id 'base'
 }
 
-TestExt{
-    serverUrl = "www.baidu.com"
-
-    age = "2222"
+repositories {
+    jcenter()
+    mavenCentral()
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
 }
 
-println "TestExt =  ${TestExt.class}"
+configurations.all.each{
+    println "it  = $it"
+}
+
+println "dependencies is ${dependencies.class}"
+
+
+configurations{
+    myDep
+}
+ 
+println "mydep class = "+ configurations.myDep.class
