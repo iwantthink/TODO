@@ -13,6 +13,8 @@
 
 [Gradle深入与实战（六）Gradle的背后是什么？](http://benweizhu.github.io/blog/2015/03/31/deep-into-gradle-in-action-6/)
 
+[Gradle构建源码浅析](https://blog.csdn.net/yanbober/article/details/60584621)
+
 # Gradle学习
 
 构建，可以叫做build或make. 就是根据输入信息然后干一堆事情，然后得出几个产出物。
