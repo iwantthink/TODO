@@ -949,8 +949,85 @@ Gradle支持用同一种类型定义多个,命名数据对象
 	    }
 	}
 
+## 2.10 为插件提供默认依赖项
 
-## 2.10 Extensions vs Conventions
+插件的实现有时需要使用外部依赖,Gradle允许插件直接添加依赖
+
+	import org.gradle.api.Action;
+	import org.gradle.api.Plugin;
+	import org.gradle.api.Project;
+	import org.gradle.api.artifacts.Configuration;
+	import org.gradle.api.artifacts.DependencySet;
+	
+	public class DataProcessingPlugin implements Plugin<Project> {
+	    public void apply(Project project) {
+			
+			// 在ConfigurationContainer 中添加了名为`dataFiles`的item
+	        final Configuration config = project.getConfigurations().create("dataFiles")
+	            .setVisible(false)
+	            .setDescription("The data artifacts to be processed for this plugin.");
+	
+			// 给依赖对象添加 Action(将该Action保存到集合中)
+			// 在构建的执行过程,会执行该 Action
+	        config.defaultDependencies(new Action<DependencySet>() {
+	            public void execute(DependencySet dependencies) {
+	                dependencies.add(project.getDependencies().create("com.company:data:1.4.6"));
+	            }
+	        });
+	
+			// 为任务添加了属性
+	        project.getTasks().withType(DataProcessing.class).configureEach(new Action<DataProcessing>() {
+	            public void execute(DataProcessing dataProcessing) {
+	                dataProcessing.setDataFiles(config);
+	            }
+	        });
+	    }
+	}
+
+- Configuration 会参与依赖解析,并在执行阶段调用传入的Action
+
+任务类:
+
+	import org.gradle.api.DefaultTask;
+	import org.gradle.api.file.ConfigurableFileCollection;
+	import org.gradle.api.file.FileCollection;
+	import org.gradle.api.tasks.InputFiles;
+	import org.gradle.api.tasks.TaskAction;
+	
+	public class DataProcessing extends DefaultTask {
+	    private final ConfigurableFileCollection dataFiles;
+	
+	    public DataProcessing() {
+	        dataFiles = getProject().files();
+	    }
+	
+	    @InputFiles
+	    public FileCollection getDataFiles() {
+	        return dataFiles;
+	    }
+	
+	    public void setDataFiles(FileCollection dataFiles) {
+	        this.dataFiles.setFrom(dataFiles);
+	    }
+	
+	    @TaskAction
+	    public void process() {
+	        System.out.println(getDataFiles().getFiles());
+	    }
+	}
+
+- **这种在插件中添加的依赖是可以被覆盖的**
+
+使用插件:
+
+	apply plugin: DataProcessingPlugin
+	
+	dependencies {
+	    dataFiles 'com.company:more-data:2.6'
+	}
+
+
+## 2.12 Extensions vs Conventions
 
 一些Gradle核心插件通过所谓的[`Convention`](https://docs.gradle.org/5.0/javadoc/org/gradle/api/plugins/Convention.html)的帮助下,将配置暴露出来
 
