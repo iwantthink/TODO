@@ -168,3 +168,8 @@ web-socket学习
 - RxAndroid
 
 - Dagger 1/2
+
+
+**基础概念**
+
+- 时间复杂度
