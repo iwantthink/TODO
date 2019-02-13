@@ -173,3 +173,10 @@ web-socket学习
 **基础概念**
 
 - 时间复杂度
+
+
+**Android基础概念**
+
+- 网络请求-HttpUrlConnection
+
+	具体的请求实体, 证书设置,SSLSocketFactory等概念
