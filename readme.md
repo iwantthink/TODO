@@ -126,6 +126,10 @@ Android源码学习
 
 - mixpanel深入分析
 
+    - mixpanel initialize construction analyze
+
+   
+
 c++学习
 
 - ~~简单学习C++~~
