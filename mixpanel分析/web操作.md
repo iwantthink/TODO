@@ -14,22 +14,40 @@
 
 	客户端会监听视图树是否发生变化,如果发生变化 那下一次`snapshot_resp` 会重新上传完整的视图树
 
+7. 服务端会下发一条 `event_binding_request`,如果当前服务端保存有事件信息
 
-# 2. 指令
 
-**服务端指令**:
+# 2. 指令类型
 
-1. device_info_request:请求客户端信息
+## 2.1 服务端指令类型
 
-2. snapshot_request:请求客户端截图 以及 视图关系
+1. `device_info_request`:要求客户端发送设备信息
+
+		{"type":"device_info_request"}
+
+2. `snapshot_request`:请求客户端截图 以及 视图关系
+
+		{"type":"snapshot_request","payload":{"config":{"classes":[{"name":"android.view.View","properties":[{"name":"importantForAccessibility","get":{"selector":"isImportantForAccessibility","parameters":[],"result":{"type":"java.lang.Boolean"}}},{"name":"clickable","get":{"selector":"isClickable","parameters":[],"result":{"type":"java.lang.Boolean"}}},{"name":"alpha","get":{"selector":"getAlpha","parameters":[],"result":{"type":"java.lang.Float"}},"set":{"selector":"setAlpha","parameters":[{"type":"java.lang.Float"}]}},{"name":"hidden","get":{"selector":"getVisibility","parameters":[],"result":{"type":"java.lang.Integer"}},"set":{"selector":"setVisibility","parameters":[{"type":"java.lang.Integer"}]}},{"name":"background","get":{"selector":"getBackground","parameters":[],"result":{"type":"android.graphics.drawable.Drawable"}},"set":{"selector":"setBackground","parameters":[{"type":"android.graphics.drawable.ColorDrawable"}]}}]},{"name":"android.widget.TextView","properties":[{"name":"importantForAccessibility","get":{"selector":"isImportantForAccessibility","parameters":[],"result":{"type":"java.lang.Boolean"}}},{"name":"clickable","get":{"selector":"isClickable","parameters":[],"result":{"type":"java.lang.Boolean"}}},{"name":"alpha","get":{"selector":"getAlpha","parameters":[],"result":{"type":"java.lang.Float"}},"set":{"selector":"setAlpha","parameters":[{"type":"java.lang.Float"}]}},{"name":"hidden","get":{"selector":"getVisibility","parameters":[],"result":{"type":"java.lang.Integer"}},"set":{"selector":"setVisibility","parameters":[{"type":"java.lang.Integer"}]}},{"name":"text","get":{"selector":"getText","parameters":[],"result":{"type":"java.lang.CharSequence"}},"set":{"selector":"setText","parameters":[{"type":"java.lang.CharSequence"}]}},{"name":"textColor","get":{"selector":"getTextColors","parameters":[],"result":{"type":"android.content.res.ColorStateList"}},"set":{"selector":"setTextColor","parameters":[{"type":"java.lang.Integer"}]}},{"name":"fontSize","get":{"selector":"getTextSize","parameters":[],"result":{"type":"java.lang.Float"}},"set":{"selector":"setTextSize","parameters":[{"type":"java.lang.Integer"},{"type":"java.lang.Float"}]}}]},{"name":"android.widget.ImageView","properties":[{"name":"importantForAccessibility","get":{"selector":"isImportantForAccessibility","parameters":[],"result":{"type":"java.lang.Boolean"}}},{"name":"clickable","get":{"selector":"isClickable","parameters":[],"result":{"type":"java.lang.Boolean"}}},{"name":"alpha","get":{"selector":"getAlpha","parameters":[],"result":{"type":"java.lang.Float"}},"set":{"selector":"setAlpha","parameters":[{"type":"java.lang.Float"}]}},{"name":"hidden","get":{"selector":"getVisibility","parameters":[],"result":{"type":"java.lang.Integer"}},"set":{"selector":"setVisibility","parameters":[{"type":"java.lang.Integer"}]}},{"name":"image","get":{"selector":"getDrawable","parameters":[],"result":{"type":"android.graphics.drawable.Drawable"}},"set":{"selector":"setImageDrawable","parameters":[{"type":"android.graphics.drawable.BitmapDrawable"}]}}]}]}}}
 
 3. change_request:请求客户端更改点击事件信息
 
-4. event_binding_request : 请求客户端绑定点击事件
+4. `event_binding_request` : 让客户端去绑定点击事件
+
+		{"type":"event_binding_request","payload":{"events":[{"id":39216,"path":[{"index":0,"view_class":"android.widget.FrameLayout"},{"index":0,"view_class":"android.widget.LinearLayout"},{"index":0,"view_class":"android.widget.FrameLayout"},{"index":0,"mp_id_name":"decor_content_parent"},{"index":0,"mp_id_name":"action_bar_container"},{"index":0,"mp_id_name":"action_bar"},{"index":0,"view_class":"android.support.v7.widget.ActionMenuView"},{"contentDescription":"更多选项","index":0}],"event_name":"testtitle","event_type":"click","device_type":"Android","os_version":"5.1","app_version":"1.0","manufacturer":"Meizu","brand":"Meizu","model":"tracking.androideventbinding","lib_version":"5.4.1","cid":"c44","screenshot_url":null},{"id":39183,"path":[{"index":0,"prefix":"shortest","id":16908290},{"index":0,"view_class":"android.support.constraint.ConstraintLayout"},{"index":0,"mp_id_name":"btn_toast"}],"event_name":"testtoast","event_type":"click","device_type":"Android","os_version":"5.1","app_version":"1.0","manufacturer":"Meizu","brand":"Meizu","model":"tracking.androideventbinding","lib_version":"5.4.1","cid":"c45","screenshot_url":null}]}}
+
 
 5. clear_request:请求客户端清除点击事件
 
 6. tweak_request:ABTest
+
+正常流程下来.
+
+
+## 2.2 客户端指令类型
+
+1. `device_info_response`:
+
+2. `snapshot_response`:
 
 	
 # 3. 问题
