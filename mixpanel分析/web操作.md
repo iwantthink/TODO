@@ -40,7 +40,6 @@
 
 6. tweak_request:ABTest
 
-正常流程下来.
 
 
 ## 2.2 客户端指令类型
