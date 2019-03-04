@@ -188,7 +188,7 @@ title	|text	|规定元素的额外信息（可在工具提示中显示）
 
 - 浏览器会自动地在标题的前后添加空行
 
-	默认情况下，HTML 会自动地在**块级元素**前后添加一个额外的空行，比如段落、标题元素前后
+	**默认情况下，HTML 会自动地在块级元素前后添加一个额外的空行，比如段落、标题元素前后**
 
 
 ### 4.1.1 标题的重要性
@@ -228,6 +228,8 @@ title	|text	|规定元素的额外信息（可在工具提示中显示）
 
 	<p>This is<br />a para<br />graph with line breaks</p>
 
+- `<br/>` 也可以被嵌套
+
 - `<br />` 元素是一个空的 HTML 元素。由于关闭标签没有任何意义，因此它没有结束标签。
 
 	**即使` <br> `在所有浏览器中的显示都没有问题，使用` <br />` 也是更长远的保障**
@@ -250,8 +252,8 @@ HTML 可定义很多供格式化输出的元素，比如粗体和斜体字
 `<sup>`|	定义上标字。
 `<ins>`|	定义插入字。
 `<del>`|	定义删除字。
-`<s>`|	不赞成使用。使用 <del> 代替。
-`<strike>`|	不赞成使用。使用 <del> 代替。
+`<s>`|	不赞成使用。使用 `<del>` 代替。
+`<strike>`|	不赞成使用。使用 `<del>` 代替。
 `<u>`|	不赞成使用。使用样式（style）代替。
 
 
@@ -318,6 +320,7 @@ HTML 使用超级链接与网络上的另一个文档相连。几乎可以在所
 
 - 使用 Target 属性，你可以定义被链接的网页文档在何处显示。
 
+	`_blank`表示打开一个新的窗口
 
 ### 4.8.3 name 属性
 
@@ -360,7 +363,7 @@ HTML 使用超级链接与网络上的另一个文档相连。几乎可以在所
 
 在 HTML 中，图像由 `<img>` 标签定义。
 
-- `<img>` 是空标签，意思是说，它只包含属性，并且没有闭合标签。
+- `<img>` 是空标签，意思是说，它只包含属性，**并且没有闭合标签**。
 
 **要在页面上显示图像，你需要使用源属性（src）**。
 
@@ -370,7 +373,7 @@ HTML 使用超级链接与网络上的另一个文档相连。几乎可以在所
 
 	<img src="url" />
 
-- URL 指存储图像的位置。如果名为 "boat.gif" 的图像位于 www.w3school.com.cn 的 images 目录中，那么其 URL 为 http://www.w3school.com.cn/images/boat.gif。
+- URL 指存储图像的位置。如果名为 "boat.gif" 的图像位于 www.w3school.com.cn 的 images 目录中，那么其 URL 为 `http://www.w3school.com.cn/images/boat.gif`
 
 
 - 浏览器将图像显示在文档中图像标签出现的地方。如果你将图像标签置于两个段落之间，那么浏览器会首先显示第一个段落，然后显示图片，最后显示第二段。
@@ -481,17 +484,15 @@ HTML 支持有序、无序和定义列表
 
 style 属性提供了一种改变所有 HTML 元素的样式的通用方法。
 
-样式是 HTML 4 引入的，它是一种新的首选的改变 HTML 元素样式的方式。通过 HTML 样式，能够通过使用 style 属性直接将样式添加到 HTML 元素，或者间接地在独立的样式表中（CSS 文件）进行定义。
+样式是 HTML 4 引入的，它是一种新的首选的改变 HTML 元素样式的方式。**通过 HTML 样式，能够通过使用 style 属性直接将样式添加到 HTML 元素，或者间接地在独立的样式表中（CSS 文件）进行定义**。
 
 **背景颜色示例**:
 
 	<html>
-	
-	<body style="background-color:yellow">
-	<h2 style="background-color:red">This is a heading</h2>
-	<p style="background-color:green">This is a paragraph.</p>
-	</body>
-	
+		<body style="background-color:yellow">
+			<h2 style="background-color:red">This is a heading</h2>
+			<p style="background-color:green">This is a paragraph.</p>
+		</body>
 	</html>
 
 - `background-color` 属性为元素定义了背景颜色
@@ -500,12 +501,10 @@ style 属性提供了一种改变所有 HTML 元素的样式的通用方法。
 **字体、颜色和尺寸示例:**
 
 	<html>
-	
-	<body>
-	<h1 style="font-family:verdana">A heading</h1>
-	<p style="font-family:arial;color:red;font-size:20px;">A paragraph.</p>
-	</body>
-	
+		<body>
+			<h1 style="font-family:verdana">A heading</h1>
+			<p style="font-family:arial;color:red;font-size:20px;">A paragraph.</p>
+		</body>
 	</html>
 
 - font-family、color 以及 font-size 属性分别定义元素中文本的字体系列、颜色和字体尺寸：
@@ -513,12 +512,10 @@ style 属性提供了一种改变所有 HTML 元素的样式的通用方法。
 **文本对齐示例:**
 
 	<html>
-	
-	<body>
-	<h1 style="text-align:center">This is a heading</h1>
-	<p>The heading above is aligned to the center of this page.</p>
-	</body>
-	
+		<body>
+			<h1 style="text-align:center">This is a heading</h1>
+			<p>The heading above is aligned to the center of this page.</p>
+		</body>
 	</html>
 
 ## 8.2 CSS
@@ -559,7 +556,7 @@ style 属性提供了一种改变所有 HTML 元素的样式的通用方法。
 
 # 9. HTML的块级元素和内联元素
 
-大多数 HTML元素 被定义为块级元素或内联元素,可以通过 <div> 和 <span> 将 HTML 元素组合起来。
+大多数 HTML元素 被定义为块级元素或内联元素,可以通过 `<div>` 和 `<span>` 将 HTML 元素组合起来。
 
 - “块级元素”译为 block level element，“内联元素”译为 inline element。
 
@@ -577,7 +574,7 @@ style 属性提供了一种改变所有 HTML 元素的样式的通用方法。
 
 例子：`<b>, <td>, <a>, <img>`
 
-## 9.3 HTML <div> 元素
+## 9.3 HTML `<div>` 元素
 
 **HTML `<div>` 元素是块级元素，它是可用于组合其他 HTML 元素的容器。**
 
@@ -588,15 +585,13 @@ style 属性提供了一种改变所有 HTML 元素的样式的通用方法。
 - `<div>` 元素的另一个常见的用途是文档布局。它取代了使用表格定义布局的老式方法。使用 `<table>` 元素进行文档布局不是表格的正确用法。`<table>` 元素的作用是显示表格化的数据。
 
 
-## 9.4 HTML <span> 元素
+## 9.4 HTML `<span>` 元素
 
 **HTML `<span>` 元素是内联元素，可用作文本的容器。**
 
 - `<span>` 元素也没有特定的含义。
 
-- 当与 CSS 一同使用时，`<span>` 元素可用于为部分文本设置样式属性。
-
-
+- **当与 CSS 一同使用时，`<span>` 元素可用于为部分文本设置样式属性。**
 
 # 10. HTML 类
 
@@ -725,7 +720,8 @@ summary|	定义 details 元素的标题
 	<html>
 	  
 	  <head>
-	    <style>header { background-color:black; color:white; text-align:center; padding:5px; } nav { line-height:30px; background-color:#eeeeee; height:300px; width:100px; float:left; padding:5px; } section { width:350px; float:left; padding:10px; } footer { background-color:black; color:white; clear:both; text-align:center; padding:5px; }</style></head>
+	    <style>header { background-color:black; color:white; text-align:center; padding:5px; } nav { line-height:30px; background-color:#eeeeee; height:300px; width:100px; float:left; padding:5px; } section { width:350px; float:left; padding:10px; } footer { background-color:black; color:white; clear:both; text-align:center; padding:5px; }</style>
+	  </head>
 	  
 	  <body>
 	    <header>
@@ -756,7 +752,8 @@ summary|	定义 details 元素的标题
 	<html>
 	  
 	  <head>
-	    <style>table.lamp { width:100%; border:1px solid #d4d4d4; } table.lamp th, td { padding:10px; } table.lamp th { width:40px; }</style></head>
+	    <style>table.lamp { width:100%; border:1px solid #d4d4d4; } table.lamp th, td { padding:10px; } table.lamp th { width:40px; }</style>
+	  </head>
 	  
 	  <body>
 	    <table class="lamp">
@@ -981,10 +978,10 @@ iframe 用于在网页内显示网页。
 可以在 style 元素内规定 HTML 元素在浏览器中呈现的样式：
 
 	<head>
-	<style type="text/css">
-	body {background-color:yellow}
-	p {color:blue}
-	</style>
+		<style type="text/css">
+			body {background-color:yellow}
+			p {color:blue}
+		</style>
 	</head>
 
 ## 17.5 `<meta>`标签
