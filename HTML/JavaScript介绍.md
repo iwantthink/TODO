@@ -61,7 +61,7 @@ JavaScript 的核心语法部分相当精简，只包括两个部分：
 	  para.textContent = '玩家1：' + name;
 	}
 
-- 如果将第一行和第三行的代码交换位置,浏览器会报错(TypeError:para is undefined)
+- 如果将第一行和第三行的代码交换位置,浏览器会报错(`TypeError:para is undefined`)
 
 	这是一个常见的错误,在引用对象之前必须确保该对象已经存在
 
@@ -144,7 +144,7 @@ JavaScript 的核心语法部分相当精简，只包括两个部分：
 
 例如: 
 
-HTML 元素是按其在页面中出现的次序调用的，如果用 JavaScript 来管理页面上的元素（更精确的说法是使用 文档对象模型 DOM），若 JavaScript 加载于欲操作的 HTML 元素之前，则代码将出错。
+HTML 元素是按其在页面中出现的次序调用的(解释型语言)，如果用 JavaScript 来管理页面上的元素（更精确的说法是使用 文档对象模型 DOM），若 JavaScript 加载于欲操作的 HTML 元素之前，则代码将出错。
 
 这个方法会有几种解决办法:
 
@@ -169,7 +169,7 @@ HTML 元素是按其在页面中出现的次序调用的，如果用 JavaScript 
 
 #### 1.8.2.1 async 和 defer介绍
 
-浏览器遇到 async 脚本时不会阻塞页面渲染，而是直接下载然后运行。
+浏览器遇到 `async` 脚本时不会阻塞页面渲染，而是直接下载然后运行。
 
 - 这样脚本的运行次序就无法控制，只是脚本不会阻止剩余页面的显示。
 
@@ -183,7 +183,7 @@ HTML 元素是按其在页面中出现的次序调用的，如果用 JavaScript 
 	
 	<script async src="js/script3.js"></script>
 
-- 三者的调用顺序是不确定的。`jquery.js` 可能在 script2 和 script3 之前或之后调用，如果这样，后两个脚本中依赖 jquery 的函数将产生错误，因为脚本运行时 jquery 尚未加载。
+- 三者的调用顺序是不确定的。`jquery.js` 可能在 `script2.js` 和 `script3.js` 之前或之后调用，如果这样，后两个脚本中依赖 jquery 的函数将产生错误，因为脚本运行时 jquery 尚未加载。
 
 解决这一问题可使用 `defer` 属性，脚本将按照在页面中出现的顺序加载和运行：
 
@@ -193,7 +193,7 @@ HTML 元素是按其在页面中出现的次序调用的，如果用 JavaScript 
 	
 	<script defer src="js/script3.js"></script>
 
-- 添加 defer 属性的脚本将按照在页面中出现的顺序加载，因此第二个示例可确保 `jquery.js` 必定加载于 `script2.js` 和 `script3.js` 之前，同时 `script2.js` 必定加载于 `script3.js` 之前。
+- 添加 `defer` 属性的脚本将按照在页面中出现的顺序加载，因此第二个示例可确保 `jquery.js` 必定加载于 `script2.js` 和 `script3.js` 之前，同时 `script2.js` 必定加载于 `script3.js` 之前。
 
 
 **总结:**
@@ -206,13 +206,15 @@ HTML 元素是按其在页面中出现的次序调用的，如果用 JavaScript 
 
 把脚本元素放在文档体的底端（`</body> `标签之前，与之相邻），这样脚本就可以在 HTML 解析完毕后加载了。
 
-- 此方案（以及上述的 DOMContentLoaded 方案）的问题是：只有在所有 HTML DOM 加载完成后才开始脚本的加载/解析过程。对于有大量 JavaScript 代码的大型网站，可能会带来显著的性能损耗。这也是 async 属性诞生的初衷
+- 此方案（以及上述的 DOMContentLoaded 方案）的问题是：只有在所有 HTML DOM 加载完成后才开始脚本的加载/解析过程。对于有大量 JavaScript 代码的大型网站，可能会带来显著的性能损耗。**这也是 async 属性诞生的初衷**
 
 # 2. JavaScript与ECMAScript的关系
 
 ECMAScript 和 JavaScript 的关系是，前者是后者的规格，后者是前者的一种实现。在日常场合，这两个词是可以互换的。
 
 ECMAScript 只用来标准化 JavaScript 这种语言的基本语法结构，与部署环境相关的标准都由其他标准规定，比如 DOM 的标准就是由 W3C组织（World Wide Web Consortium）制定的。
+
+- [JS和ECMAScript之间关系的参考文章](https://www.oschina.net/translate/whats-the-difference-between-javascript-and-ecmascript)
 
 # 3. 如何查找并解决JS代码的错误
 
