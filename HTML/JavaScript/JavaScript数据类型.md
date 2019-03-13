@@ -582,7 +582,9 @@ JavaScript 原生提供两个 Base64 相关的方法。
 
 - 简单说，对象就是一组“键值对”（key-value）的集合，是一种无序的复合数据集合。或者说是一个包含相关数据和方法的集合（通常由一些变量和函数组成，我们称之为对象里面的属性和方法）
 
-## 9.1 sheng
+## 9.1 定义对象
+
+### 9.1.1 使用对象字面量定义对象
 
 		var obj = {
 			foo: 'Hello',// 对象的属性
@@ -597,6 +599,79 @@ JavaScript 原生提供两个 Base64 相关的方法。
 	该对象内部包含两个键值对（又称为两个“成员”），第一个键值对是foo: 'Hello'，其中foo是“键名”（成员的名称），字符串Hello是“键值”（成员的值）。
 
 - **键名与键值之间用冒号分隔**。第二个键值对是bar: 'World'，bar是键名，World是键值。两个键值对之间用逗号分隔。
+
+### 9.1.2 使用构造函数定义对象
+
+JavaScript 用一种称为构建函数的特殊函数来定义对象和它们的特征。
+
+- 构建函数非常有用，因为很多情况下不知道实际需要多少个对象（实例）。
+
+- 构建函数提供了创建所需对象（实例）的有效方法，将对象的数据和特征函数按需联结至相应对象。
+
+
+示例(构建函数):
+
+	function Person(name) {
+	  this.name = name;
+	  this.greeting = function() {
+	    alert('Hi! I\'m ' + this.name + '.');
+	  };
+	}
+
+	var person1 = new Person('Bob');
+
+- 这个构建函数就是JS版本的类,**构建函数名称的首字通常是大写的,便于区分构建函数和普通函数**
+
+- 这里使用了`this`关键词，即无论是该对象的哪个实例被这个构建函数创建，它的 name 属性就是传递到构建函数形参name的值
+
+- 当新的对象被创建,变量person1有效地包含了以下值:
+
+		{
+		  name : 'Bob',
+		  greeting : function() {
+		    alert('Hi! I\'m ' + this.name + '.');
+		  }
+		}
+
+	- 实际的方法仍然是定义在类里面的,而不是在对象实例里面
+
+### 9.1.3 使用`Object()`构造函数定义对象
+
+使用`Object()`构造函数能够创建一个空对象,将空对象赋值给变量之后,可以向这个空对象添加属性和方法
+
+	// 创建空对象
+	var person1 = new Object();
+	// 添加属性和方法
+	person1.name = 'Chris';
+	person1['age'] = 38;
+	person1.greeting = function() {
+	  alert('Hi! I\'m ' + this.name + '.');
+	}
+
+还可以将对象文本传递给`Object()`构造函数作为参数,以便用属性/方法填充它
+
+
+	var person1 = new Object({
+	  name : 'Chris',
+	  age : 38,
+	  greeting : function() {
+	    alert('Hi! I\'m ' + this.name + '.');
+	  }
+	});
+
+### 9.1.4 使用`create()`方法创建对象
+
+JavaScript有个内嵌的方法`create()`, 它允许您基于现有对象创建新的对象实例。
+
+	var person2 = Object.create(person1);
+
+	person2.name // Chirs
+	person2.greeting() // HI!!.....
+
+- person2 是基于 person1 创建的,它们具有相同的属性和方法
+
+- 这十分灵活,因为它允许不通过构造函数创建新的对象实例. 但是缺点是比起构造函数浏览器在比较新的版本上才支持`create()`方法
+
 
 ## 9.2 键名
 
