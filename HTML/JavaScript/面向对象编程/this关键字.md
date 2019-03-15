@@ -8,7 +8,7 @@
 
 # 1. this关键字的含义
 
-`this`可以用在构造函数之中，表示实例对象。除此之外，`this`还可以用在别的场合。但不管是什么场合，`this`都有一个共同点：**它总是返回一个对象**。
+`this`有一个特点：**它总是返回一个对象**
 
 - 简单的说:`this`就是属性或方法"当前"所属的对象
 
@@ -16,7 +16,16 @@
 
 **JavaScript 语言之中，一切皆对象，运行环境也是对象，所以函数都是在某个对象之中运行**，**`this`就是函数运行时所在的对象（环境）**。
 
-- **JavaScript 支持运行环境动态切换，也就是说，this的指向是动态的，没有办法事先确定到底指向哪个对象.这是导致`this`容易混淆的原因**
+- **因为JavaScript 支持运行环境动态切换，也就是说，this的指向是动态的，没有办法事先确定到底指向哪个对象.所以导致`this`容易混淆**
+
+		Function.prototype.test = function (){
+		    console.log(this)
+		}
+		var f = function(){
+			console.log(this)
+		}
+		f.test() // 调用对象是 f
+		f() // 调用对象是 Window
 
 
 
@@ -32,7 +41,7 @@
 	
 	person.describe() // 姓名: 张三
 
-- `this.name`表示`name`属性所在的那个对象。
+- `this.name`中的`this`表示 属性`describe` 所在的对象。
 
 	由于`this.name`是在`describe`方法中调用，而`describe`方法所在的当前对象是`person`，因此`this`指向`person`，`this.name`就是`person.name`
 
@@ -119,11 +128,11 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 - 将对象赋值给变量obj的流程是:
 
 	1. JS引擎在内存中生成一个对象`{foo:5}`
-	2. 把这个对象的内存地址赋值给变量`obj`. 也就是说`obj`是一个地址(`reference`)
+	2. 把这个对象的内存地址赋值给变量`obj`. 也就是说`obj`保存了一个地址(`reference`)
 
 - 读取`obj.foo`的流程:
 
-	1. JS引擎从`obj`拿到内存地址
+	1. JS引擎从`obj`拿到对象的内存地址
 	2. 然后从地址读出**原始的对象**,返回`foo`属性
 
 **原始的对象**以字典结构保存,每一个属性名都对应一个属性描述对象,对应上面的`obj.foo`属性:
@@ -140,6 +149,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 - `foo`属性的值保存在属性描述对象的`value`属性中
 
 ## 2.2 方法在内存中的数据结构
+
 **方法的与属性相似,但是JS引擎会将函数单独保存在内存中,并提供一个地址指向它!**
 
 	var obj = { foo: function () {} };
@@ -201,41 +211,43 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	}
 	f() // true
 
+- 通过全局对象调用了函数`f()`
+
 - **无论是否在严格模式下,全局环境中使用`this`(在任何函数体外部),指代的就是全局对象`window`**
 
 ## 3.2 函数(运行内)环境
 
-当在函数内部使用`this`时,`this`的取值取决于函数被调用的方式 和 严格模式
+当在函数内部使用`this`时,`this`的取值取决于函数被调用的方式 和 是否处于严格模式
 
-### 3.2.1 简单调用
+### 3.2.1 简单调用时的`this`
 
 **非严格模式:**
 
 	function f1(){
 	  return this;
 	}
-	//在浏览器中：
 	f1() === window;   //在浏览器中，全局对象是window
-	
-	//在Node中：
-	f1() === global;
 
-- `this`的值不是由该调用设置的,那么`this`的值默认指向全局对象
+- `f1()`在全局环境中直接调用,因此函数内部的`this`指向全局对象
+
+	- **直接调用并不是仅仅指在全局作用域下进行调用,而是说在任何作用域下通过`funName()`这种方式调用**
+
+
 
 **严格模式:**
 
 	function f2(){
-	  "use strict"; // 这里是严格模式
+	  "use strict"; // 严格模式
 	  return this;
 	}
 	
 	f2() === undefined; // true
 
-- f2被直接调用,而不是作为对象的属性或方法代用(如`window.f2()`),所以应该是`undefined`
+- 只要`f2()`方法被直接调用,而不是作为对象的属性或方法代用(如`window.f2()`),那么就应该是`undefined`
 
 	**在严格模式下,如果`this`没有被执行环境(execution context)定义,那么会保持`undefined`**
 
-### 3.2.2 箭头函数
+### 3.2.2 箭头函数里的`this`
 
 在箭头函数中，`this`与封闭词法环境的`this`保持一致。在全局代码中，它将被设置为全局对象：
 	
@@ -244,11 +256,12 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	console.log(foo() === globalObject); // true
 
 
-### 3.2.3 对象的方法
+### 3.2.3 对象的方法里的`this`
 
-**当函数作为对象里的方法被调用时,它们的`this`是调用该函数的对象!**
+**当函数作为对象里的方法被调用时,函数内部的`this`就会指向调用该函数的对象!**
 
 	var obj ={
+	  // 定义方法
 	  foo: function () {
 	    console.log(this);
 	  }
@@ -273,6 +286,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	var a = {
 	  p: 'Hello',
 	  b: {
+		// 定义方法
 	    m: function() {
 	      console.log(this.p);
 	    }
@@ -302,6 +316,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 
 		var a = {
 		  b: {
+			// 方法里的`this`指向的是 b
 		    m: function() {
 		      console.log(this.p);
 		    },
@@ -310,16 +325,15 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 		};
 
 	
-- 但是这时,如果将嵌套对象内部的方法赋值给一个变量,`this`仍然会指向全局环境(全局对象)
+- 如果将嵌套对象内部的方法赋值给一个变量,`this`会指向全局对象(**因为此时调用方法的是全局对象!**)
 
 		var hello  = a.b.m;
 		hello()  // undefined
 
-	- 将`m`所在的对象`b`赋值给变量`hello`,这样调用时,`this`的指向就不会改变了
+	- 将`m`所在的对象`b`赋值给变量`hello`,这样调用时,`this`的指向就不会改变了(**因此此时调用方法的是`a.b`对象**)
 
-		var hello = a.b;
-		hello.m() // Hello
-
+			var hello = a.b;
+			hello.m() // Hello
 
 
 #### 3.2.3.1 方法中的`this`的指向会发生改变
@@ -362,34 +376,47 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	  console.log(this);
 	})()
 
-
-
 ### 3.2.4 原型链中的`this`
 
-对于在对象原型链上的某处定义的方法,`this`指向的是调用这个方法的对象，就像该方法在对象上一样
+**对于在对象原型链上的某处定义的方法,`this`指向的是调用这个方法的对象，就像该方法在对象上一样**
 
-	var o = {
-	  f: function() { 
-	    return this.a + this.b; 
-	  }
-	};
-	var p = Object.create(o);
-	p.a = 1;
-	p.b = 4;
-	
-	console.log(p.f()); // 5
+	Function.prototype.test = function (){
+	    return this;
+	}
+	function ƒ (){
+	    return this;
+	}
+
+	f.test() 
+	// 输出内容
+	ƒ (){
+	    return this;
+	}
+
+- 函数`test()`内部的`this` 指向函数`f()`(**因为函数`f()`也是对象,根据函数内部的`this`会指向调用函数的对象得知,函数`test()`内部的`this`会指向函数`f()`**)
+
+
+	f() 
+	// 输出内容
+	window
+
+- 函数`f()`在全局环境中被调用,因此调用对象是window(**因为js中全员皆对象,环境也是对象**)
 
 
 ### 3.2.5 构造函数
 
+**构造函数中的`this`，指的是实例对象**
+
 	var Obj = function (p) {
-	  this.p = p; // this 指向实例对象 Obj , 相当于Obj.p
+	  this.p = p; // Obj.p = p
 	};
 
-- **构造函数中的`this`，指的是实例对象**
+	var o = new Obj('Hello World!');
+	o.p // "Hello World!"
 
-		var o = new Obj('Hello World!');
-		o.p // "Hello World!"
+- 构造函数内的`this` 指向实例对象 `Obj` , 其赋值语句相当于`Obj.p = p` 
+
+
 
 # 4. `this`的易错点
 
@@ -402,7 +429,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	    console.log(this);
 	    var f2 = function () {
 	      console.log(this);
-	    }();
+	    }(); // 立即执行的函数
 	  }
 	}
 	
@@ -410,7 +437,11 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	// Object
 	// Window
 
-- 上述代码包含俩层`this`,第一层`this`指向对象`o`,第二层`this`指向全局对象. 因为上述代码实际是以下面的逻辑执行的:
+- 第一层`this`指向对象`o`,**因为函数内的`this`指向调用其的对象**
+
+- 第二层`this`指向全局对象,**因为在任何作用域下以`funName()`这种方式调用函数,其内部的`this`就指向全局对象**
+
+	上述代码也可以以下面的表现形式:
 
 		var temp = function () {
 		  console.log(this); 
@@ -474,7 +505,9 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	// undefined a1
 	// undefined a2
 
-- 这里导致 undefined 的原因也是`this`指代对象不同导致的,外层的`this`指向对象`o`,内层的`this`指向全局对象
+- 这里导致 undefined 的原因也是`this`指代对象不同导致的
+	1. 外层的`this`指向对象`o`
+	2. 内层的`this`指向全局对象,
 
 ### 4.2.1 解决办法1(使用中间变量固定`this`)
 
