@@ -12,20 +12,24 @@
 
 - 简单的说:`this`就是属性或方法"当前"所属的对象
 
-		this.property // this 就代表了property 属性当前所在的对象
+   this.property // this 就代表了property 属性当前所在的对象
 
 **JavaScript 语言之中，一切皆对象，运行环境也是对象，所以函数都是在某个对象之中运行**，**`this`就是函数运行时所在的对象（环境）**。
 
 - **因为JavaScript 支持运行环境动态切换，也就是说，this的指向是动态的，没有办法事先确定到底指向哪个对象.所以导致`this`容易混淆**
 
-		Function.prototype.test = function (){
-		    console.log(this)
-		}
-		var f = function(){
-			console.log(this)
-		}
-		f.test() // 调用对象是 f
-		f() // 调用对象是 Window
+   ```
+   Function.prototype.test = function (){
+   	    console.log(this)
+   	}
+   	var f = function(){
+   		console.log(this)
+   	}
+   	f.test() // 调用对象是 f
+   	f() // 调用对象是 Window
+   ```
+
+   
 
 
 
@@ -156,26 +160,38 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 
 - JS引擎会将函数单独保存在内存中,然后将函数的地址赋值给`foo`属性的`value`属性
 
-		{
-		  foo: {
-		    [[value]]: 函数的地址
-		    ...
-		  }
-		}
+   ```
+   {
+   	  foo: {
+   	    [[value]]: 函数的地址
+   	    ...
+   	  }
+   	}
+   ```
+
+   
 
 - **由于函数是一个单独的值,所以它可以在不同的环境(上下文)执行**
 
-		var f = function () {}; // f 保存了函数的地址
-		var obj = { f: f }; 
-		
-		f()	// 单独执行
-		obj.f()	// obj 环境执行
+   ```
+   var f = function () {}; // f 保存了函数的地址
+   var obj = { f: f }; 
+   
+   f()	// 单独执行
+   obj.f()	// obj 环境执行
+   ```
+
+   
 
 - **JS允许在函数体内部,引用当前环境的其他变量**
 
-		var f = function () {
-		  console.log(x); // x 变量由运行环境提供
-		};
+   ```
+   var f = function () {
+   	  console.log(x); // x 变量由运行环境提供
+   	};
+   ```
+
+   
 
 **由于函数可以在不同的环境中运行,所以`this`就被设计出来用作在"函数体内部指代函数当前的运行环境(context)"**
 
@@ -183,7 +199,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	  console.log(this.x); 
 	}
 	f() // 这时 函数内部的this 就指代 window(全局环境)
-
+	
 	var obj = {
 	  f: f,
 	  x: 2,
@@ -297,43 +313,55 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 
 - 上述代码中,`m`方法在`b`对象中,因此该方法内部的`this`指向的是`a.b`而不是`a`,其实际执行的逻辑如下:
 
-		var b = {
-		  m: function() {
-		   console.log(this.p);
-		  }
-		};
-		
-		var a = {
-		  p: 'Hello',
-		  b: b
-		};
-		
-		(a.b).m() // 等同于 b.m()
+   ```
+   var b = {
+   	  m: function() {
+   	   console.log(this.p);
+   	  }
+   	};
+   	
+   
+   var a = {
+     p: 'Hello',
+     b: b
+   };
+   
+   (a.b).m() // 等同于 b.m()
+   ```
+
+   
 
 - **如果`this`所在的方法不在对象的第一层，这时`this`只是指向当前一层的对象，而不会指向更上面的层**
 
-	想要解决这种情况,那就需要将`this`的指向外层对象`a`,或者**将属性`p`放到内层对象`b`中**
+  想要解决这种情况,那就需要将`this`的指向外层对象`a`,或者**将属性`p`放到内层对象`b`中**
 
-		var a = {
-		  b: {
-			// 方法里的`this`指向的是 b
-		    m: function() {
-		      console.log(this.p);
-		    },
-		    p: 'Hello'
-		  }
-		};
+  	var a = {
+  	  b: {
+  		// 方法里的`this`指向的是 b
+  	    m: function() {
+  	      console.log(this.p);
+  	    },
+  	    p: 'Hello'
+  	  }
+  	};
 
-	
 - 如果将嵌套对象内部的方法赋值给一个变量,`this`会指向全局对象(**因为此时调用方法的是全局对象!**)
 
-		var hello  = a.b.m;
-		hello()  // undefined
+   ```
+   var hello  = a.b.m;
+   	hello()  // undefined
+   ```
 
-	- 将`m`所在的对象`b`赋值给变量`hello`,这样调用时,`this`的指向就不会改变了(**因此此时调用方法的是`a.b`对象**)
+   
 
-			var hello = a.b;
-			hello.m() // Hello
+   - 将`m`所在的对象`b`赋值给变量`hello`,这样调用时,`this`的指向就不会改变了(**因此此时调用方法的是`a.b`对象**)
+
+      ```
+      var hello = a.b;
+      hello.m() // Hello
+      ```
+
+      
 
 
 #### 3.2.3.1 方法中的`this`的指向会发生改变
@@ -386,7 +414,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	function ƒ (){
 	    return this;
 	}
-
+	
 	f.test() 
 	// 输出内容
 	ƒ (){
@@ -410,7 +438,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	var Obj = function (p) {
 	  this.p = p; // Obj.p = p
 	};
-
+	
 	var o = new Obj('Hello World!');
 	o.p // "Hello World!"
 
@@ -507,7 +535,7 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 
 - 这里导致 undefined 的原因也是`this`指代对象不同导致的
 	1. 外层的`this`指向对象`o`
-	2. 内层的`this`指向全局对象,
+	2. 内层的`this`指向全局对象,**函数只要是独立被调用的，那就是指向window！**
 
 ### 4.2.1 解决办法1(使用中间变量固定`this`)
 
@@ -888,3 +916,33 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 	- 上面代码的含义就是，将`Function.prototype.call`的`this`指向`Function.prototype.bind`对象，所以`bind()`方法就可以直接使用，不需要在函数实例上使用。
 
 	![](http://ww1.sinaimg.cn/large/6ab93b35gy1g12i13htu9j21980zon7n.jpg)
+
+
+
+
+
+# 6.  `this` 用法的总结
+
+## 6.1 `this`的4种指向
+
+1. 独立调用：`func()`，函数独立调用，this指向window，;
+
+2. 方法调用：`obj.func()`，函数作为obj的一个方法（属性）调用，this指向obj；
+
+3. 构造函数调用：`new Func()`，如果在一个函数前面带上 new 关键字来调用， 那么背地里将会创建一个连接到该函数的 prototype 的新对象，this指向这个新的对象；
+
+4. call、apply、bind调用：
+
+   ```
+   func.call(obj,value1,value2);  func.apply(obj,[value1,value2])； func.bind(obj,value1,value2)();  func.bind(obj)(value1,value2); 动态改变this的指向obj；
+   ```
+
+
+
+## 6.2 独立调用和方法调用
+
+1. 全局环境中，this默认指向到window；
+2. 函数独立调用（不论这个函数在哪调用），this默认指向到window；
+3. 当函数被作为对象的方法（对象的一个属性）调用时，this指向该对象；
+4. 函数只有调用了之后才有this的概念，不然它只是代码而已，我们经常把函数传给一个变量，如果后面没加括号，就只是传了个函数，而不是执行结果；
+
