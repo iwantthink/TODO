@@ -12,7 +12,7 @@
 
 - 简单的说:`this`就是属性或方法"当前"所属的对象
 
-   this.property // this 就代表了property 属性当前所在的对象
+		this.property // this 就代表了property 属性当前所在的对象
 
 **JavaScript 语言之中，一切皆对象，运行环境也是对象，所以函数都是在某个对象之中运行**，**`this`就是函数运行时所在的对象（环境）**。
 
