@@ -946,3 +946,117 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 3. 当函数被作为对象的方法（对象的一个属性）调用时，this指向该对象；
 4. 函数只有调用了之后才有this的概念，不然它只是代码而已，我们经常把函数传给一个变量，如果后面没加括号，就只是传了个函数，而不是执行结果；
 
+# 7. 方法`call,apply,bind`的原理
+
+## 7.1 call方法的原理
+
+call方法。每个函数都可以调用call方法，来改变当前这个函数执行的this关键字，并且支持传入参数
+
+	Function.prototype.mycall = function(context){
+	    context = context || window;
+		// this就是调用函数mycall的对象
+	    context.fn = this;
+		console.log('inside this = '+this);
+
+		// 获取到额外的参数
+	    var arr = [];
+	    for(var i = 1;i<arguments.length;i++){
+	        arr.push('arguments['+i+']');
+	    }
+		// 执行调用函数mycall的对象
+	    var result = eval('context.fn('+arr.toString()+')');
+		// 删除掉这个对象
+	    delete context.fn;
+	    return result;
+	}
+
+- 参数`context`就是待改变的函数内部的`this`要指向的对象,默认会指向window(**即 函数执行时,函数内部`this`指向的对象**)
+
+- **函数`mycall()`中的`this`会指向调用该函数的对象(其实就是要改变`this`的函数!)**
+
+
+	var obj = {name:'ryan'};
+	var a = {age:1}
+
+	function say(n){
+	    console.log(this,n);
+	}
+	say.mycall(obj,a)
+	// 输出内容
+	VM1748:3 inside this = function say(n){
+	    console.log(this,n);
+	}
+	VM1748:15 {name: "ryan", fn: ƒ} {age: 1}
+
+- 函数`mycall()`中的 context 就是 obj, `this`就是函数`say()`
+
+	函数`mycall()`内部将函数`say()`添加到了对象`obj`上,并执行了(**方法内部的`this`会指向调用该方法的对象**)
+
+## 7.2 apply方法的原理
+
+apply和call方法类似，作用都是改变当前函数执行的this指向，并且将函数执行。
+唯一不同就是 call方法给当前函数传参是一个一个传。而apply是以数组方式传入参数
+
+	Function.prototype.myApply =function(context,arr){
+		context = Object(context) || window;
+		// this 就是 函数myApply被调用时指向的对象
+		context.fn = this;
+		var result;
+		// 无参
+		if(!arr){
+		    result= context.fn();
+		}else{
+		    var args = [];
+		    for(var i=0;i<arr.length;i++){
+		        args.push('arr['+i+']');
+		    }
+		    result = eval('context.fn('+args.toString()+')')
+		}
+		delete context.fn;
+		return result;
+	}
+	
+	var q = {name:'ryan'};
+	var arg1 = 1;
+	var arg2= [123]
+	function eat(n,m){
+	    console.log(this,n,m);
+	}
+	eat.myApply(q,[arg1,arg2])
+
+- `context` 指向 对象`q` 
+	
+- 函数`myApply()`内部的`this`指向 函数`eat()` 
+
+- 函数`eat()`被添加到了 对象`q`上,然后被执行
+
+
+## 7.3 bind方法的原理
+
+方法`bind()`，是改变当前调用`bind()`方法的函数`this`指向，但是不会立即执行当前函数，而是返回一个新的函数。并且支持给新的函数传入参数执行，从而触发之前调用bind方法的函数执行，并且参数透传进去。bind方法是高阶函数的一种。
+
+
+	Function.prototype.myBind = function(){
+		// arguments[0] 就是函数被执行时 this的 指向
+		var context = arguments[0];
+		// this 指向调用该函数的对象
+		var self = this;
+		return function (){
+			// 使用 myApply 改变了 self 中 this的指向
+		    self.myApply(context,arguments)
+		}
+	};
+
+	var j = {name:1};
+	var k = [123]
+	function drink (k){
+	    console.log(this.name,k);
+	}
+	var fn = drink.myBind(j);
+	fn(k);
+
+- 参数`context`就是**待改变的函数内部的`this`要指向的对象**
+
+	就是上述示例中的对象`j`
+
+- 函数`myBind()`内部的`this`就是函数`drink()`
