@@ -9,7 +9,7 @@ DOM 是 JavaScript 操作网页的接口，全称为“**文档对象模型**”
 
 - **它的作用是将网页转为一个 JavaScript 对象，从而可以用脚本进行各种操作（比如增删内容）**
 
-浏览器会根据 DOM 模型，将结构化文档（比如 HTML 和 XML）解析成一系列的节点，再由这些节点组成一个树状结构（DOM Tree）。
+浏览器会根据 DOM ，将结构化文档（比如 HTML 和 XML）解析成一系列的节点，再由这些节点组成一个树状结构（DOM Tree）。
 
 - 所有的节点和最终的树状结构，都有规范的对外接口。
 
@@ -21,21 +21,21 @@ DOM 是 JavaScript 操作网页的接口，全称为“**文档对象模型**”
 
 节点的类型有七种。
 
-1. Document：整个文档树的顶层节点
+1. `Document`：整个文档树的顶层节点
 
-2. DocumentType：doctype标签（比如`<!DOCTYPE html>`）
+2. `DocumentType`：doctype标签（比如`<!DOCTYPE html>`）
 
-3. Element：网页的各种HTML标签（比如`<body>、<a>`等）
+3. `Element`：网页的各种HTML标签（比如`<body>、<a>`等）
 
-4. Attribute：网页元素的属性（比如`class="right"`）
+4. `Attribute`：网页元素的属性（比如`class="right"`）
 
-5. Text：标签之间或标签包含的文本
+5. `Text`：标签之间或标签包含的文本
 
-6. Comment：注释
+6. `Comment`：注释
 
-7. DocumentFragment：文档的片段
+7. `DocumentFragment`：文档的片段
 
-浏览器提供一个原生的节点对象Node，上面这七种节点都继承了Node，因此具有一些共同的属性和方法。
+- **浏览器提供一个原生的节点对象`Node`，上面这七种节点都继承了Node，因此具有一些共同的属性和方法**
 
 # 3. 节点树
 
@@ -43,7 +43,7 @@ DOM 是 JavaScript 操作网页的接口，全称为“**文档对象模型**”
 
 - 它有一个顶层节点，下一层都是顶层节点的子节点，然后子节点又有自己的子节点，就这样层层衍生出一个金字塔结构，倒过来就像一棵树。
 
-浏览器原生提供document节点，代表整个文档。
+**浏览器原生提供document节点，代表整个文档**
 
 	document
 	// 整个文档树
@@ -52,10 +52,10 @@ DOM 是 JavaScript 操作网页的接口，全称为“**文档对象模型**”
 
 **除了根节点，其他节点都有三种层级关系**
 
-1. 父节点关系（parentNode）：直接的那个上级节点
+1. **父节点关系**（parentNode）：直接的那个上级节点
 
-2. 子节点关系（childNodes）：直接的下级节点
+2. **子节点关系**（childNodes）：直接的下级节点
 
-3. 同级节点关系（sibling）：拥有同一个父节点的节点
+3. **同级节点关系**（sibling）：拥有同一个父节点的节点
 
 DOM 提供操作接口，用来获取这三种关系的节点。比如，子节点接口包括firstChild（第一个子节点）和lastChild（最后一个子节点）等属性，同级节点接口包括nextSibling（紧邻在后的那个同级节点）和previousSibling（紧邻在前的那个同级节点）属性。
