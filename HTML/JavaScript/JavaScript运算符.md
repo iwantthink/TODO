@@ -924,3 +924,76 @@ JavaScript 各种运算符的优先级别（Operator Precedence）是不一样�
 		w = x = y = z;
 		q = a ? b : c ? d : e ? f : g;
 		2 ** 3 ** 2; // 2 ** (3 ** 2)
+
+## 5.4 instanceof 运算符
+
+`instanceof`运算符返回一个布尔值，**表示对象是否为某个构造函数的实例**
+
+	var v = new Vehicle();
+	v instanceof Vehicle // true
+
+- 运算符`instanceof`的左边是实例对象，右边是构造函数。
+
+	其逻辑是**检查右边构建函数的原型对象（`prototype`），是否在左边对象的原型链上**。
+
+	因此，下面两种写法是等价的。
+
+		v instanceof Vehicle
+		// 等同于
+		Vehicle.prototype.isPrototypeOf(v)
+
+- 存在一种特殊情况,如果使用运算符`instanceof`进行判断的对象的原型链中只有`null`,那么这时候运算符`instanceof`无效
+
+		var obj = Object.create(null);
+		typeof obj // "object"
+		Object.create(null) instanceof Object // false
+
+由于instanceof会检查整个原型链，因此同一个实例对象，可能会对多个构造函数都返回true。
+
+	var d = new Date();
+	d instanceof Date // true
+	d instanceof Object // true
+
+
+### 5.4.1 作用
+
+运算符`instanceof`的一个用处，是判断值的类型。
+
+	var x = [1, 2, 3];
+	var y = {};
+	x instanceof Array // true
+	y instanceof Object // true
+
+- **但是运算符`instanceof`只能用于对象,不能用于原始类型**
+
+		var s = 'hello';
+		s instanceof String // false
+
+- 对于`undefined`和`null`,运算符`instanceof`总是返回false
+
+		undefined instanceof Object // false
+		null instanceof Object // false
+
+利用运算符`instanceof`还可以解决调用构造函数忘记加`new`命令的问题
+
+	function Fubar (foo, bar) {
+	  if (this instanceof Fubar) {
+	    this._foo = foo;
+	    this._bar = bar;
+	  } else {
+	    return new Fubar(foo, bar);
+	  }
+	}
+
+	var f = Fubar(1,2)
+
+- 当构造函数没有搭配`new`命名使用时,`this`就指向了全局对象 . 否则`this`将会指向构造函数!
+
+## 5.5 `in`运算符
+
+**运算符`in`返回一个布尔值，表示一个对象是否具有某个属性(常用于检查一个属性是否存在)**
+
+- **它不区分该属性是对象自身的属性，还是继承的属性**
+
+		'length' in Date // true
+		'toString' in Date // true

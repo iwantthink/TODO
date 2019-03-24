@@ -6,8 +6,13 @@
 
 [MDN Web教程-JavaScript](https://developer.mozilla.org/zh-CN/docs/Learn/JavaScript/First_steps/What_is_JavaScript)
 
+[浏览器环境概述-阮一峰](https://wangdoc.com/javascript/bom/engine.html)
+
 # 1. 什么是JavaScript语言?
-JavaScript 是一种轻量级的脚本语言(动态编程语言),应用于HTML文档时,为网站提供动态交互特性.
+
+JavaScript 是一种**轻量级的脚本语言(动态编程语言)**,应用于HTML文档时,为网站提供动态交互特性.
+
+- 浏览器内置了Javascript作为内置脚本语言
 
 - 所谓“脚本语言”（script language），指的是它不具备开发操作系统的能力，而是只用来编写控制其他大型应用程序（比如浏览器）的“脚本”。
 
@@ -92,13 +97,42 @@ JavaScript 的核心语法部分相当精简，只包括两个部分：
 
 - 没有动态更新内容的网页叫做“静态”页面，所显示的内容不会改变
 
-## 1.7 如何向页面添加JavaScript
+# 2. JavaScript与ECMAScript的关系
 
-将元素`<script>`添加到 `<head>`或`<body>`标签中即可实现向页面添加JavaScript
+ECMAScript 和 JavaScript 的关系是，前者是后者的规格，后者是前者的一种实现。在日常场合，这两个词是可以互换的。
 
-元素`<script>`有几种不同的表现形式
+ECMAScript 只用来标准化 JavaScript 这种语言的基本语法结构，与部署环境相关的标准都由其他标准规定，比如 DOM 的标准就是由 W3C组织（World Wide Web Consortium）制定的。
 
-### 1.7.1 内部JavaScript
+- [JS和ECMAScript之间关系的参考文章](https://www.oschina.net/translate/whats-the-difference-between-javascript-and-ecmascript)
+
+# 3. 如何查找并解决JS代码的错误
+
+一般来说，JS代码错误主要分为两种：
+
+- **语法错误**：代码中存在拼写错误，将导致程序完全或部分不能运行，通常你会收到一些出错信息.只要熟悉语言并了解出错信息的含义，你就能够顺利修复它们。
+
+- **逻辑错误**：有些代码语法虽正确，但执行结果和预期相悖，这里便存在着逻辑错误。这意味着程序虽能运行，但会给出错误的结果。由于一般你不会收到来自这些错误的提示，它们通常比语法错误更难修复。
+
+
+## 3.1 修复语法错误
+
+通过查看 [浏览器开发者工具](https://developer.mozilla.org/zh-CN/docs/Learn/Discover_browser_developer_tools)中的控制台,可以看到语法错误
+
+
+
+# 4.  如何向页面添加JavaScript
+
+网页中嵌入 JavaScript 代码，主要有三种方法。
+
+- `<script>`元素直接嵌入代码。
+
+- `<script>`标签加载外部脚本
+
+- 事件属性
+
+- URL 协议
+
+### 4.1 script元素内部嵌入代码
 
 直接在元素`<script>`的内容中编码JS代码
 
@@ -108,16 +142,38 @@ JavaScript 的核心语法部分相当精简，只包括两个部分：
 	
 	</script>
 
+- `<script>`标签有一个type属性，用来指定脚本类型。对 JavaScript 脚本来说，type属性可以设为两种值。
 
-### 1.7.2 外部JavaScript
+	1. `text/javascript`：这是默认值，也是历史上一贯设定的值。**如果你省略type属性，默认就是这个值**。对于老式浏览器，设为这个值比较好。
+
+	2. `application/javascript`：对于较新的浏览器，建议设为这个值。
+
+- **如果type属性的值，浏览器不认识，那么它不会执行其中的代码**
+
+		<script id="mydata" type="x-custom-data">
+		  console.log('Hello World');
+		</script>
+
+	- 上面的代码，浏览器不会执行，也不会显示它的内容，因为不认识它的type属性。但是，这个`<script>`节点依然存在于 DOM 之中，可以使用`<script>`节点的text属性读出它的内容。
+
+
+## 4.2 script元素加载外部代码
 
 将JS代码编写到单独的文件中,在元素`<script>`中引用即可
 
 	<script src="script.js" async></script>
 
-### 1.7.3 内联JavaScript处理器
+- **如果脚本文件使用了非英语字符，还应该注明字符的编码**
 
-这种方式并不被建议,因为这将使JS污染到HTML,而且效率低下,对于每个需要应用JS的按钮,都得手动添加属性.
+		<script charset="utf-8" src="https://www.example.com/script.js"></script>
+
+- **加载外部脚本和直接添加代码块,不能混用**
+
+- script标签允许设置一个integrity属性，写入该外部脚本的 Hash 签名，用来验证脚本的一致性
+
+## 4.3 内联JavaScript处理器
+
+这种方式并不被建议,因为这将使JS污染到HTML,而且效率低下,对于每个需要应用JS的网页元素,都得手动添加属性(比如onclick 和 onmouseover 等)
 
 	<script>
 		function createParagraph() {
@@ -137,16 +193,66 @@ JavaScript 的核心语法部分相当精简，只包括两个部分：
 	  buttons[i].addEventListener('click', createParagraph);
 	}
 
+## 4.4 URL协议
 
-## 1.8 脚本调用策略
+URL 支持`javascript:`协议
 
-让脚本调用的时机符合预期,会遇到一系列的问题
+- **即在 URL 的位置写入代码，使用这个 URL 的时候就会执行 JavaScript 代码**
 
-例如: 
+		<a href="javascript:console.log('Hello')">点击</a>
 
-HTML 元素是按其在页面中出现的次序调用的(解释型语言)，如果用 JavaScript 来管理页面上的元素（更精确的说法是使用 文档对象模型 DOM），若 JavaScript 加载于欲操作的 HTML 元素之前，则代码将出错。
+- 浏览器的地址栏也可以执行`javascript:`协议。将`javascript:console.log('Hello')`放入地址栏，按回车键也会执行这段代码。
 
-这个方法会有几种解决办法:
+- 如果 JavaScript 代码返回一个字符串，浏览器就会新建一个文档，展示这个字符串的内容，原有文档的内容都会消失。
+
+		<a href="javascript: new Date().toLocaleTimeString();">点击</a>
+
+- 如果返回的不是字符串，那么浏览器不会新建文档，也不会跳转。
+
+- **为了防止书签替换掉当前文档，可以在脚本前加上void，或者在脚本最后加上void 0**
+
+		<a href="javascript: void new Date().toLocaleTimeString();">点击</a>
+		<a href="javascript: new Date().toLocaleTimeString();void 0;">点击</a>
+
+# 5. 脚本调用策略
+
+## 5.1 script元素工作原理
+
+浏览器加载 JavaScript 脚本，主要通过`<script>`元素完成。正常的网页加载流程是这样的。
+
+1. 浏览器一边下载 HTML 网页，一边开始解析。也就是说，不等到下载完，就开始解析。
+
+2. 解析过程中，浏览器发现`<script>`元素，就暂停解析，把网页渲染的控制权转交给 JavaScript 引擎。
+
+3. 如果`<script>`元素引用了外部脚本，就下载该脚本再执行，否则就直接执行代码。
+
+4. JavaScript 引擎执行完毕，控制权交还渲染引擎，恢复往下解析 HTML 网页。
+
+**加载外部脚本时，浏览器会暂停页面渲染，等待脚本下载并执行完成后，再继续渲染**
+
+- 原因是 JavaScript 代码可以修改 DOM，所以必须把控制权让给它，否则会导致复杂的线程竞赛的问题。
+
+	如果外部脚本加载时间很长（一直无法完成下载），那么浏览器就会一直等待脚本下载完成，造成网页长时间失去响应，浏览器就会呈现“假死”状态，这被称为“阻塞效应”。
+
+	**为了避免这种情况，较好的做法是将`<script>`标签都放在页面底部，而不是头部**
+
+	- 这样即使遇到脚本失去响应，网页主体的渲染也已经完成了，用户至少可以看到内容，而不是面对一张空白的页面。如果某些脚本代码非常重要，一定要放在页面头部的话，最好直接将代码写入页面，而不是连接外部脚本文件，这样能缩短加载时间
+
+	脚本文件都放在网页尾部加载，还有一个好处。因为在 DOM 结构生成之前就调用 DOM 节点，JavaScript 会报错，如果脚本都在网页尾部加载，就不存在这个问题，因为这时 DOM 肯定已经生成了。
+
+**多个script标签会按照代码出现的顺序进行执行(但是会同时并行下载):**
+
+	<script src="a.js"></script>
+	<script src="b.js"></script>
+
+- **浏览器会同时并行下载`a.js`和`b.js`，但是，执行时会保证先执行a.js，然后再执行b.js，即使后者先下载完成，也是如此**。
+
+	也就是说，**脚本的执行顺序由它们在页面中的出现顺序决定，这是为了保证脚本之间的依赖关系不受到破坏**。当然，加载这两个脚本都会产生“阻塞效应”，必须等到它们都加载完成，浏览器才会继续页面渲染。
+
+
+解析和执行 CSS，也会产生阻塞。Firefox 浏览器会等到脚本前面的所有样式表，都下载并解析完，再执行脚本；Webkit则是一旦发现脚本引用了样式，就会暂停执行脚本，等到样式表下载并解析完，再恢复执行。
+
+此外，对于来自同一个域名的资源，比如脚本文件、样式表文件、图片文件等，浏览器一般有限制，同时最多下载6～20个资源，即最多同时打开的 TCP 连接有限制，这是为了防止对服务器造成太大压力。如果是来自不同域名的资源，就没有这个限制。所以，通常把静态文件放在不同的域名之下，以加快下载速度。
 
 
 ### 1.8.1 事件监听器解决
@@ -207,24 +313,3 @@ HTML 元素是按其在页面中出现的次序调用的(解释型语言)，如�
 把脚本元素放在文档体的底端（`</body> `标签之前，与之相邻），这样脚本就可以在 HTML 解析完毕后加载了。
 
 - 此方案（以及上述的 DOMContentLoaded 方案）的问题是：只有在所有 HTML DOM 加载完成后才开始脚本的加载/解析过程。对于有大量 JavaScript 代码的大型网站，可能会带来显著的性能损耗。**这也是 async 属性诞生的初衷**
-
-# 2. JavaScript与ECMAScript的关系
-
-ECMAScript 和 JavaScript 的关系是，前者是后者的规格，后者是前者的一种实现。在日常场合，这两个词是可以互换的。
-
-ECMAScript 只用来标准化 JavaScript 这种语言的基本语法结构，与部署环境相关的标准都由其他标准规定，比如 DOM 的标准就是由 W3C组织（World Wide Web Consortium）制定的。
-
-- [JS和ECMAScript之间关系的参考文章](https://www.oschina.net/translate/whats-the-difference-between-javascript-and-ecmascript)
-
-# 3. 如何查找并解决JS代码的错误
-
-一般来说，JS代码错误主要分为两种：
-
-- **语法错误**：代码中存在拼写错误，将导致程序完全或部分不能运行，通常你会收到一些出错信息.只要熟悉语言并了解出错信息的含义，你就能够顺利修复它们。
-
-- **逻辑错误**：有些代码语法虽正确，但执行结果和预期相悖，这里便存在着逻辑错误。这意味着程序虽能运行，但会给出错误的结果。由于一般你不会收到来自这些错误的提示，它们通常比语法错误更难修复。
-
-
-## 3.1 修复语法错误
-
-通过查看 [浏览器开发者工具](https://developer.mozilla.org/zh-CN/docs/Learn/Discover_browser_developer_tools)中的控制台,可以看到语法错误
