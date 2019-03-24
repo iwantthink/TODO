@@ -19,7 +19,7 @@
 
 **`Context`的实际实现类是`ContextImpl`，是一个注解了的内部保护文件。是Context api的通用实现，提供了基本的Context给Activity和Application组件使用**
 
-- ** `ContextWrapper`类中存在一个变量`mBase`是一个`ContextImpl`对象，指向真正的实现类`ContextImpl`.而`ContextImpl`类中的变量`mOuterContext`指向相对应的`Activity,Service,Application`**
+- **`ContextWrapper`类中存在一个变量`mBase`是一个`ContextImpl`对象，指向真正的实现类`ContextImpl`.而`ContextImpl`类中的变量`mOuterContext`指向相对应的`Activity,Service,Application`**
 
 	可以查看`ContextWrapper`的源码：
 
