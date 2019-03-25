@@ -354,7 +354,7 @@ Android系统基于Linux内核，存在**进程隔离**，即对每个进程来�
 
 	Binder并不是Linux内核的一部分，它是通过**Linux的动态可加载内核模块(Loadable Kernel Module,LKM)**机制解决的通信。该模块是具有独立功能的程序，可以被单独编译但是不能单独运行。它在运行时被链接到内核作为内核的一部分在内核空间运行。
 
-	也就是说：**Android系统通过添加一个内核模块运行在内核空间(该内核模块实现了Binder底层工作机制)，而用户进程通过这个模块作为桥梁 来完成通信。在Adnroid系统中，这个运行在内核空间，负责各个用户进程通信的内核模块叫做Binder驱动**
+	也就是说：**Android系统通过添加一个内核模块运行在内核空间(该内核模块实现了Binder底层工作机制)，而用户进程通过这个模块作为桥梁 来完成通信。在Android系统中，这个运行在内核空间，负责各个用户进程通信的内核模块叫做Binder驱动**
 
 	- 驱动程序一般指的是设备驱动程序（Device Driver），是一种可以使计算机和设备通信的特殊程序。相当于硬件的接口，操作系统只有通过这个接口，才能控制硬件设备的工作；
 
@@ -388,7 +388,6 @@ Android使用的Linux内核拥有着非常多的跨进程通信机制，比如�
 
 - 俩个运行在用户空间的进程要进行通信，需要借助内核的帮助(实际上是需要**动态可加载内核模块**)，这个运行在内核中的程序叫做**Binder驱动**，它的功能类似基站，另外打电话通信中的通信录对应Binder通信中的`ServiceManager`.
 
-	![weishu的图...挂了](http://7xp3xc.com1.z0.glb.clouddn.com/binder-model.png)
 
 **整体流程如下：**
 
@@ -414,7 +413,6 @@ Binder通信中的四个角色：client,server,sm,driver。那么具体client如
 
 Binder机制并不是通过以上方式实现的，**通信是一个广泛的概念，只要一个进程能调用另外一个进程里某个对象的方法，那么具体要完成什么通信内容就很容易**
 
-![图挂了](http://7sbqce.com1.z0.glb.clouddn.com/2016binder-procedure.png)
 
 1. Server进程向SM注册，告诉SM自己的名字，有什么能力。即Server告诉SM自己叫ASM，自己有个object对象，可以执行add操作。于是SM建立了一张表，然后保存了这些信息(简化了SM注册的流程，见下文)
 
@@ -455,7 +453,7 @@ Binder的设计采用了面向对象的思想，在Binder通信模型的四个�
 
 已知Server进程里的Binder对象是Binder本地对象，Client进程里的Binder对象是Binder代理对象，且在Binder对象进行跨进程传递的时候(**由于驱动返回的objectProxy与Server进程中的十分相似，给人的感觉像是Server进程中的object对象传递到了Client进程。因此 称Binder对象是可以进行跨进程传递的对象**)，Binder驱动会自动完成本地对象和代理对象的转换。
 
-因此，Binder驱动必然保存了每一个跨进程的Binder对象的相关信息。在驱动中，**Binder本地对象 体现为 一个叫做`binder_node`的数据结构,Binder代理对象 体现为 一个叫做`binder_ref`的数据结构**。有的地方将Binder本地对象称为Binder实体，将Binder代理对象称为Binder引用(句柄)。其实就是指的Binder对象在驱动力的表现形式
+因此，Binder驱动必然保存了每一个跨进程的Binder对象的相关信息。在驱动中，**Binder本地对象 体现为 一个叫做`binder_node`的数据结构,Binder代理对象 体现为 一个叫做`binder_ref`的数据结构**。有的地方将Binder本地对象称为Binder实体，将Binder代理对象称为Binder引用(句柄)。其实就是指的Binder对象在驱动里的表现形式
 
 
 ### 2.4.2 Java层的Binder
