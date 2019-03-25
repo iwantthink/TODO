@@ -1,8 +1,8 @@
-# WindowManagerService分析
+# WindowManagerService分析1
 
 [WMS-启动过程](http://gityuan.com/2017/01/08/windowmanger/)
 
-[WMS的诞生(1)](https://blog.csdn.net/itachi85/article/details/78186741)
+[Android解析WindowManagerService（一）WMS的诞生](https://blog.csdn.net/itachi85/article/details/78186741)
 
 [Android窗口管理服务WindowManagerService的简要介绍和学习计划](https://blog.csdn.net/Luoshengyang/article/details/8462738)
 
@@ -10,6 +10,18 @@
 **基于Android 27,代码中会移除掉LOG和一些与分析内容不相关的代码**
 
 内容包含WMS的创建和使用
+
+## 1.1 为什么存在WMS?
+
+Activity通过`Surface`来显示自己的过程如下:
+
+1. Surface是一块画布,应用可以通过Canvas或者OpenGL在其上作画
+
+2. 通过`SurfaceFlinger`将多块`Surface`的内容按照特定的顺序`Z-order`进行混合并输出到`FrameBuffer`,从而将内容显示给用户
+
+因为每个窗口都有一块`Surface`供自己作画,因此需要一个角色对所有窗口的`Surface`进行协调管理,而这个对象就是WMS
+
+- **WMS为所有窗口分配Surface,管理Surface的显示顺序(Z-order)以及位置尺寸,控制窗口动画,此外WMS还是输入系统的一个重要中转站**
 
 # 2. WMS的创建过程
 
@@ -97,8 +109,7 @@
     public static WindowManagerService main(final Context context, final InputManagerService im,
             final boolean haveInputMethods, final boolean showBootMsgs, final boolean onlyCore,
             WindowManagerPolicy policy) {
-		//DisplayThread是一个单例的前台线程,处理需要低延时显示的相关操作,只能由
-		//WindowManager,DisplayManager,InputManager实时执行快速操作
+		
         DisplayThread.getHandler().runWithScissors(() ->
 				//创建WMS实例
                 sInstance = new WindowManagerService(context, im, haveInputMethods, showBootMsgs,
@@ -106,9 +117,11 @@
         return sInstance;
     }
 
+- `DisplayThread`是一个单例的前台线程,处理需要低延时显示的相关操作,只能由`WindowManager,DisplayManager,InputManager`实时执行快速操作
+
 - `WMS`实例的创建在一个`Runnable`中,而这个`Runnable`是被`DisplayThread`所属的`Handler`执行.所以可以得出`WMS`的创建过程是运行在`android.display`线程中
 
-- `runWithScissors`方法的第二个参数是0
+- Handler的`runWithScissors`方法会将传入的`Runnable`在Handler所在的线程中执行,同时阻塞调用线程的执行,直到`Runnable`对象的`run()`函数执行完毕!
 
 
 ## 2.5 WindowManagerService.runWithScissors()
@@ -131,7 +144,7 @@
         return br.postAndWait(this, timeout);
     }
 
-- 根据每个线程只有一个Looper的原理判断当前的线程(`system_server`线程)是否是Handler所指向的线程(`android.display`线程).如果是则直接执行,否则调用`BlockingRunnable.postAndWait()`进行执行
+- 根据每个线程只有一个Looper的原理判断当前的线程(`system_server`线程)是否是Handler所指向的线程(`android.display`线程).如果是则直接执行,否则调用`BlockingRunnable.postAndWait()`进行线程的切换与执行
 
 
 ## 2.6 BlockingRunnable.postAndWait()
@@ -336,7 +349,7 @@
 
 # 6. Window的添加过程
 
-之前[Window的相关操作.md]()中已经分析过`Window`在应用进程中的创建过程,并与 2.3.1-2.3.2 小节得知,在视图的创建过程中会调用 `WMS.addWindow`
+之前[Window的相关操作.md]()中已经分析过`Window`在应用进程中的创建过程,并与 2.3.1-2.3.2 小节得知,在视图的创建过程中会通过IPC调用WMS的`addWindow`方法
 
 ## 6.1 addWindow-1
 	
@@ -356,6 +369,7 @@
 	            if (!mDisplayReady) {
 	                throw new IllegalStateException("Display has not been initialialized");
 	            }
+				// 获取窗口要添加到的DisplayContent
 	            final DisplayContent displayContent = mRoot.getDisplayContentOrCreate(displayId);//2
 	            if (displayContent == null) {
 	                Slog.w(TAG_WM, "Attempted to add window to a display that does not exist: "
@@ -363,15 +377,18 @@
 	                return WindowManagerGlobal.ADD_INVALID_DISPLAY;
 	            }
 	            ...
+				// 如果被添加的窗口是一个子窗口,就要求父窗口必须存在!
 	            if (type >= FIRST_SUB_WINDOW && type <= LAST_SUB_WINDOW) {//3
+					// 取出父窗口
 	                parentWindow = windowForClientLocked(null, attrs.token, false);//4
 	                if (parentWindow == null) {
 	                    Slog.w(TAG_WM, "Attempted to add window with token that is not a window: "
 	                          + attrs.token + ".  Aborting.");
 	                    return WindowManagerGlobal.ADD_BAD_SUBWINDOW_TOKEN;
 	                }
+					// 父窗口不能是别的窗口的子窗口!!!
 	                if (parentWindow.mAttrs.type >= FIRST_SUB_WINDOW
-	                        && parentWindow.mAttrs.type <= LAST_SUB_WINDOW) {
+	                        && parentWindow.mAttrs.type <= LAST_SUB_WINDOW) {// 5 
 	                    Slog.w(TAG_WM, "Attempted to add window with token that is a sub-window: "
 	                            + attrs.token + ".  Aborting.");
 	                    return WindowManagerGlobal.ADD_BAD_SUBWINDOW_TOKEN;
@@ -390,7 +407,11 @@
 
 - 注释3处，`type`代表一个窗口的类型，它的数值介于`FIRST_SUB_WINDOW`和`LAST_SUB_WINDOW`之间（1000~1999），这个数值定义在`WindowManager`中，说明这个窗口是一个子窗口。
 
-- 注释4处，`attrs.token`是`IBinder`类型的对象，`windowForClientLocked`方法内部会根据`attrs.token`作为key值从`mWindowMap`中得到该子窗口的父窗口。接着对父窗口进行判断，如果父窗口为null或者type的取值范围不正确则会返回错误的状态。
+- 注释4处，`attrs.token`表示窗口所隶属的对象,是`IBinder`类型的对象.
+
+	方法`windowForClientLocked()`内部会根据`attrs.token`作为key值从`mWindowMap`中得到该子窗口的父窗口。接着对父窗口进行判断，如果父窗口为null或者type的取值范围不正确则会返回错误的状态。
+
+- 注释5处: WMS要求窗口的层级关系最多为俩层!!!
 
 
 ## 6.2 addWindow-2
@@ -398,11 +419,13 @@
 	 ...
 	            AppWindowToken atoken = null;
 	            final boolean hasParent = parentWindow != null;
+				// 取出WindowToken
 	            WindowToken token = displayContent.getWindowToken(
 	                    hasParent ? parentWindow.mAttrs.token : attrs.token);//1
+				// 如果存在父窗口,就赋值为父窗口的type,否则就是当前窗口
 	            final int rootType = hasParent ? parentWindow.mAttrs.type : type;//2
 	            boolean addToastWindowRequiresToken = false;
-	
+				// WindowToken为空的情况下
 	            if (token == null) {
 	                if (rootType >= FIRST_APPLICATION_WINDOW && rootType <= LAST_APPLICATION_WINDOW) {
 	                    Slog.w(TAG_WM, "Attempted to add application window with unknown token "
@@ -435,8 +458,12 @@
 	                    }
 	                }
 	                final IBinder binder = attrs.token != null ? attrs.token : client.asBinder();
+					// 隐式创建WindowToken
 	                token = new WindowToken(this, binder, type, false, displayContent,
 	                        session.mCanAddInternalSystemWindow);//3
+	
+				// WindowToken 非空的情况下
+				// 判断窗口类型是否是应用窗口
 	            } else if (rootType >= FIRST_APPLICATION_WINDOW && rootType <= LAST_APPLICATION_WINDOW) {//4
 	                atoken = token.asAppWindowToken();//5
 	                if (atoken == null) {
@@ -464,7 +491,10 @@
 
 	接下来如果`WindowToken`为null，则根据`rootType`或者`type`的值进行区分判断，如果`rootType`值等于`TYPE_INPUT_METHOD`、`TYPE_WALLPAPER`等值时，则返回状态值`WindowManagerGlobal.ADD_BAD_APP_TOKEN`，说明`rootType`值等于`TYPE_INPUT_METHOD、TYPE_WALLPAPER`等值时是不允许`WindowToken`为null的。
 
-	通过多次的条件判断筛选，最后会在注释3处隐式创建`WindowToken`，**这说明当我们添加窗口时是可以不向WMS提供`WindowToken`的**，前提是`rootType`和`type`的值不为前面条件判断筛选的值。`WindowToken`隐式和显式的创建肯定是要加以区分的
+	通过多次的条件判断筛选，最后会在注释3处隐式创建`WindowToken`，**这说明当我们添加窗口时是可以不向WMS提供`WindowToken`的**
+	
+	- 前提是`rootType`或`type`的值不为前面条件判断筛选的值(`TYPE_TOAST`,`TYPE_WALLPAPER`等等)。`WindowToken`隐式和显式的创建肯定是要加以区分的
+
 
 - 注释3处的第4个参数为false就代表这个`WindowToken`是隐式创建的。接下来的代码逻辑就是`WindowToken`不为null的情况，根据`rootType`和type的值进行判断，比如在注释4处判断如果窗口为应用程序窗口，
 
@@ -473,9 +503,13 @@
 ## 6.3 addWindow-3
 
 	   ...
+	  // WMS为待添加的窗口创建了一个WindowState独享
+	  // 该对象维护了一个窗口的所有状态信息
 	  final WindowState win = new WindowState(this, session, client, token, parentWindow,
 	                    appOp[0], seq, attrs, viewVisibility, session.mUid,
 	                    session.mCanAddInternalSystemWindow);//1
+
+				// 对窗口存活状态进行判断
 	            if (win.mDeathRecipient == null) {//2
 	                // Client has apparently died, so there is no reason to
 	                // continue.
@@ -483,7 +517,7 @@
 	                        + " that is dead, aborting.");
 	                return WindowManagerGlobal.ADD_APP_EXITING;
 	            }
-	
+				
 	            if (win.getDisplayContent() == null) {//3
 	                Slog.w(TAG_WM, "Adding window to Display that has been removed.");
 	                return WindowManagerGlobal.ADD_INVALID_DISPLAY;
@@ -532,7 +566,7 @@
 	            }
 	         ...
 
-- 在注释1处创建了`WindowState`，它存有窗口的所有的状态信息，在WMS中它代表一个窗口。从`WindowState`传入的参数，可以发现`WindowState`中包含了WMS、Session、WindowToken、父类的WindowState、LayoutParams等信息。
+- 在注释1处创建了`WindowState`，**它存有窗口的所有的状态信息**，在WMS中它代表一个窗口。从`WindowState`传入的参数，可以发现`WindowState`中包含了`WMS、Session、WindowToken、父类的WindowState、LayoutParams`等信息。
 
 - 紧接着在注释2和3处分别判断请求添加窗口的客户端是否已经死亡、窗口的`DisplayContent`是否为null，如果是则不会再执行下面的代码逻辑。
 
