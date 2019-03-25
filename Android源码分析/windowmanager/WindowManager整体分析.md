@@ -34,17 +34,11 @@ WMS与WM通过Binder进行IPC,WMS作为系统级别的服务,并不会将全部A
 
 # 3. WindowManager介绍
 
-`WindowManager`是一个接口类，继承自接口`ViewManager`.WM在继承VM的同时,又加入了很多功能,包括Window类型,层级相关的常量,内部类以及一些方法
+`WindowManager`用来管理`Window`,是一个接口类，继承自接口`ViewManager`.
 
-其中存在俩个方法是根据`Window`特性加入
+- `WindowManager`的具体实现类是`WindowManagerImpl`,通过WM可以对Window进行增删操作,具体的工作会转交给WMS来处理,俩者通过Binder进行IPC
 
-	public Display getDefaultDisplay();
-	public void removeViewImmediate(View view);
-
-- `getDefaultDisplay()`方法会得知这个`WindowManager`实例将`Window`添加到哪个屏幕上了，换句话说，就是得到`WindowManager`所管理的屏幕（`Display`）。
-
-- `removeViewImmediate()`方法则规定在这个方法返回前要立即执行`View.onDetachedFromWindow()`，来完成传入的View相关的销毁工作
-
+	WMS作为系统服务,很多API不会暴露给`WindowManager`
 
 ## 3.1 ViewManager
 
@@ -64,6 +58,19 @@ WMS与WM通过Binder进行IPC,WMS作为系统级别的服务,并不会将全部A
 - `ViewManager`定义了三个方法,分别用来添加,更新和删除view
 
 	另外,**这三个方法都是直接对`View`进行操作,说明WM具体管理的是以`View`形式存在的`Window`**
+
+## 3.2 WindowManager的额外扩展
+
+`WindowManager`在继承`ViewManager`的同时，又加入很多功能，包括Window的类型和层级相关的常量、内部类以及一些方法
+
+`WindowManager`中存在俩个方法是根据`Window`特性加入
+
+	public Display getDefaultDisplay();
+	public void removeViewImmediate(View view);
+
+- `getDefaultDisplay()`方法会得知这个`WindowManager`实例将`Window`添加到哪个屏幕上了，换句话说，就是得到`WindowManager`所管理的屏幕（`Display`）。
+
+- `removeViewImmediate()`方法则规定在这个方法返回前要立即执行`View.onDetachedFromWindow()`，来完成传入的View相关的销毁工作
 
 
 # 4. 整体关系结构图
