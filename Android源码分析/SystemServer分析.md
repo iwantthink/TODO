@@ -11,7 +11,7 @@
 
 # 1. 简介
 
-![](http://gityuan.com/images/process/android-booting.jpg)
+![](http://gityuan.com/images/android-arch/android-booting.jpg)
 
 Linux系统中 用户空间的第一个进程是`init`进程(Kernel启动后,会创建`init`进程). **然后`init`进程会启动`ServiceManager`(Binder服务管家),`Zygote`进程(Java进程的鼻祖,通过fork它会创建`system_server`进程等各种app进程)**
 
