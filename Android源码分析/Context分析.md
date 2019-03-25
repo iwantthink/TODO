@@ -55,7 +55,7 @@
 
 ### 2.1.1 AMS.attachApplicationLocked()
 
-Android 系统Framework框架里的`ActivityManagerService` 会调度Activity的创建，在这个流程中，其中一步是调用`ActivityTherad.handleBindApplication()完成与ActivitThread 的绑定`
+Android 系统Framework框架里的`ActivityManagerService` 会调度Activity的创建，在这个流程中，其中一步是调用`ActivityTherad.handleBindApplication()`完成与`ActivityThread` 的绑定
 
 ### 2.1.2 Activity.handleBindApplication()
 
