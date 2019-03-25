@@ -28,6 +28,27 @@
 
 - 这篇文章仅分析`WindowManager`处理的部分,与WMS相关的内容可以在[WindowManagerService分析.md]()中查看
 
+
+## 1.1 窗口的概念
+
+窗口的本质是进行绘制时所使用的画布(`Surface`)
+
+- 当一块`Surface`显示在屏幕上时，就是用户所看到的窗口了。
+
+	**客户端向WMS添加一个窗口的过程，其实就是WMS为其分配一块Surface的过程**，一块块Surface在WMS的管理之下有序地排布在屏幕上，Android才得以呈现出界面来。所以从这个意义上来讲，WindowManagerService被称之为SurfaceManagerService也说得通的。
+
+
+**根据对Surface的操作类型可以将Android的显示系统分为三个层次**
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1g1f4rst4vqj20uv0bm3zh.jpg)
+
+
+- 第一个层次是UI框架层，其工作为在Surface上绘制UI元素以及响应输入事件。
+
+- 第二个层次为WMS，其主要工作在于管理Surface的分配、层级顺序等。
+
+- 第三层为SurfaceFlinger，负责将多个Surface混合并输出。
+
 # 2. Window的添加操作
 
 `Window`的添加过程需要通过`WindowManager`的`addView()`来实现,而`WindowManager`是一个接口,它真正的实现是`WindowManagerImpl`类.
