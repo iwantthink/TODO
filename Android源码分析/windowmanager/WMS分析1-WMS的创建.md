@@ -6,22 +6,12 @@
 
 [Android窗口管理服务WindowManagerService的简要介绍和学习计划](https://blog.csdn.net/Luoshengyang/article/details/8462738)
 
+[Android窗口管理分析（1）：View如何绘制到屏幕上的主观理解 - 看书的小蜗牛](https://www.jianshu.com/p/e4b19fc36a0e)
+
 # 1. 简介
 **基于Android 27,代码中会移除掉LOG和一些与分析内容不相关的代码**
 
-内容包含WMS的创建和使用
-
-## 1.1 为什么存在WMS?
-
-Activity通过`Surface`来显示自己的过程如下:
-
-1. Surface是一块画布,应用可以通过Canvas或者OpenGL在其上作画
-
-2. 通过`SurfaceFlinger`将多块`Surface`的内容按照特定的顺序`Z-order`进行混合并输出到`FrameBuffer`,从而将内容显示给用户
-
-因为每个窗口都有一块`Surface`供自己作画,因此需要一个角色对所有窗口的`Surface`进行协调管理,而这个对象就是WMS
-
-- **WMS为所有窗口分配Surface,管理Surface的显示顺序(Z-order)以及位置尺寸,控制窗口动画,此外WMS还是输入系统的一个重要中转站**
+内容包含WMS的创建
 
 # 2. WMS的创建过程
 
