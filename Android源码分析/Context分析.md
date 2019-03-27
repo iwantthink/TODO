@@ -224,3 +224,94 @@ Android 系统Framework框架里的`ActivityManagerService` 会调度Activity的
 	}
 
 - **将`Activity`的`ContextImpl` 绑定到`Activity-ContextWrapper`**
+
+
+# 3. 通过Context获取系统服务
+
+这里以`WINDOW_SERVICE`(WindowManagerService)为例,介绍整个获取系统服务的流程
+
+	context.getSystemService(Context.WINDOW_SERVICE)
+
+- 这里的`context`就是`ContextImpl`,从`ActivityThread.performLaunchActivity()`方法中可以得知
+
+## 3.1 ContextImpl.getSystemService()
+	
+	@Override
+	public Object getSystemService(String name) {
+	    return SystemServiceRegistry.getSystemService(this, name);
+	}
+
+## 3.2 SystemServiceRegistry.getSystemService()
+
+    public static Object getSystemService(ContextImpl ctx, String name) {
+        ServiceFetcher<?> fetcher = SYSTEM_SERVICE_FETCHERS.get(name);
+        return fetcher != null ? fetcher.getService(ctx) : null;
+    }
+
+- `SystemServiceRegistry`会在其静态代码块中调用`registerService()`方法,将一些Manager的关系添加到`SYSTEM_SERVICE_NAMES`和`SYSTEM_SERVICE_FETCHERS`
+
+- `SYSTEM_SERVICE_FETCHERS`
+
+	`SYSTEM_SERVICE_FETCHERS`是一个HashMap类型的数据，key-value关系是 `serviceName-serviceFetcher`
+
+- **查看静态代码块可知此处的`ServiceFetcher`是`CachedServiceFetcher`类型**
+
+## 3.3 SystemServiceRegistry 静态代码块
+
+	final class SystemServiceRegistry {
+	...
+	 private SystemServiceRegistry() { }
+	 static {
+	 ...
+	   registerService(Context.WINDOW_SERVICE, WindowManager.class,
+	                new CachedServiceFetcher<WindowManager>() {
+	            @Override
+	            public WindowManager createService(ContextImpl ctx) {
+	                return new WindowManagerImpl(ctx);
+	            }});
+	...
+	 }
+	}
+
+    private static <T> void registerService(String serviceName, Class<T> serviceClass,
+            ServiceFetcher<T> serviceFetcher) {
+        SYSTEM_SERVICE_NAMES.put(serviceClass, serviceName);
+        SYSTEM_SERVICE_FETCHERS.put(serviceName, serviceFetcher);
+    }
+
+## 3.4 CachedServiceFetcher.getService(ctx)
+
+
+		static abstract class CachedServiceFetcher<T> implements ServiceFetcher<T> {
+        private final int mCacheIndex;
+
+        public CachedServiceFetcher() {
+            mCacheIndex = sServiceCacheSize++;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public final T getService(ContextImpl ctx) {
+            final Object[] cache = ctx.mServiceCache;
+            synchronized (cache) {
+                // Fetch or create the service.
+                Object service = cache[mCacheIndex];
+                if (service == null) {
+                    try {
+                        service = createService(ctx);
+                        cache[mCacheIndex] = service;
+                    } catch (ServiceNotFoundException e) {
+                        onServiceNotFound(e);
+                    }
+                }
+                return (T)service;
+            }
+        }
+
+        public abstract T createService(ContextImpl ctx) throws ServiceNotFoundException;
+    }
+
+- 看到这里,可以得出一个结论
+
+	**`mContext.getSystemService(Context.WINDOW_SERVICE)`方法获取到的是`WindowManager`,它是的实现类是`WindowManagerImpl`**. Android并没有直接返回WMS给开发者进行使用,而是使用了`WindowManager`对其进行了封装,此外WM也没有直接与WMS进行交互而是借助`WindowManagerGlobal`这个真正与WMS进行IPC的类
+
