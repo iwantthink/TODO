@@ -370,7 +370,7 @@
 
 	如果Surface未分配，则请求分配Surface，并测量、布局、绘图，其执行主体其实是`performTraversals()`函数
 
-### 4.1.1 ViewRootImpl.performTraversals()
+## 4.2 ViewRootImpl.performTraversals()
 
 该函数包含了APP端View绘制大部分的逻辑, performTraversals函数很长，这里只简要看几个点:
 	
@@ -409,7 +409,7 @@
 
 - 注释1:
 
-	方法`relayoutWindow()`主要是通过`mWindowSession.relayout()`向WMS申请或者更新`Surface`如下，这里只关心一个重要的参数mSurface，在Binder通信中mSurface是一个out类型的参数，也就是Surface内部的内容需要WMS端负责填充，并回传给APP端
+	方法`relayoutWindow()`主要是通过`mWindowSession.relayout()`向WMS申请或者更新`Surface`如下，这里只关心一个重要的参数`mSurface`，在Binder通信中mSurface是一个out类型的参数，也就是Surface内部的内容需要WMS端负责填充，并回传给APP端
 
 	   private int relayoutWindow(WindowManager.LayoutParams params, int viewVisibility,
 	            boolean insetsPending) throws RemoteException {
@@ -419,3 +419,172 @@
 	        ...
 	        return relayoutResult;
 	    }
+
+	- 这里的`mWindowSession`具体的实现类是 `Session`.
+
+	- **这里有一个`Surface mSurface`,作为成员变量,在`ViewRootImpl`对象被创建时创建**
+
+### 4.2.1 Session.relayout()
+
+    @Override
+    public int relayout(IWindow window, int seq, WindowManager.LayoutParams attrs,
+            int requestedWidth, int requestedHeight, int viewFlags,
+            int flags, Rect outFrame, Rect outOverscanInsets, Rect outContentInsets,
+            Rect outVisibleInsets, Rect outStableInsets, Rect outsets, Rect outBackdropFrame,
+            MergedConfiguration mergedConfiguration, Surface outSurface) {
+
+        int res = mService.relayoutWindow(this, window, seq, attrs,
+                requestedWidth, requestedHeight, viewFlags, flags,
+                outFrame, outOverscanInsets, outContentInsets, outVisibleInsets,
+                outStableInsets, outsets, outBackdropFrame, mergedConfiguration, outSurface);
+        return res;
+    }
+
+- `Session`又会调用`WMS`的`relayoutWindow()`方法
+
+### 4.2.2 WMS.relayoutWindow()
+
+    public int relayoutWindow(Session session, IWindow client, int seq,
+            WindowManager.LayoutParams attrs, int requestedWidth,
+            int requestedHeight, int viewVisibility, int flags,
+            Rect outFrame, Rect outOverscanInsets, Rect outContentInsets,
+            Rect outVisibleInsets, Rect outStableInsets, Rect outOutsets, Rect outBackdropFrame,
+            MergedConfiguration mergedConfiguration, Surface outSurface) {
+		...................
+		result = createSurfaceControl(outSurface, result, win, winAnimator);
+		..............
+	}
+
+### 4.2.3 WMS.createSurfaceControl()
+
+    private int createSurfaceControl(Surface outSurface, int result, WindowState win,
+            WindowStateAnimator winAnimator) {
+        if (!win.mHasSurface) {
+            result |= RELAYOUT_RES_SURFACE_CHANGED;
+        }
+
+        WindowSurfaceController surfaceController;
+        try {
+			// 注释1
+            surfaceController = winAnimator.createSurfaceLocked(win.mAttrs.type, win.mOwnerUid);
+        } finally {
+        }
+	
+		// 注释2
+        if (surfaceController != null) {
+            surfaceController.getSurface(outSurface);
+        } else {
+            // For some reason there isn't a surface.  Clear the
+            // caller's object so they see the same state.
+            outSurface.release();
+        }
+        return result;
+    }
+
+- **注释1:**
+
+	每个窗口都有一个`WindowState`与其对应，另外每个窗口也有自己的动画，比如入场/出厂动画，而`WindowStateAnimator`就是与`WindowState`的动画，同时通过它能够创建`WindowSurfaceController`
+
+- **注释2:**
+
+	借助`WindowSurfaceController`获取`Surface`
+
+### 4.2.4 WindowSurfaceController.getSurface()
+
+    void getSurface(Surface outSurface) {
+        outSurface.copyFrom(mSurfaceControl);
+    }
+
+- 这里的`mSurfaceControl`是 `SurfaceControlWithBackground`
+
+
+### 4.2.5 Surface.copyFrom()
+
+    /**
+     * Copy another surface to this one.  This surface now holds a reference
+     * to the same data as the original surface, and is -not- the owner.
+     * This is for use by the window manager when returning a window surface
+     * back from a client, converting it from the representation being managed
+     * by the window manager to the representation the client uses to draw
+     * in to it.
+     *
+     * @param other {@link SurfaceControl} to copy from.
+     *
+     * @hide
+     */
+    public void copyFrom(SurfaceControl other) {
+		................
+        long surfaceControlPtr = other.mNativeObject;
+		.................
+        long newNativeObject = nativeGetFromSurfaceControl(surfaceControlPtr);
+
+        synchronized (mLock) {
+            if (mNativeObject != 0) {
+                nativeRelease(mNativeObject);
+            }
+            setNativeObjectLocked(newNativeObject);
+        }
+    }
+
+- 调用了本地方法..从传入的`SurfaceControl`处复制了一份内容. **Surface的拷贝函数其实就是直接修改Surface native对象指针值，native的Surface对象中包含mGraphicBufferProducer对象，很重要，会被传递给APP端**
+
+### 4.2.6 nativeCreateFromSurfaceControl
+
+	static jlong nativeCreateFromSurfaceControl(JNIEnv* env, jclass clazz,
+	        jlong surfaceControlNativeObj) {
+	
+	    sp<SurfaceControl> ctrl(reinterpret_cast<SurfaceControl *>(surfaceControlNativeObj));
+	    sp<Surface> surface(ctrl->getSurface());
+	    if (surface != NULL) {
+	        surface->incStrong(&sRefBaseOwner);
+	    }
+	    return reinterpret_cast<jlong>(surface.get());
+	}
+	
+	sp<Surface> SurfaceControl::getSurface() const
+	{
+		    Mutex::Autolock _l(mLock);
+		    if (mSurfaceData == 0) {
+		        mSurfaceData = new Surface(mGraphicBufferProducer, false);
+		    }
+		    return mSurfaceData;
+	}
+
+- 到这里WMS端`Surface`创建及填充完毕，并且`Surface`其实与WMS的`WindowSurfaceControl`一一对应，当APP端需要在图层级别进行操控的时候，其实还是要依靠`WindowSurfaceControl`的
+
+- WMS的Surface创建完毕后，需要传递给APP端，之后APP端就获得直接同`SurfaceFlinger`通信的能力，比如绘图与UI更新，怎传递的呢？
+
+	我们知道Surface实现了Parcel接口，因此可以传递序列化的数据，其实看一下`Surface nativeReadFromParcel`就知道到底是怎么传递的了，利用`readStrongBinder`获取`IGraphicBufferProducer`对象的句柄，之后转化为`IGraphicBufferProducer`代理其实就是`BpGraphicBufferProducer`，之后利用`BpGraphicBufferProducer`构建`Surface`，这样APP端Surface就被填充完毕，可以同SurfaceFlinger通信了
+
+
+## 4.3 图层创建的总结
+
+1. 首先APP端新建一个Surface图层的容器壳子，
+
+2. APP端通过Binder通信将这个Surface的壳子传递给WMS，
+
+3. WMS为了填充Surface去向SurfaceFlinger申请真正的图层，
+
+4. SurfaceFlinger收到WMS请求为APP端的Surface分配真正图层
+
+5. 将图层相关的关键信息Handle及Producer传递给WMS
+
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1g1ijjw0sevj20rs0a7aa9.jpg)
+
+
+# 5. 窗口添加的总结
+
+1. APP首先去WMS登记窗口
+
+2. WMS端登记窗口
+
+3. APP新建Surface壳子，请求WMS填充Surface
+
+4. WMS请求SurfaceFlinger分配窗口图层
+
+5. SurfaceFlinger分配Layer，将结果回传给WMS
+
+6. WMS将窗口信息填充到Surface传输到APP
+
+7. APP端获得填充信息，获取与SurfaceFlinger通信的能力
