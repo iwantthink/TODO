@@ -131,7 +131,7 @@
 	            }
 				....
 				// 注释3
-				// 如果被添加的窗口是一个子窗口,就要求父窗口必须存在,并且父窗口不能是子窗口类型!
+				// 如果被添加的窗口的type是一个子窗口,就要求父窗口必须存在,并且父窗口不能是子窗口类型!
 	            if (type >= FIRST_SUB_WINDOW && type <= LAST_SUB_WINDOW) {
 					// 注释4
 					// 取出父窗口
@@ -159,7 +159,7 @@
 
 - 注释3处，`type`代表一个窗口的类型，它的数值介于`FIRST_SUB_WINDOW`和`LAST_SUB_WINDOW`之间（1000~1999），这个数值定义在`WindowManager`中，说明这个窗口是一个子窗口。
 
-- 注释4处，`attrs.token`表示窗口所隶属的对象,是`IBinder`类型的对象.
+- 注释4处，`attrs.token`表示待添加窗口所隶属的对象,是`IBinder`类型的对象.
 
 	方法`windowForClientLocked()`内部会根据`attrs.token`作为key值从`mWindowMap`中得到该子窗口的父窗口。接着对父窗口进行判断，如果父窗口为null或者type的取值范围不正确则会返回错误的状态。
 
@@ -173,7 +173,7 @@
 				// 判断是否存在父窗口
 	            final boolean hasParent = parentWindow != null;
 				// 注释1
-				// 取出WindowToken
+				// 根据的IBinder 取出WindowToken
 	            WindowToken token = displayContent.getWindowToken(
 	                    hasParent ? parentWindow.mAttrs.token : attrs.token);
 				// 注释2
