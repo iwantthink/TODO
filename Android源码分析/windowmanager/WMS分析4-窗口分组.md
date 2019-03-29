@@ -2,6 +2,8 @@
 
 [Android窗口管理分析（3）：窗口分组及Z-order的确定](https://www.jianshu.com/p/90ede7b2a64a)
 
+[Activity中的mToken](http://www.momoandy.com/2018/12/20/Activity%E4%B8%AD%E7%9A%84mToken/)
+
 # 1. 简介
 
 **在Android系统中，窗口是有分组概念的**
@@ -273,5 +275,283 @@
         child.setParent(this);
     }
 
-# 4. Activity 对应的token,WindowToken的添加
+
+# 4. Activity 对应的Token的介绍
+
+AMS通过`ActivityStarter`为Activity创建`ActivityRecord`的时候(构造函数中)，会新建`Token extends IApplicationToken.Stub appToken`对象
+
+    ActivityRecord(ActivityManagerService _service, ProcessRecord _caller, int _launchedFromPid,
+            int _launchedFromUid, String _launchedFromPackage, Intent _intent, String _resolvedType,
+            ActivityInfo aInfo, Configuration _configuration,
+            ActivityRecord _resultTo, String _resultWho, int _reqCode,
+            boolean _componentSpecified, boolean _rootVoiceInteraction,
+            ActivityStackSupervisor supervisor, ActivityOptions options,
+            ActivityRecord sourceRecord) {
+        appToken = new Token(this);
+
+		.......................
+	}
+
+    static class Token extends IApplicationToken.Stub {
+		............
+	}
+
+## 4.1 Activity对应的Token的传递
+
+AMS经过`ActivityStarter`,`ActivityStackSupervisor`和`ActivityStack`的一系列跳转之后,最终调用`ActivityStackSupervisor.realStartActivityLocked()`,通过`app.thread`(即`IApplicationThread`)调用其`scheduleLaunchActivity()`方法和应用进程进行IPC
+
+- **这里的`app.thread`是`IApplicationThread.Stub`类型,注意是`ActivityThread`类的内部类`ApplicationThread`**
+
+
+        // we use token to identify this activity without having to send the
+        // activity itself back to the activity manager. (matters more with ipc)
+        @Override
+        public final void scheduleLaunchActivity(Intent intent, IBinder token, int ident,
+                ActivityInfo info, Configuration curConfig, Configuration overrideConfig,
+                CompatibilityInfo compatInfo, String referrer, IVoiceInteractor voiceInteractor,
+                int procState, Bundle state, PersistableBundle persistentState,
+                List<ResultInfo> pendingResults, List<ReferrerIntent> pendingNewIntents,
+                boolean notResumed, boolean isForward, ProfilerInfo profilerInfo) {
+			..................
+            ActivityClientRecord r = new ActivityClientRecord();
+
+            r.token = token;
+			.................
+            sendMessage(H.LAUNCH_ACTIVITY, r);
+        }
+
+- 参数中的`IBinder token`是AMS中的`ActivityRecord.appToken`, 也就是在`ActivityRecord`构造函数中创建的`Token`(该`Token`类同样继承自`IApplicationToken.Stub`)
+
+
+在`ActivityThread`类中经过一系列方法调用,最终在`ActivityThread.performLaunchActivity()`方法中通过调用`Activity.attach()`方法将`Token`注入到Activity.
+
+### 4.1.1 过程概述
+
+AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代理，创建好Activity后在`attach()`方法中注入到Activity中
+	
+
+## 4.2 Token对于AMS和App的作用
+
+**AMS端维护一份`ProcessRecord`数据结构，`ProcessRecord`代表一个进程的所有信息，包含了这个进程的`TaskRecord`和`ActivityRecord`和其他系统组件等。**
+
+**App进程则在`ActivityThread`维护一个`key`和`value`为`IBinder`和`ActivityClientRecord`的`ArrayMap mActivities`，这里的`IBinder`就是AMS端的那个`Token`，`ActivityClientRecord`则类似AMS端的`ActivityRecord`，存储着Activity实例和Activity相关信息。**
+
+**这样，无论是`AMS`还是`App`进程的`ActivityThread`均可以使用`Token`这个`Binder`查找到准确的Activity，然后进行相应操作。**
+
+### 4.2.1 应用场景
+
+启动一个新的Activity：App携带当前Activity的`Token`向AMS发起IPC，AMS准备创建并启动新的Activity，在新的Activity可见之前就会携带这个`Token`向App进程通信暂停上一个Activity，App进程收到通信后通过`Token`查找`ActivityThread`存储的列表，找到对应Activity后做相应处理并回调这个Activity的`onPause()`，然后AMS才会让新启动的Activity进入可见状态。
+
+
+# 5. Activity 对应的Token 绑定到客户端Window的过程
+
+## 5.1 Token绑定到Activity
+
+在`ActivityThread.performLaunchActivity()`方法中通过调用`Activity.attach()`方法将`Token`注入到Activity.
+
+    final void attach(Context context, ActivityThread aThread,
+            Instrumentation instr, IBinder token, int ident,
+            Application application, Intent intent, ActivityInfo info,
+            CharSequence title, Activity parent, String id,
+            NonConfigurationInstances lastNonConfigurationInstances,
+            Configuration config, String referrer, IVoiceInteractor voiceInteractor,
+            Window window, ActivityConfigCallback activityConfigCallback) {
+
+		// 当前Activity 对应一个PhoneWIndow
+        mWindow = new PhoneWindow(this, window, activityConfigCallback);
+        mWindow.setWindowControllerCallback(this);
+        mWindow.setCallback(this);
+        mToken = token;
+		// PhoneWIndow保存了token
+        mWindow.setWindowManager(
+                (WindowManager)context.getSystemService(Context.WINDOW_SERVICE),
+                mToken, mComponent.flattenToString(),
+                (info.flags & ActivityInfo.FLAG_HARDWARE_ACCELERATED) != 0)
+        mWindowManager = mWindow.getWindowManager();
+		.........
+	}
+
+- 这里参数中的`IBinder token`是AMS中通过`ActivityRecord`生成的`Token`,由于在应用进程中,所以这里应该是BInder代理
+
+- `PhoneWindow`保存了`Token`
+
+
+## 5.1 PhoneWindow.setWIndowManager()
+
+    public void setWindowManager(WindowManager wm, IBinder appToken, String appName,
+            boolean hardwareAccelerated) {
+        mAppToken = appToken;
+        mAppName = appName;
+        mHardwareAccelerated = hardwareAccelerated
+                || SystemProperties.getBoolean(PROPERTY_HARDWARE_UI, false);
+        if (wm == null) {
+            wm = (WindowManager)mContext.getSystemService(Context.WINDOW_SERVICE);
+        }
+        mWindowManager = ((WindowManagerImpl)wm).createLocalWindowManager(this);
+    }
+
+## 5.2 Token绑定到Window
+
+1. 在`ActivityThread`的`performResumeActivity()`方法中依次完成Activity的`onRestart()、onStart()、onResume()`回调
+
+2. 在`handleResumeActivity()`方法中将`PhoneWindow`中的`DecorView`视图状态设置为`INVISIBLE`
+
+3. 之后调用`wm.addView(decor, l)`添加视图，其中`wm`是`WindowManagerImpl`
+
+	- 在`attach()`方法中，通过`PhoneWindow`构造了`WindowManagerImpl`对象并赋值给了`Activity`；
+
+4. 调用`r.activity.makeVisible()`设置页面View为可见。
+
+
+
+    final void handleResumeActivity(IBinder token,
+            boolean clearHide, boolean isForward, boolean reallyResume, int seq, String reason) {
+		// 包含了Token 信息
+        ActivityClientRecord r = mActivities.get(token);
+		// 经过一系列回调,修改了ActivityClientRecord的信息
+        r = performResumeActivity(token, clearHide, reason);
+        if (r != null) {
+            final Activity a = r.activity;
+
+            boolean willBeVisible = !a.mStartedActivity;
+            if (!willBeVisible) {
+                try {
+                    willBeVisible = ActivityManager.getService().willActivityBeVisible(
+                            a.getActivityToken());
+                } catch (RemoteException e) {
+                }
+            }
+            if (r.window == null && !a.mFinished && willBeVisible) {
+                r.window = r.activity.getWindow();
+                View decor = r.window.getDecorView();
+                decor.setVisibility(View.INVISIBLE);
+                ViewManager wm = a.getWindowManager();
+				// 窗口参数信息
+                WindowManager.LayoutParams l = r.window.getAttributes();
+                a.mDecor = decor;
+                l.type = WindowManager.LayoutParams.TYPE_BASE_APPLICATION;
+
+                if (a.mVisibleFromClient) {
+                    if (!a.mWindowAdded) {
+                        a.mWindowAdded = true;
+                        wm.addView(decor, l);
+                    } else {
+                        // The activity will get a callback for this {@link LayoutParams} change
+                        // earlier. However, at that time the decor will not be set (this is set
+                        // in this method), so no action will be taken. This call ensures the
+                        // callback occurs with the decor set.
+                        a.onWindowAttributesChanged(l);
+                    }
+                }
+
+            // Tell the activity manager we have resumed.
+            if (reallyResume) {
+                try {
+                    ActivityManager.getService().activityResumed(token);
+                } catch (RemoteException ex) {
+                    throw ex.rethrowFromSystemServer();
+                }
+            }
+
+        } 
+		.......................
+    }
+
+- `wm`是`WindowManagerImpl`,在`Activity.attach()`方法中通过`PhoneWindow`获取
+
+	WMI通过桥接模式 将具体的调用交给了`WindowManagerGlobal`
+
+- 这里和Token绑定最重要的一部分就是`wm.addView(decor, l)`,这里有俩个比较重要的参数
+
+	1. `WindowManager.LayoutParams l`
+
+	2. `DecorView decor`
+
+### 5.2.1 WindowManagerImpl.addView()
+
+    @Override
+    public void addView(@NonNull View view, @NonNull ViewGroup.LayoutParams params) {
+        applyDefaultToken(params);
+        mGlobal.addView(view, params, mContext.getDisplay(), mParentWindow);
+    }
+
+- `mParentWindow`是在`WMI`的构造函数中被传入
+
+	在`Activity.attach()`方法中,会调用`PhoneWindow.setWindowManager()`方法,然后在该方法中 调用了`WindowManagerImpl.createLocalWindowManager()`将`PhoneWindow`传入
+
+### 5.2.1 WindowManagerGlobal.addView()
+
+    public void addView(View view, ViewGroup.LayoutParams params,
+            Display display, Window parentWindow) {
+		......省略参数的检查...................
+
+        final WindowManager.LayoutParams wparams = (WindowManager.LayoutParams) params;
+		//Activity.attach()中创建的 PhoneWindow
+        if (parentWindow != null) {
+			// 在这里绑定了token
+            parentWindow.adjustLayoutParamsForSubWindow(wparams);
+        } else {
+
+            final Context context = view.getContext();
+            if (context != null
+                    && (context.getApplicationInfo().flags
+                            & ApplicationInfo.FLAG_HARDWARE_ACCELERATED) != 0) {
+                wparams.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+            }
+        }
+
+        ViewRootImpl root;
+        View panelParentView = null;
+
+        synchronized (mLock) {
+        	..................
+
+            root = new ViewRootImpl(view.getContext(), display);
+
+            view.setLayoutParams(wparams);
+
+            mViews.add(view);
+            mRoots.add(root);
+            mParams.add(wparams);
+
+            // do this last because it fires off messages to start doing things
+            try {
+                root.setView(view, wparams, panelParentView);
+            } catch (RuntimeException e) {
+            }
+        }
+    }
+
+- `WindowManagerGlobal.addView()`做了4件事。
+
+	1. 调用`PW.adjustLayoutParamsForSubWindow()`为`WindowManager.LayoutParams`绑定Token；
+
+	2. 构造ViewRootImpl(简称VRI)；
+
+	3. 为DecorView设置`WindowManager.LayoutParams`
+
+	4. 把`DecorView、VRI和WindowManager.LayoutParams`添加到WMG中的List中缓存起来；
+
+	5. 调用`root.setView(view, wparams, panelParentView)`做进一步设置；
+
+### 5.2.2 PhoneWindow.adjustLayoutParamsForSubWindow()
+
+
+
+
+# 6. Activity 对应的WindowToken的创建
+
+1. 在`AMS.startActivityLocked()`方法中会通过调用`ActivityRecord`的`createWindowContainer()`去创建`AppWindowContainerController`
+
+2. 在`AppWindowContainerController`的构造函数中,会去创建`AppWindowToken`
+
+3. `AppWindowToken`的构造函数中会调用其父类`WindowToken`的构造函数. 
+
+4. `WindowToken`的构造函数会调用`onDisplayChanged()`方法,在这里将调用`DisplayContent`的`reParentWindowToken()`
+
+5. 方法`reParentWindowToken`会调用`addWindowToken()`,将应用的Binder 和其对应的`WindowToken`保存到一个`HashMap<IBinder, WindowToken> mTokenMap`.**后面WMS添加Window时会和mTokenMap中的Token进行匹配验证**
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1g1jmwjp98gj20y90e9abj.jpg)
+
+随后，通过`Binder`通信将`IApplicationToken`传递给APP端，在通知`ActivityThread`新建`Activity`对象之后，利用`Activity`的`attach()`方法添加到`Activity`中
 
