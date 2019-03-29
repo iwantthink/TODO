@@ -14,7 +14,7 @@
 
 [Android 7.0 - 应用程序启动过程](http://liuwangshu.cn/framework/component/1-activity-start-1.html)
 
-[Android 8.0 - 根Activity启动过程](https://blog.csdn.net/itachi85/article/details/78569299)
+[Android深入四大组件（六）Android8.0 根Activity启动过程（前篇）](https://blog.csdn.net/itachi85/article/details/78569299)
 
 # 1. 概述
 
@@ -110,7 +110,7 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 
 	- 点击`Launcher`应用的桌面图标之后，`Launcher`程序会调用`startActivity`启动应用,**俩种情况最终都会走到`Instrumentation`的`execStartActivity()`来启动应用**,
 
-2. 普通应用调用AMS
+2. 普通应用调用AMS(最终也都是调用`Instrumentation.execStartActivity()`)
 
 	![](http://ww1.sinaimg.cn/large/6ab93b35gy1fqzevkrkp4j20ph0dh0su.jpg)
 
@@ -167,11 +167,15 @@ Android系统中有一个`zygote`进程专用于孵化Android框架层和应用�
 	        return null;
 	    }
 
+	- **`IBinder contextThread`参数的类型是`IApplicationThread.Stub`,其具体实现是`ActivityThread`的内部类`ApplicationThread`,提供给AMS与应用进行IPC**
+
+	- **`IBinder token`参数的类型也是`IApplicationThread.Stub`,不同于`contextThread`,它的具体实现是`ActivityRecord`的内部类`Token`,作用是作为Activity的标识**
+
 	- **查看源码的时候请注意**:`Instrumentation` 中有俩个`execStartActivity()`方法。俩者所需的参数不同，提供给不同的地方去调用，但是正常的启动activity流程是走的 参数少的那个方法。俩个方法最终调用的AMS方法也不同，一个是调用 startActivityAsUser ，一个是调用startActivity(**实际上这个方法也会调用startActivityUser**)。
 
 	- `ActivityManager.getService()` 通过`SingleTon`这个类获取到了AMS的Binder代理，接着通过这个Binder代理调用了`startActivityAsUser()`方法，那么实际上会调用`IActivityManager.Stub.Proxy.startActivityAsUser`
 
-	而Proxy这个类，会通过Binder通信 去调用`IActivityManager.Stub.startActivityAsUser`.完成一次进程间通信(**具体细节查看Binder分析.md**)
+		而Proxy这个类，会通过Binder通信 去调用`IActivityManager.Stub.startActivityAsUser`.完成一次进程间通信(**具体细节查看Binder分析.md**)
 
 	- [Instrumentation源码](https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/app/Instrumentation.java)
 
