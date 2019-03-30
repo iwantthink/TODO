@@ -3,9 +3,9 @@
 
 # 1. 简介
 
-从[ViewRootImpl中输入事件的派发.md]()中最后一小节可知,在`ViewPostImeInputStage.processPointerEvent()`方法中,事件被传递了`mView`去派发
+从[ViewRootImpl中输入事件的派发.md]()中最后一小节可知,在`ViewPostImeInputStage.processPointerEvent()`方法中,事件最终通过`DecorView mView`去派发
 
-这里的`PointerEvent`是包含以`MotionEvent.getAction()`进行区分的俩种事件,以是否实际接触到屏幕为区分
+这里的`PointerEvent`是包含以`MotionEvent.getAction()`进行区分的俩种事件,**以是否实际接触到屏幕为区分**
 
 1. 实际的触摸事件,例如`ACTION_DOWN/MOVE/UP`等实际接触到屏幕所产生的事件
 
