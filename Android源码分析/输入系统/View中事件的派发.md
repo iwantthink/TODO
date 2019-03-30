@@ -280,7 +280,7 @@ View.dispatchTouchEvent()
 			// 事件动作为DOWN, 或者事件序列已经确定派发目标 才会重新计算是否需要拦截
             if (actionMasked == MotionEvent.ACTION_DOWN
                     || mFirstTouchTarget != null) {
-				// 判断是否禁止拦截,即ViewGroup禁止拦截事件
+				// 判断是否禁止ViewGroup拦截,即不允许ViewGroup拦截事件
                 final boolean disallowIntercept = (mGroupFlags & FLAG_DISALLOW_INTERCEPT) != 0;
 				// 如果没有禁止拦截
                 if (!disallowIntercept) {
@@ -787,7 +787,7 @@ View.dispatchTouchEvent()
 
 在 3.1 示例 中,事件序列一定以`ACTION_DOWN`开始,经过一系列`ACTION_POINTER_DOWN`,`ACTION_POINTER_UP`,`ACTION_MOVE`之后以一条`ACTION_UP`结束
 
-**特殊情况1: **
+**特殊情况1:**
 
 - 假设`ViewGroup`收到示例中的事件序列,它的一个子控件仅对触控点3 对应的子序列感兴趣,此时`ViewGroup`通过`MotionEvent.split()`方法将触控点3的信息分离出来并派发给子控件
 
@@ -874,7 +874,11 @@ View.dispatchTouchEvent()
 
 触摸事件 因为 **多点触摸 和 事件序列拆分机制**的存在 而变得十分复杂,其本质就是**从根控件开始在其子控件中寻找目标子控件并发给目标子控件,然后再从目标子控件中继续刚才的寻找,直到事件得到处理,**
 
-多点触摸与事件序列拆分是围绕`TouchTarget`完成的,** `TouchTarget`是绑定触控点与目标控件的纽带**
+多点触摸与事件序列拆分是围绕`TouchTarget`完成的,**`TouchTarget`是绑定触控点与目标控件的纽带**
+
+- `TouchTarget`主要有俩个功能 
+	1. 确定派发目标 
+	2. 执行派发
 
 每当一个事件子序列到来,`ViewGroup`都会新建或选择一个现有的`TouchTarget`,并将子序列对应的触控点ID绑定在其上,从而生成`TouchTarget`感兴趣的触控点列表. 随后的事件到来时`ViewGroup`会从其所收到的`MotionEvent`中为每一个`TouchTarget`分离出包含它所感兴趣的触控点的新`MotionEvent`,然后派发给对应的子控件
 
