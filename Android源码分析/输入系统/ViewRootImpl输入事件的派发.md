@@ -85,47 +85,44 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 
 - `View.FOCUS_DOWN`表示焦点的寻找方向. 当**本控件是一个`ViewGroup`时将会从自身的`View[] mChildren`成员变量中按照顺序去查找**,由于当前分析的是控件为`View`的情况,所以该参数无效
 
-
-    public final boolean requestFocus(int direction) {
-        return requestFocus(direction, null);
-    }
+	    public final boolean requestFocus(int direction) {
+	        return requestFocus(direction, null);
+	    }
 
 - `Rect`参数表示上一个焦点控件的区域 . 表示从哪个位置开始沿着`direction`所指定的方向查找焦点控件.仅当控件是`ViewGroup`时有意义
 
+	    public boolean requestFocus(int direction, Rect previouslyFocusedRect) {
+	        return requestFocusNoSearch(direction, previouslyFocusedRect);
+	    }
 
-    public boolean requestFocus(int direction, Rect previouslyFocusedRect) {
-        return requestFocusNoSearch(direction, previouslyFocusedRect);
-    }
-
-- ** 这个俩个参数的重载方法便是`View`和`ViewGroup`对焦点控件查找的分界点**
+- **这个俩个参数的重载方法便是`View`和`ViewGroup`对焦点控件查找的分界点**
 
 	在`View`类型的控件中,直接调用了`View.requestFocusNoSearch()`,代表的含义就是无需查找,直接使本控件获取焦点
 
-
-    private boolean requestFocusNoSearch(int direction, Rect previouslyFocusedRect) {
-        // 首先必须是Focusable,另外不可见的控件也不能获取焦点
-		// 可以通过View.setFocusable()进行设置
-        if ((mViewFlags & FOCUSABLE) != FOCUSABLE
-                || (mViewFlags & VISIBILITY_MASK) != VISIBLE) {
-            return false;
-        }
-
-        // 如果系统目前处于触摸模式,则要求此控件必须可以在触摸模式下可以拥有焦点
-        if (isInTouchMode() &&
-            (FOCUSABLE_IN_TOUCH_MODE != (mViewFlags & FOCUSABLE_IN_TOUCH_MODE))) {
-               return false;
-        }
-
-        // need to not have any parents blocking us
-		// 判断是否存在任意父控件的DescendantFocusability取值为FOCUS_BLOCK_DESCENDANTS,意义为父类阻止此控件获取焦点
-        if (hasAncestorThatBlocksDescendantFocus()) {
-            return false;
-        }
-
-		//通过此方法使得控件获取焦点
-        handleFocusGainInternal(direction, previouslyFocusedRect);
-        return true;
-    }
+	    private boolean requestFocusNoSearch(int direction, Rect previouslyFocusedRect) {
+	        // 首先必须是Focusable,另外不可见的控件也不能获取焦点
+			// 可以通过View.setFocusable()进行设置
+	        if ((mViewFlags & FOCUSABLE) != FOCUSABLE
+	                || (mViewFlags & VISIBILITY_MASK) != VISIBLE) {
+	            return false;
+	        }
+	
+	        // 如果系统目前处于触摸模式,则要求此控件必须可以在触摸模式下可以拥有焦点
+	        if (isInTouchMode() &&
+	            (FOCUSABLE_IN_TOUCH_MODE != (mViewFlags & FOCUSABLE_IN_TOUCH_MODE))) {
+	               return false;
+	        }
+	
+	        // need to not have any parents blocking us
+			// 判断是否存在任意父控件的DescendantFocusability取值为FOCUS_BLOCK_DESCENDANTS,意义为父类阻止此控件获取焦点
+	        if (hasAncestorThatBlocksDescendantFocus()) {
+	            return false;
+	        }
+	
+			//通过此方法使得控件获取焦点
+	        handleFocusGainInternal(direction, previouslyFocusedRect);
+	        return true;
+	    }
 
 **控件能否获取焦点有一下俩个要求:**
 
@@ -187,7 +184,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
         }
     }
 
-- ** `PFLAG_FOCUSED`是一个控件是否拥有焦点的最直接体现**,但这一标记仅体现了焦点在个体级别上的特性,而`mParent.requestChildFocus()`则体现了焦点在控件树级别的特性
+- **`PFLAG_FOCUSED`是一个控件是否拥有焦点的最直接体现**,但这一标记仅体现了焦点在个体级别上的特性,而`mParent.requestChildFocus()`则体现了焦点在控件树级别的特性
 
 ### 3.2.2 控件树中的焦点体系
 
@@ -212,7 +209,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 		// mFocused代表目前拥有焦点控件的父控件(child代表将要拥有焦点的控件,俩者肯定在不同时才需要进行焦点获取)
 		// child 在View调用requestChildFocus()时 为 View本身
 		//  	 在ViewGroup调用requestChildFocus()时为 ViewGroup本身
-		// 第一次调用时 mFocused 为空,肯定不等于View,那么mFocused直接被赋值为View本身
+		// 第一次调用时 mFocused 为空,肯定不等于View,那么mFocused直接被赋值为child
         if (mFocused != child) {
 	        // 如果上一个焦点控件 是这个控件树中的子控件,即mFocused 不为空
 			// 则调用 该子控件的unFocus()
@@ -255,7 +252,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 	        }
 	    }
 
-- `View.unFocus()`
+- `View.unFocus()`方法会调用`clearFocusInternal()`方法
 
 	    void clearFocusInternal(View focused, boolean propagate, boolean refocus) {
 	        if ((mPrivateFlags & PFLAG_FOCUSED) != 0) {
@@ -558,8 +555,11 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
         // 处理输入事件队列中的事件
         while (mPendingInputEventHead != null) {
 			........省略代码............
+			
+			QueuedInputEvent q = mPendingInputEventHead;
+			mPendingInputEventHead = q.mNext;
 			//该方法会完成单个事件的整个处理流程
-            deliverInputEvent(q);
+			deliverInputEvent(q);
         }
 
 		........省略代码............
@@ -697,7 +697,7 @@ Android同时支持**按键与触摸**俩种操作方式,并且可以在俩者�
 
 	2. 判断事件是否需要被丢弃,即对视图的状态,焦点状态等进行检查
 
-	3. 调用`onProcess()`去处理事件,并将结果交给`apply()`去处理.(`onProcess()`方法多在子类中被重写)
+	3. 调用`onProcess()`去处理事件,并将结果交给`apply()`去处理.(`onProcess()`方法在子类中被重写)
 
 	
 
