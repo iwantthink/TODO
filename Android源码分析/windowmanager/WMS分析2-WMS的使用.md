@@ -126,6 +126,7 @@
 	            }
 	            ...
 				// IWindow是一个Binder代理,在WMS端,一个窗口只可能对应一个IWindow代理,这是由Binder通信机制保证的,因此不能重复添加,否则会报错
+				// 主要是为了防止重复添加视图!!!
 	            if (mWindowMap.containsKey(client.asBinder())) {
 	                return WindowManagerGlobal.ADD_DUPLICATE_ADD;
 	            }
@@ -243,6 +244,7 @@
 - 注释3处的第4个参数为false就代表这个`WindowToken`是隐式创建的。接下来的代码逻辑就是`WindowToken`不为null的情况，根据`rootType`和type的值进行判断，比如在注释4处判断如果窗口为应用程序窗口，
 
 - 在注释5处会将`WindowToken`转换为专门针对应用程序窗口的`AppWindowToken`，然后根据`AppWindowToken`的值进行后续的判断。
+
 
 ## 2.3 addWindow-3
 
@@ -400,6 +402,25 @@
 3. `WindowState`的创建和相关处理，将`WindowToken`和`WindowState`相关联。 
 
 4. 创建和配置`DisplayContent`，完成窗口添加到系统前的准备工作。
+
+
+
+根据`WindowManager.LayoutParams`的`type`属性,`WindowToken`有三种不同的取法:
+
+1. `ApplicationWindows`: 取值在 `FIRST_APPLICATION_WINDOW` 和 `LAST_APPLICATION_WINDOW `之间,是通常的、顶层的应用程序窗口。
+
+	必须将token设置成Activity的token。如Activity,Dialog. 在`WMS.addWindow()`中会通过`WindowToken.asAppWindowToken()`方法对其进行转换
+
+		atoken = token.asAppWindowToken()
+
+2. `SubWindows`: 取值在 `FIRST_SUB_WINDOW `和 `LAST_SUB_WINDOW `之间。
+
+	token必须设置为它所附着的宿主窗口的token。如PopupWindow(想要依附在Activity上需要将token设置成Activity的token)
+
+3. `SystemWindows`: 取值在 `FIRST_SYSTEM_WINDOW `和 `LAST_SYSTEM_WINDOW `之间。
+
+	用于特定的系统功能，不能用于应用程序，使用时需要特殊权限。如Toast，输入法等。
+
 
 
 **到这里APP端向WMS注册窗口的流程就算走完了，不过只算完成了前半部分，WMS还需要向`SurfaceFlinger`申请`Surface`，才算完成真正的分配了窗口。**
