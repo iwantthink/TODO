@@ -4,17 +4,21 @@
 
 [Activity中的mToken](http://www.momoandy.com/2018/12/20/Activity%E4%B8%AD%E7%9A%84mToken/)
 
-# 1. 简介
+# 1. 窗口概念简介
 
 **在Android系统中，窗口是有分组概念的**
 
-- 例如，Activity中弹出的所有`PopupWindow`会随着Activity的隐藏而隐藏，可以说这些都附属于Actvity的子窗口分组，对于Dialog也同样如此，只不过Dialog与Activity属于同一个分组。
+- 例如，Activity中弹出的所有`PopupWindow`会随着Activity的隐藏而隐藏，可以说其附属于Actvity的子窗口分组，对于Dialog也同样如此，只不过Dialog与Activity属于同一个分组。
 
-	窗口类型划分：**应用窗口、子窗口、系统窗口**，`Activity`与`Dialog`都属于应用窗口，而`PopupWindow`属于子窗口，`Toast`、输入法等属于系统窗口。
+窗口类型划分：**应用窗口、子窗口、系统窗口**，`Activity`与`Dialog`都属于应用窗口，而`PopupWindow`属于子窗口，`Toast`、输入法等属于系统窗口。
 
-	**只有应用窗口与系统窗口可以作为父窗口，子窗口不能作为子窗口的父窗口**，也就说Activity与Dialog或者系统窗口中可以弹出PopupWindow，但是PopupWindow不能在自己内部弹出PopupWindow子窗口。
+- **只有应用窗口与系统窗口可以作为父窗口，子窗口不能作为子窗口的父窗口**，也就说`Activity`与`Dialog`或者系统窗口中可以弹出`PopupWindow`，但是`PopupWindow`不能在自己内部弹出`PopupWindow`子窗口。
 
-日常开发中，一些常见的问题都同窗口的分组有关系，比如为什么新建Dialog的时候必须要用Activity的Context，而不能用Application的；为什么不能以PopupWindow的View为锚点弹出子PopupWindow？其实这里面就牵扯都Android的窗口组织管理形式
+日常开发中，一些常见的问题都同窗口的分组有关系,其实这里面就牵扯都Android的窗口组织管理形式!
+
+1. 比如为什么新建`Dialog`的时候必须要用Activity的Context，而不能用Application的?
+
+2. 为什么不能以`PopupWindow`的View为锚点弹出子`PopupWindow`？
 
 **本文主要包含以下几点内容**：
 
@@ -28,18 +32,24 @@
 
 # 2. 重要参数介绍
 
-在[WMS分析3-具体案例.md]()的窗口添加过程中,依次调用`WindowManagerImpl->WindowManagerGlobal`. 以`WindowManagerGlobal.addView()`方法中的参数为例
+根据[WMS分析3-具体案例.md]()的分析结果可知
+
+- **窗口添加过程中,依次会调用`WindowManagerImpl.addView()`,`WindowManagerGlobal.addView()`,`ViewRootImpl.setView()`,  `Session.addToDisplay()`,`WMS.addWindow()`**
+
+## 2.1 `WMG.addView()`参数介绍
+
+以`WindowManagerGlobal.addView()`方法中的参数为例介绍几个重要参数
 
     public void addView(View view, ViewGroup.LayoutParams params,
             Display display, Window parentWindow) 
 
 1. `View view`:
 
-	表示应用要添加到`WMG`管理的控件
+	表示待添加到WMS中的控件
 
 2. `ViewGroup.LayoutParams params`:
 
-	用来描述窗口属性. 实际传入的是`WindowManager.LayoutParams`
+	用来描述窗口属性. 实际传入的应该是`WindowManager.LayoutParams`类型
 
 3. `Display display`:
 
@@ -47,53 +57,57 @@
 
 4. `Window parentWindow`:
 
-	表示其父窗口
+	表示其父窗口,具体的值可能为空!
 
-在`WindowManager.LayoutParams`中有俩个很重要的参数`type`和`token`
+	在`Activity.attach()`方法中会调用`mWindow.setWIndowManager()`,这个`mWindow`就是`PhoneWindow`
+
+## 2.2 WindowManager.LayoutParams中的参数
+
+在`WM.LayoutParams`中有俩个很重要的参数`type`和`token`
 
     public static class LayoutParams extends ViewGroup.LayoutParams implements Parcelable {
-
         public int type;
 
-        /**
-         * Identifier for this window.  This will usually be filled in for
-         * you.
-         */
+        //Identifier for this window.  This will usually be filled in for you
         public IBinder token = null;
-
 	}
 
-- **`int type`用来描述窗口的类型**
+- `int type`:
 
-- **`IBinder token`是标志窗口的分组,token相同的窗口属于同一组,在WMS中该值对应一个`WindowToken`**
+	用来描述窗口的类型. 主要分为三类:应用窗口,系统窗口和子窗口
 
+	**[Window属性介绍.md]()中详细介绍了`type`的取值**
 
-**[Window属性介绍.md]()中介绍了`type`的取值**
+- `IBinder token`:
+
+	是窗口进行分组的关键,token相同的窗口属于同一组,在WMS中该值对应一个`WindowToken`
+
 
 # 3. 窗口的分组原理
 
-如果用一句话概括窗口分组的话：**Android窗口是以token来进行分组的，同一组窗口握着相同的token**
+如果用一句话概括窗口分组的话：
 
-- 什么是token呢？在 Android WMS管理框架中，`token`一个`IBinder`对象，`IBinder`在实体端与代理端会相互转换
+- **Android窗口是以`token`来进行分组的，同一组窗口握着相同的`token`**
 
-	这里只看实体端，它的取值只有两种:
+**什么是token呢**？
+
+- 在 Android WMS管理框架中，`token`一个`IBinder`对象，`IBinder`在实体端与代理端会相互转换,它的取值只有两种
 
 	1. **`ViewRootImpl`中`ViewRootImpl.W`**
 
-		`ViewRootImpl.W`的实体对象在`ViewRootImpl`中实例化
+		`ViewRootImpl.W`的实体对象在`ViewRootImpl`构造函数中初始化
 
 			 static class W extends IWindow.Stub {.....}
 
 	2. **`ActivityRecord`中的`ActivityRecord.Token`**
 
-		`IApplicationToken.Stub`在`ActivityManagerService`端实例化，之后被AMS添加到WMS服务中去，作为Activity应用窗口的键值标识
+		`IApplicationToken.Stub`在`ActivityManagerService`端实例化，之后被AMS添加到WMS服务中去，**主要作用是作为Activity应用窗口的键值标识**
 
 			static class Token extends IApplicationToken.Stub {.....}
 
-之前说过`Activity`跟`Dialog`属于同一分组，现在就来看一下`Activity`跟`Dialog`的`token`是如何复用的，这里的复用分为APP端及WMS服务端
+		- **注意:**`ActivityThread`中也有一个`IApplicationThread.Stub`的实现类`ApplicationThread`,该类提供给`AMS`对应用进程进行IPC
 
-关于窗口的添加流程之前已经分析过，这里只跟随窗口token来分析窗口的分组，我们知道在WMS端，`WindowState`与窗口的一一对应，而`WindowToken`与窗口分组有关，查看两者的定义：
-
+关于窗口的添加流程之前已经分析过，这里只跟随窗口`token`来分析窗口的分组，我们知道在WMS端，`WindowState`与窗口的一一对应，而`WindowToken`与窗口分组有关，查看两者的定义：
 
 ## 3.1 WindowState
 
@@ -171,16 +185,18 @@
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1g1ilyqgngaj20rs0m30t2.jpg)
 
 
-## 3.4 WMS.addWindow()
+# 4. 窗口分组逻辑介绍
 
 **WMS的窗口分组逻辑主要是在其`addWindow()`方法中:**
 
+## 4.1 `WMS.addWindow()` - part1
 
     public int addWindow(Session session, IWindow client, int seq,
             WindowManager.LayoutParams attrs, int viewVisibility, int displayId,
             Rect outContentInsets, Rect outStableInsets, Rect outOutsets,
             InputChannel outInputChannel) {
 
+		// 表示父类WindowState
         WindowState parentWindow = null;
         final int type = attrs.type;
         synchronized(mWindowMap) {
@@ -237,7 +253,7 @@
 
 - **子窗口的`WS`会被添加到父窗口的`WS`,然后父窗口的`WS`会被添加到代表这一系列窗口的`WindowToken`中**
 
-### 3.4.1 WindowToken.addWIndow()
+## 4.2 `WindowToken.addWindow()` - part2
 
     void addWindow(final WindowState win) {
 		// 判断WS对应的窗口是否是子窗口
@@ -261,7 +277,7 @@
 - `mChildren` 包含了在当前`WindowToken`下的一组`WindowState`. **注意:这里的`WindowState`可能还包含子窗口的`WindowState`**
 
 
-### 3.4.2 WindowContainer.addChild()
+###  4.2.1  WindowContainer.addChild()
 
     protected void addChild(E child, Comparator<E> comparator) {
 		// 说明当前WindowState已经设置了WindowToken
@@ -276,9 +292,11 @@
     }
 
 
-# 4. Activity 对应的Token的介绍
+# 5. Activity对应的`ActivityRecord.Token`
 
-AMS通过`ActivityStarter`为Activity创建`ActivityRecord`的时候(构造函数中)，会新建`Token extends IApplicationToken.Stub appToken`对象
+## 5.1 创建过程
+
+**AMS通过`ActivityStarter`为Activity创建`ActivityRecord`的时候,在`ActivityRecord`的构造函数中会新建`Token extends IApplicationToken.Stub appToken`对象**
 
     ActivityRecord(ActivityManagerService _service, ProcessRecord _caller, int _launchedFromPid,
             int _launchedFromUid, String _launchedFromPackage, Intent _intent, String _resolvedType,
@@ -296,7 +314,7 @@ AMS通过`ActivityStarter`为Activity创建`ActivityRecord`的时候(构造函�
 		............
 	}
 
-## 4.1 Activity对应的Token的传递
+## 5.2 传递过程概述
 
 AMS经过`ActivityStarter`,`ActivityStackSupervisor`和`ActivityStack`的一系列跳转之后,最终调用`ActivityStackSupervisor.realStartActivityLocked()`,通过`app.thread`(即`IApplicationThread`)调用其`scheduleLaunchActivity()`方法和应用进程进行IPC
 
@@ -314,7 +332,7 @@ AMS经过`ActivityStarter`,`ActivityStackSupervisor`和`ActivityStack`的一系�
                 boolean notResumed, boolean isForward, ProfilerInfo profilerInfo) {
 			..................
             ActivityClientRecord r = new ActivityClientRecord();
-
+			//ActivityRecord.Token
             r.token = token;
 			.................
             sendMessage(H.LAUNCH_ACTIVITY, r);
@@ -323,29 +341,27 @@ AMS经过`ActivityStarter`,`ActivityStackSupervisor`和`ActivityStack`的一系�
 - 参数中的`IBinder token`是AMS中的`ActivityRecord.appToken`, 也就是在`ActivityRecord`构造函数中创建的`Token`(该`Token`类同样继承自`IApplicationToken.Stub`)
 
 
-在`ActivityThread`类中经过一系列方法调用,最终在`ActivityThread.performLaunchActivity()`方法中通过调用`Activity.attach()`方法将`Token`注入到Activity.
+**在`ActivityThread`类中经过一系列方法调用,最终在`ActivityThread.performLaunchActivity()`方法中通过调用`Activity.attach()`方法将`Token`注入到Activity**.
 
-### 4.1.1 过程概述
 
-AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代理，创建好Activity后在`attach()`方法中注入到Activity中
-	
-
-## 4.2 Token对于AMS和App的作用
+# 6. Token对于AMS和App的作用
 
 **AMS端维护一份`ProcessRecord`数据结构，`ProcessRecord`代表一个进程的所有信息，包含了这个进程的`TaskRecord`和`ActivityRecord`和其他系统组件等。**
 
-**App进程则在`ActivityThread`维护一个`key`和`value`为`IBinder`和`ActivityClientRecord`的`ArrayMap mActivities`，这里的`IBinder`就是AMS端的那个`Token`，`ActivityClientRecord`则类似AMS端的`ActivityRecord`，存储着Activity实例和Activity相关信息。**
+**App进程则在`ActivityThread`维护一个`key`和`value`为`IBinder`和`ActivityClientRecord`的`ArrayMap mActivities`**
+
+- 这里的`IBinder`就是AMS端的那个`Token`，`ActivityClientRecord`则类似AMS端的`ActivityRecord`，存储着Activity实例和Activity相关信息。
 
 **这样，无论是`AMS`还是`App`进程的`ActivityThread`均可以使用`Token`这个`Binder`查找到准确的Activity，然后进行相应操作。**
 
-### 4.2.1 应用场景
+## 6.1 应用场景
 
 启动一个新的Activity：App携带当前Activity的`Token`向AMS发起IPC，AMS准备创建并启动新的Activity，在新的Activity可见之前就会携带这个`Token`向App进程通信暂停上一个Activity，App进程收到通信后通过`Token`查找`ActivityThread`存储的列表，找到对应Activity后做相应处理并回调这个Activity的`onPause()`，然后AMS才会让新启动的Activity进入可见状态。
 
 
-# 5. Activity 对应的Token 绑定到客户端Window的过程
+# 7. ActivityRecord.Token的传递分析
 
-## 5.1 Token绑定到Activity
+## 7.1 ActivityRecord.Token绑定到Activity
 
 在`ActivityThread.performLaunchActivity()`方法中通过调用`Activity.attach()`方法将`Token`注入到Activity.
 
@@ -357,12 +373,13 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
             Configuration config, String referrer, IVoiceInteractor voiceInteractor,
             Window window, ActivityConfigCallback activityConfigCallback) {
 
-		// 当前Activity 对应一个PhoneWIndow
+		// 当前Activity 对应一个PhoneWindow
         mWindow = new PhoneWindow(this, window, activityConfigCallback);
         mWindow.setWindowControllerCallback(this);
         mWindow.setCallback(this);
+		// Token 被绑定到了 Activity
         mToken = token;
-		// PhoneWIndow保存了token
+		// 将token保存到PhoneWindow中
         mWindow.setWindowManager(
                 (WindowManager)context.getSystemService(Context.WINDOW_SERVICE),
                 mToken, mComponent.flattenToString(),
@@ -371,15 +388,17 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
 		.........
 	}
 
-- 这里参数中的`IBinder token`是AMS中通过`ActivityRecord`生成的`Token`,由于在应用进程中,所以这里应该是BInder代理
+- 这里参数中的`IBinder token`是`AMS`中通过`ActivityRecord`生成的`Token`,由于在应用进程中,所以这里应该是Binder的远程代理对象
 
-- `PhoneWindow`保存了`Token`
+- **对`Token`的处理 主要在`PhoneWindow.setWindowManager()`中**
 
+## 7.2 ActivityRecord.Token绑定到Window(PhoneWindow)
 
-## 5.1 PhoneWindow.setWIndowManager()
+### 7.2.1 PhoneWindow.setWindowManager()
 
-    public void setWindowManager(WindowManager wm, IBinder appToken, String appName,
-            boolean hardwareAccelerated) {
+    public void setWindowManager(WindowManager wm, IBinder appToken,
+	 String appName,boolean hardwareAccelerated) {
+		// 注意这个mAppToken 就是AMS创建的Token
         mAppToken = appToken;
         mAppName = appName;
         mHardwareAccelerated = hardwareAccelerated
@@ -387,16 +406,19 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
         if (wm == null) {
             wm = (WindowManager)mContext.getSystemService(Context.WINDOW_SERVICE);
         }
+		// 将当前PhoneWindow 传入 WindowManagerImpl,赋值给它的成员变量`mParentWindow`
         mWindowManager = ((WindowManagerImpl)wm).createLocalWindowManager(this);
     }
 
-## 5.2 Token绑定到Window
+- `mAppToken`即`AMS`为当前`Activity`创建的`Token`
+
+## 7.3 ActivityRecord.Token绑定到WindowManagerService
 
 1. 在`ActivityThread`的`performResumeActivity()`方法中依次完成Activity的`onRestart()、onStart()、onResume()`回调
 
 2. 在`handleResumeActivity()`方法中将`PhoneWindow`中的`DecorView`视图状态设置为`INVISIBLE`
 
-3. 之后调用`wm.addView(decor, l)`添加视图，其中`wm`是`WindowManagerImpl`
+3. 之后会调用`wm.addView(decor, l)`添加视图，其中`wm`是`WindowManagerImpl`
 
 	- 在`attach()`方法中，通过`PhoneWindow`构造了`WindowManagerImpl`对象并赋值给了`Activity`；
 
@@ -406,53 +428,37 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
 
     final void handleResumeActivity(IBinder token,
             boolean clearHide, boolean isForward, boolean reallyResume, int seq, String reason) {
-		// 包含了Token 信息
+		// 通过AMS-Token  获取到保存 Activity相关信息的ActivityClientRecord
         ActivityClientRecord r = mActivities.get(token);
 		// 经过一系列回调,修改了ActivityClientRecord的信息
         r = performResumeActivity(token, clearHide, reason);
         if (r != null) {
             final Activity a = r.activity;
-
-            boolean willBeVisible = !a.mStartedActivity;
-            if (!willBeVisible) {
-                try {
-                    willBeVisible = ActivityManager.getService().willActivityBeVisible(
-                            a.getActivityToken());
-                } catch (RemoteException e) {
-                }
-            }
+			..............
             if (r.window == null && !a.mFinished && willBeVisible) {
+				// Activity的Window在其attach()方法中被创建
                 r.window = r.activity.getWindow();
+				// DecorView 在 Activity.onCreate()中被创建
                 View decor = r.window.getDecorView();
                 decor.setVisibility(View.INVISIBLE);
                 ViewManager wm = a.getWindowManager();
-				// 窗口参数信息
+				// 获取窗口参数信息
                 WindowManager.LayoutParams l = r.window.getAttributes();
+				// 将DecorView 绑定到Activity
                 a.mDecor = decor;
+				// Activity 的窗口类型是 应用窗口
                 l.type = WindowManager.LayoutParams.TYPE_BASE_APPLICATION;
 
                 if (a.mVisibleFromClient) {
                     if (!a.mWindowAdded) {
                         a.mWindowAdded = true;
+						// 调用WindowManagerImpl
                         wm.addView(decor, l);
                     } else {
-                        // The activity will get a callback for this {@link LayoutParams} change
-                        // earlier. However, at that time the decor will not be set (this is set
-                        // in this method), so no action will be taken. This call ensures the
-                        // callback occurs with the decor set.
-                        a.onWindowAttributesChanged(l);
+						...........
                     }
                 }
-
-            // Tell the activity manager we have resumed.
-            if (reallyResume) {
-                try {
-                    ActivityManager.getService().activityResumed(token);
-                } catch (RemoteException ex) {
-                    throw ex.rethrowFromSystemServer();
-                }
-            }
-
+			.........
         } 
 		.......................
     }
@@ -467,7 +473,7 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
 
 	2. `DecorView decor`
 
-### 5.2.1 WindowManagerImpl.addView()
+### 7.3.1 WindowManagerImpl.addView()
 
     @Override
     public void addView(@NonNull View view, @NonNull ViewGroup.LayoutParams params) {
@@ -477,27 +483,22 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
 
 - `mParentWindow`是在`WMI`的构造函数中被传入
 
-	在`Activity.attach()`方法中,会调用`PhoneWindow.setWindowManager()`方法,然后在该方法中 调用了`WindowManagerImpl.createLocalWindowManager()`将`PhoneWindow`传入
+	**在`Activity.attach()`方法中,会调用`PhoneWindow.setWindowManager()`方法,然后在该方法中 调用了`WindowManagerImpl.createLocalWindowManager()`将`PhoneWindow`传入**
 
-### 5.2.1 WindowManagerGlobal.addView()
+### 7.3.2 WindowManagerGlobal.addView()
 
     public void addView(View view, ViewGroup.LayoutParams params,
             Display display, Window parentWindow) {
 		......省略参数的检查...................
 
         final WindowManager.LayoutParams wparams = (WindowManager.LayoutParams) params;
-		//Activity.attach()中创建的 PhoneWindow
+		
         if (parentWindow != null) {
-			// 在这里绑定了token
+			// 在这里将ActivityRecord.Token绑定到LayoutParams
             parentWindow.adjustLayoutParamsForSubWindow(wparams);
-        } else {
 
-            final Context context = view.getContext();
-            if (context != null
-                    && (context.getApplicationInfo().flags
-                            & ApplicationInfo.FLAG_HARDWARE_ACCELERATED) != 0) {
-                wparams.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-            }
+        } else {
+			...................
         }
 
         ViewRootImpl root;
@@ -507,14 +508,13 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
         	..................
 
             root = new ViewRootImpl(view.getContext(), display);
-
+			// WindowManager.LayoutParams 绑定到 DecorView
             view.setLayoutParams(wparams);
-
+			// 存储数据
             mViews.add(view);
             mRoots.add(root);
             mParams.add(wparams);
 
-            // do this last because it fires off messages to start doing things
             try {
                 root.setView(view, wparams, panelParentView);
             } catch (RuntimeException e) {
@@ -524,22 +524,142 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
 
 - `WindowManagerGlobal.addView()`做了4件事。
 
-	1. 调用`PW.adjustLayoutParamsForSubWindow()`为`WindowManager.LayoutParams`绑定Token；
+	1. 调用`PW.adjustLayoutParamsForSubWindow()`为`WindowManager.LayoutParams`的成员变量`token`设置值；
 
-	2. 构造ViewRootImpl(简称VRI)；
+	2. 构造`ViewRootImpl`(简称VRI)；
 
-	3. 为DecorView设置`WindowManager.LayoutParams`
+	3. 为`DecorView`设置`WindowManager.LayoutParams`
 
 	4. 把`DecorView、VRI和WindowManager.LayoutParams`添加到WMG中的List中缓存起来；
 
 	5. 调用`root.setView(view, wparams, panelParentView)`做进一步设置；
 
-### 5.2.2 PhoneWindow.adjustLayoutParamsForSubWindow()
+### 7.3.3 PhoneWindow.adjustLayoutParamsForSubWindow()
+
+    void adjustLayoutParamsForSubWindow(WindowManager.LayoutParams wp) {
+        CharSequence curTitle = wp.getTitle();
+		// 类型为 子窗口
+        if (wp.type >= WindowManager.LayoutParams.FIRST_SUB_WINDOW &&
+                wp.type <= WindowManager.LayoutParams.LAST_SUB_WINDOW) {
+            if (wp.token == null) {
+				// 返回与PhoneWindow绑定的 DecorView
+                View decor = peekDecorView();
+                if (decor != null) {
+					// 这里获取到的是 IWindow(W extends IWindow.Stub )
+                    wp.token = decor.getWindowToken();
+                }
+            }
+ 			..........设置title.................
+            }
+		// 类型为 系统窗口
+        } else if (wp.type >= WindowManager.LayoutParams.FIRST_SYSTEM_WINDOW &&
+                wp.type <= WindowManager.LayoutParams.LAST_SYSTEM_WINDOW) {
+            // We don't set the app token to this system window because the life cycles should be independent
+            // If an app creates a system window and then the app goes to the stopped state
+            // , the system window should not be affected (can still show and receive input events
+
+            if (curTitle == null || curTitle.length() == 0) {
+                final StringBuilder title = new StringBuilder(32);
+                title.append("Sys").append(wp.type);
+                if (mAppName != null) {
+                    title.append(":").append(mAppName);
+                }
+                wp.setTitle(title);
+            }
+		// 应用窗口
+        } else {
+			// 对于Activity来说,wp.token就是AMS端传过来的ActivityRecord.Token
+			// mAppToken  setWindowManager方法中传入
+            if (wp.token == null) {
+                wp.token = mContainer == null ? mAppToken : mContainer.mAppToken;
+            }
+            if ((curTitle == null || curTitle.length() == 0)
+                    && mAppName != null) {
+                wp.setTitle(mAppName);
+            }
+        }
+        if (wp.packageName == null) {
+            wp.packageName = mContext.getPackageName();
+        }
+        if (mHardwareAccelerated ||(mWindowAttributes.flags & FLAG_HARDWARE_ACCELERATED) != 0) {
+            wp.flags |= FLAG_HARDWARE_ACCELERATED;
+        }
+    }
+
+根据不同的窗口类型,`WindowManager.LayoutParams`中的成员变量`token`的值也不同
+
+1. **应用窗口的`WindowManager.LayoutParams.token`的值是`AMS`为当前Activity创建的`Token`**
+
+2. **子窗口的`LayoutParams.token`的值是 `IWindow(W extends IWindow.Stub )`,其使用的是父窗口的`Token`**
+
+#### 7.3.3.1 `View.getWindowToken()`
+
+在`ViewRootImpl`类的`performTraversals()`方法中,会调用`dispatchAttachedToWindow()`方法将`View.AttachInfo`保存到`DecorView`中
+
+    private void performTraversals() {
+        final View host = mView;
+		.......
+        if (mFirst) {
+			...........
+            host.dispatchAttachedToWindow(mAttachInfo, 0);
+        } 
+		..........
+	}
 
 
 
+### 7.3.4 ViewRootImpl中对Token的操作
 
-# 6. Activity 对应的WindowToken的创建
+	
+	public void setView(View view, WindowManager.LayoutParams attrs, View panelParentView) {
+	    synchronized (this) {
+	        if (mView == null) {
+	            mView = view;
+	            ...
+	            try {
+					...........
+	                res = mWindowSession.addToDisplay(mWindow, mSeq, mWindowAttributes,
+	                        getHostVisibility(), mDisplay.getDisplayId(), mWinFrame,
+	                        mAttachInfo.mContentInsets, mAttachInfo.mStableInsets,
+	                        mAttachInfo.mOutsets, mAttachInfo.mDisplayCutout, mInputChannel);
+	            }
+	            //把VRI绑定到DecorView。
+	            view.assignParent(this);
+	            ...
+	        }
+	    }
+	}
+
+#### 7.3.4.1 `Session mWindowSession`的创建
+
+在`ViewRootImpl`的构造函数中创建了`mWindowSession`,其具体实现类是`Session`,是一个Binder,运行于`SystemServer`进程中
+
+每一个进程对应一个`Session`代理,`WindowManagerGlobal`维护了一个`Session`的远程Binder代理对象(**单例**)
+
+- **具体可以参考[WMS分析3-具体案例---3.3.md]()**
+
+## 7.4 `Session.addToDisplay()`
+
+    @Override
+    public int addToDisplay(IWindow window, int seq, WindowManager.LayoutParams attrs,
+            int viewVisibility, int displayId, Rect outContentInsets, Rect outStableInsets,
+            Rect outOutsets, InputChannel outInputChannel) {
+        return mService.addWindow(this, window, seq, attrs, viewVisibility, displayId,
+                outContentInsets, outStableInsets, outOutsets, outInputChannel);
+    }
+
+## 7.5 WindowManagerService.addWindow()
+
+**参考[WMS分析2-WMS的使用.md]()**
+
+
+## 7.6 总结
+
+Activity通过`PhoneWindow`把`Token`放到`DecorView`的`WindowManager.LayoutParams`中。然后App进程向WMS发起IPC，WMS拿到Token保存到WindowState，最终存储到WMS的mWindowMap中。
+
+
+
+# 8. Activity 对应的WindowToken的创建
 
 1. 在`AMS.startActivityLocked()`方法中会通过调用`ActivityRecord`的`createWindowContainer()`去创建`AppWindowContainerController`
 
@@ -554,4 +674,10 @@ AMS向App进程发起IPC，`ActivityThread`拿到`Token`在App进程的Binder代
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1g1jmwjp98gj20y90e9abj.jpg)
 
 随后，通过`Binder`通信将`IApplicationToken`传递给APP端，在通知`ActivityThread`新建`Activity`对象之后，利用`Activity`的`attach()`方法添加到`Activity`中
+
+# 9. ActivityRecord.Token对于WMS的作用?
+
+AMS在创建`Token`后，在`ActivityStarter.startActivityLocked()`方法中创建`WindowToken`，然后分别以`Token`和`WindowToken`为key和value存储在`DisplayContent`的`mTokenMap`中.
+
+**当WMS调用addWindow添加Window时候，会使用Activity传过来的Token去mTokenMap查找，来验证Token的合法性**
 
