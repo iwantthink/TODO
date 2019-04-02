@@ -114,18 +114,18 @@ Dialog和Activity共享同一个`WindowManager`（也就是`WindowManagerImpl`�
         mGlobal.addView(view, params, mContext.getDisplay(), mParentWindow);
     }
 
-- 已知这里的`WindowManagerImpl`是`Activity`对应的那个
-
-	**这里的`mParentWindow`是`Activity.attach()`中传给`WindowManagerImpl`的`PhoneWindow`**
+- **已知这里的`WindowManagerImpl`是`Activity`对应的那个,因此这里的`mParentWindow`是`Activity.attach()`中传给`WindowManagerImpl`的`PhoneWindow`**
 	
-	当走到`PhoneWindow.adjustLayoutParamsForSubWindow()`的时候，仍然按照Activity的`WindowManagerImpl.addView()`的方式处理，并利用Activity的`PhoneWindow`的 `adjustLayoutParamsForSubWindow()`调整参数，赋值给`WindowManager.LayoutParams token`的值仍然是Activity的`ActivityRecord.Token`，那么在WMS端，对应就是`APPWindowToken`，也就是Activity与Dialog属于同一分组
+	那么`WindowManagerImpl.addView()`仍然按照处理`Activity`的方式处理，并利用Activity的`PhoneWindow`的 `adjustLayoutParamsForSubWindow()`方法调整参数
+
+	赋值给`WindowManager.LayoutParams token`的值仍然是`Activity`的`ActivityRecord.Token`，那么在WMS端，对应就是`APPWindowToken`，也就是Activity与Dialog属于同一分组
 
 
-## 7.3 为什么`Dialog`用`Application`作为context不行呢
+## 2.4 为什么`Dialog`用`Application`作为context不行呢
 
-- Dialog的窗口类型属于应用窗口，如果采用Application作为context，那么在通过`context.getSystemService(Context.WINDOW_SERVICE)`获取`WindowManagerImpl`时,其调用的`getSystemService()`,会使用`Application`对应的`ContextImpl`. 这和`Activity`的`ContextImpl`是不一样的. 这就会导致获取到的`WindowManagerImpl`不一致
+Dialog的窗口类型属于应用窗口，如果采用Application作为context，那么在通过`context.getSystemService(Context.WINDOW_SERVICE)`获取`WindowManagerImpl`时,其调用的`getSystemService()`,会使用`Application`对应的`ContextImpl`. 这和`Activity`的`ContextImpl`是不一样的. 这就会导致获取到的`WindowManagerImpl`不一致
 
-	`Application`和`Activity`分别对应的`WindowManagerImpl`的区别是前者没有`parentWindow`，因此在`WMG.addView()`方法中的`WindowManagerGlobal.adjustLayoutParamsForSubWindow()`函数不会被调用
+- `Application`和`Activity`分别对应的`WindowManagerImpl`的区别是前者没有`parentWindow`，因此在`WMG.addView()`方法中的`WindowManagerGlobal.adjustLayoutParamsForSubWindow()`函数不会被调用
 
 	这样就导致`WindowManager.LayoutParams`的`token`就不会被赋值，最终导致`ViewRootImpl`在通过`setView()`向WMS在添加窗口的时候会失败,WMS抛出`WindowManagerGlobal.ADD_BAD_APP_TOKEN`错误给App端,App端接收到信息后抛出异常
 
@@ -156,6 +156,91 @@ Dialog和Activity共享同一个`WindowManager`（也就是`WindowManagerImpl`�
 **因此,不用使用Application作为Dialog的context的根本原因,是因为其不能为Dialog提供正确的token!!!**
 
 
-# 8. PopupWindow类子窗口的添加流程及WindowToken分组
+# 3. PopupWindow类子窗口的添加流程及WindowToken分组
 
 
+
+## 3.
+
+    public void showAsDropDown(View anchor, int xoff, int yoff, int gravity) {
+		.....状态判断.......
+		
+        TransitionManager.endTransitions(mDecorView);
+
+        attachToAnchor(anchor, xoff, yoff, gravity);
+
+		............
+
+        final WindowManager.LayoutParams p =
+                createPopupLayoutParams(anchor.getApplicationWindowToken());
+
+        preparePopup(p);
+
+        final boolean aboveAnchor = findDropDownPosition(anchor, p, xoff, yoff,
+                p.width, p.height, gravity, mAllowScrollingAnchorParent);
+
+        updateAboveAnchor(aboveAnchor);
+        p.accessibilityIdOfAnchor = (anchor != null) ? anchor.getAccessibilityViewId() : -1;
+
+        invokePopup(p);
+    }
+
+
+### 3. View.getApplicationWindowToken()
+
+    public IBinder getApplicationWindowToken() {
+        AttachInfo ai = mAttachInfo;
+        if (ai != null) {
+            IBinder appWindowToken = ai.mPanelParentWindowToken;
+            if (appWindowToken == null) {
+                appWindowToken = ai.mWindowToken;
+            }
+            return appWindowToken;
+        }
+        return null;
+    }
+
+
+### 3. WindowManagerGlobal.addView()
+
+    public void addView(View view, ViewGroup.LayoutParams params,
+            Display display, Window parentWindow) {
+
+        View panelParentView = null;
+        synchronized (mLock) {
+
+            // If this is a panel window, then find the window it is being
+            // attached to for future reference.
+            if (wparams.type >= WindowManager.LayoutParams.FIRST_SUB_WINDOW &&
+                    wparams.type <= WindowManager.LayoutParams.LAST_SUB_WINDOW) {
+                final int count = mViews.size();
+                for (int i = 0; i < count; i++) {
+                    if (mRoots.get(i).mWindow.asBinder() == wparams.token) {
+                        panelParentView = mViews.get(i);
+                    }
+                }
+            }
+
+            root = new ViewRootImpl(view.getContext(), display);
+
+			.............
+			// do this last because it fires off messages to start doing things
+            try {
+                root.setView(view, wparams, panelParentView);
+            } catch (RuntimeException e) {...}
+
+
+### 3. ViewRootImpl.setView()
+
+    public void setView(View view, WindowManager.LayoutParams attrs, View panelParentView) {
+
+        synchronized (this) {
+            if (mView == null) {
+
+                if (panelParentView != null) {
+                    mAttachInfo.mPanelParentWindowToken
+                            = panelParentView.getApplicationWindowToken();
+                }
+		............
+		}
+	}
