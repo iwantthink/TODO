@@ -158,9 +158,37 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
 
 # 3. PopupWindow类子窗口的添加流程及WindowToken分组
 
+## 3.1 PopUpWindow 的使用方式
+	// PopupWindow的布局
+	View root = LayoutInflater.from(MainActivity.this).
+                inflate(R.layout.pop_window, null);
+	PopupWindow popupWindow =
+                new PopupWindow(root,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        true);
+	popupWindow.setBackgroundDrawable(new BitmapDrawable());
+	popupWindow.showAsDropDown(mTargetView);
 
+- `mTargetView`表示弹出的`popupwindow`的位置相对于这个控件
 
-## 3.
+### 3.1.1 PopupWindow的构造函数
+
+    public PopupWindow(View contentView, int width, int height, boolean focusable) {
+        if (contentView != null) {
+            mContext = contentView.getContext();
+            mWindowManager = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
+        }
+
+        setContentView(contentView);
+        setWidth(width);
+        setHeight(height);
+        setFocusable(focusable);
+    }
+
+- 会去获取布局使用的`Context`以及其对应的`WindowManagerImpl`
+
+## 3.1.2 showAsDropDown()
 
     public void showAsDropDown(View anchor, int xoff, int yoff, int gravity) {
 		.....状态判断.......
@@ -185,6 +213,8 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
         invokePopup(p);
     }
 
+
+- 存在三个重载的方法,但是最终都会调用上面的这个
 
 ### 3. View.getApplicationWindowToken()
 
