@@ -166,6 +166,18 @@
 
 - 注释5处: WMS要求窗口的层级关系最多为俩层!!!
 
+### 2.1.1 windowForClientLocked()
+
+    final WindowState windowForClientLocked(Session session, IBinder client, boolean throwOnError) {
+        WindowState win = mWindowMap.get(client);
+        if (win == null) {
+            return null;
+        }
+        if (session != null && win.mSession != session) {
+            return null;
+        }
+        return win;
+    }
 
 ## 2.2 addWindow-2
 
@@ -231,6 +243,8 @@
 - 注释1处通过`DisplayContent`的`getWindowToken()`方法来得到`WindowToken`。**`WindowToken`是窗口分组的基础,每个窗口必定有一个分组**
 
 	`DisplayContent`内部保存了一个`HashMap<IBinder, WindowToken> mTokenMap`用来保存`WindowManager.LayoutParams.token`与`WindowToken`的关系
+
+	**`Activity`的视图首次被添加时,这里的`WindowToken`肯定为空**
 
 - 注释2处，如果有父窗口就将父窗口的`type`值赋值给`rootType`，如果没有将当前窗口的`type`值赋值给`rootType`。
 
