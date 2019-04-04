@@ -188,7 +188,7 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
 
 - 会去获取布局使用的`Context`以及其对应的`WindowManagerImpl`
 
-## 3.1.2 showAsDropDown()
+### 3.1.2 showAsDropDown()
 
     public void showAsDropDown(View anchor, int xoff, int yoff, int gravity) {
 		.....状态判断.......
@@ -216,7 +216,11 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
 
 - 存在三个重载的方法,但是最终都会调用上面的这个
 
-### 3. View.getApplicationWindowToken()
+- **`anchor`是`PopupWindow`弹出时所依赖的那个控件**
+
+- 先给出结论,`anchor.getApplicationWindowToken()`在当前这个例子中,获取到的是在`ViewRootImpl`中创建的那个`W extends IWindow.Stub`
+
+## 3.2 View.getApplicationWindowToken()
 
     public IBinder getApplicationWindowToken() {
         AttachInfo ai = mAttachInfo;
@@ -230,17 +234,25 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
         return null;
     }
 
+- 如果`AttachInfo`中存在`mPanelParentWindowToken`那就使用它,否则就使用`mWindowToken`
 
-### 3. WindowManagerGlobal.addView()
+- `AttachInfo`是在`ViewRootImpl`创建时被创建的,同时会分发给`DecorView`,并且该`DecorView`下所有的子类包括其自身,都使用的这个`AttachInfo`
+
+	因此这里,查看`DecorView`在`WindowManagerGlobal.addView()`中创建`mPanelParentWIndowToken`的过程
+
+- 关于`AttachInfo`的具体分析可以查看[AttachInfo.md]()
+
+
+### 3.2.1 WindowManagerGlobal.addView()
 
     public void addView(View view, ViewGroup.LayoutParams params,
             Display display, Window parentWindow) {
 
+        final WindowManager.LayoutParams wparams = (WindowManager.LayoutParams) params;
         View panelParentView = null;
         synchronized (mLock) {
 
-            // If this is a panel window, then find the window it is being
-            // attached to for future reference.
+			// 如果当前控件是子窗口类型,那么就找到它的父窗口,取父窗口的对应的View
             if (wparams.type >= WindowManager.LayoutParams.FIRST_SUB_WINDOW &&
                     wparams.type <= WindowManager.LayoutParams.LAST_SUB_WINDOW) {
                 final int count = mViews.size();
@@ -252,15 +264,26 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
             }
 
             root = new ViewRootImpl(view.getContext(), display);
-
+            view.setLayoutParams(wparams);
+			// 保存控件
+            mViews.add(view);
+			// 保存ViewRootImpl
+            mRoots.add(root);
+			// 保存窗口属性
+            mParams.add(wparams);
 			.............
 			// do this last because it fires off messages to start doing things
             try {
                 root.setView(view, wparams, panelParentView);
             } catch (RuntimeException e) {...}
 
+- 当前讨论的是作为`PopupWindow`的`anchor`控件,它属于`Activity`,所以Activity就是对应的`DecorView`
 
-### 3. ViewRootImpl.setView()
+	**作为Acitivity的`DecorView`,属于应用窗口,因此`mPanelParentWIndowToken`没有值**
+
+- 假如当前的`DecorView`对应的是子窗口类型,那么它就会去寻找其所依赖的父窗口对应的View
+
+### 3.2.2 ViewRootImpl.setView()
 
     public void setView(View view, WindowManager.LayoutParams attrs, View panelParentView) {
 
@@ -274,3 +297,167 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
 		............
 		}
 	}
+
+- `panelParentView`作为 子窗口对应控件的父控件,在子窗口需要获取`mPanelParentWindowToken`时,会调用父窗口的`getApplicationWindowToken()`不断向上遍历(实际上最多就俩层..因为 子窗口不能作为父窗口来使用)
+
+	因此这里子窗口的`mPanelParentWindowToken`就是父窗口的`WindowToken`,即`IWindow`
+
+
+## 3.3 PopupWindow.createPopupLayoutParams()
+
+    protected final WindowManager.LayoutParams createPopupLayoutParams(IBinder token) {
+        final WindowManager.LayoutParams p = new WindowManager.LayoutParams();
+        p.gravity = computeGravity();
+        p.flags = computeFlags(p.flags);
+        p.type = mWindowLayoutType;
+        p.token = token;
+		...........
+        return p;
+    }
+
+- 新建了一个`WindowManager.LayoutParams`作为窗口属性,并将之前获取到的`windowToken`赋值给当前窗口属性(`W extends IWindow.Stub`)
+
+	`Activity`和`Dialog`的token是在`ActivityRecord`中的`Token extends IApplication.Stub`
+
+
+- 窗口的`type`属性的默认值应该是`TYPE_APPLICATION_PANEL`:
+
+		private int mWindowLayoutType = WindowManager.LayoutParams.TYPE_APPLICATION_PANEL;
+
+		public static final int TYPE_APPLICATION_PANEL = FIRST_SUB_WINDOW;
+
+
+## 3.4 PopupWindow.preparePopup()
+
+    private void preparePopup(WindowManager.LayoutParams p) {
+
+
+		// 判断是否设置了  Drawable mBackground
+        if (mBackground != null) {
+            mBackgroundView = createBackgroundView(mContentView);
+            mBackgroundView.setBackground(mBackground);
+        } else {
+            mBackgroundView = mContentView;
+        }
+
+        mDecorView = createDecorView(mBackgroundView);
+        mDecorView.setIsRootNamespace(true);
+
+        // The background owner should be elevated so that it casts a shadow.
+        mBackgroundView.setElevation(mElevation);
+
+        // We may wrap that in another view, so we'll need to manually specify
+        // the surface insets.
+        p.setSurfaceInsets(mBackgroundView, true /*manual*/, true /*preservePrevious*/);
+
+        mPopupViewInitialLayoutDirectionInherited =
+                (mContentView.getRawLayoutDirection() == View.LAYOUT_DIRECTION_INHERIT);
+    }
+
+### 3.4.1 PopupWindow.createBackgroundView()
+
+    private PopupBackgroundView createBackgroundView(View contentView) {
+        final ViewGroup.LayoutParams layoutParams = mContentView.getLayoutParams();
+        final int height;
+        if (layoutParams != null && layoutParams.height == WRAP_CONTENT) {
+            height = WRAP_CONTENT;
+        } else {
+            height = MATCH_PARENT;
+        }
+
+        final PopupBackgroundView backgroundView = new PopupBackgroundView(mContext);
+        final PopupBackgroundView.LayoutParams listParams = new PopupBackgroundView.LayoutParams(
+                MATCH_PARENT, height);
+        backgroundView.addView(contentView, listParams);
+
+        return backgroundView;
+    }
+
+- 创建了一个`PopupBackgroundView`,对视图View进行包装
+
+### 3.4.2 PopupWindow.createDecorView()
+
+    private PopupDecorView createDecorView(View contentView) {
+		................
+        final PopupDecorView decorView = new PopupDecorView(mContext);
+        decorView.addView(contentView, MATCH_PARENT, height);
+		.............
+        return decorView;
+    }
+
+- 使用`PopupDecorView`对`PopupBackgroundView`或者原始视图View 进行包装
+
+- 该包装后的View 代表`PopupWindow`的根视图,类似于Activity的`DecorView`
+
+
+## 3.5 PopupWindow.invokePopup()
+
+    private void invokePopup(WindowManager.LayoutParams p) {
+		...........
+
+        final PopupDecorView decorView = mDecorView;
+        mWindowManager.addView(decorView, p);
+
+    }
+
+- 主要就是调用了`WindowManagerImpl`去添加视图
+
+- 这里的`WindowManager`是在其构造函数中创建的,获取的是视图View 对应的那个.**可以是Activity,也可以是Application,这对后续添加视图没有影响**
+
+	**因为`PopupWindow`的`token`是显性赋值的，就是是就算用`Application`，也不会有什么问题，对于`PopupWindow`子窗口，关键点是View锚点决定其token，而不是`WindowManagerImpl`对象**
+
+
+## 3.6 WindowManagerImpl.addView()
+
+	public void addView(@NonNull View view, @NonNull ViewGroup.LayoutParams params) {
+	    applyDefaultToken(params);
+	    mGlobal.addView(view, params, mContext.getDisplay(), mParentWindow);
+	}
+
+- 假设这里的是`Activity`对应的`WindowManagerImpl`,那么`mParentWindow`就是`Activity.attach()`方法中`PhoneWindow`
+
+
+### 3.6.1 WindowManagerService.addView() 
+
+    public int addWindow(Session session, IWindow client, int seq,
+            WindowManager.LayoutParams attrs, int viewVisibility, int displayId,
+            Rect outContentInsets, Rect outStableInsets, Rect outOutsets,
+            InputChannel outInputChannel) {
+
+	        WindowState parentWindow = null;
+
+	       // PopupWindow的type属于子窗口,那就需要找到其对应的父窗口对应的WindowState
+			//PopupWindow的type是手动指定的,是父窗口的IWindow
+			// 获取到父窗口的WindowState
+	       WindowState attachedWindow = null;
+            if (type >= FIRST_SUB_WINDOW && type <= LAST_SUB_WINDOW) {
+                parentWindow = windowForClientLocked(null, attrs.token, false);
+				...........非空判断...
+            }
+	        // 如果Activity第一次添加子窗口 ，子窗口分组对应的WindowToken一定是null
+            WindowToken token = displayContent.getWindowToken(
+                    hasParent ? parentWindow.mAttrs.token : attrs.token);
+	        AppWindowToken atoken = null;
+	        if (token == null) {
+	        ...
+	            token = new WindowToken(this, attrs.token, -1, false);
+	            addToken = true;
+	        }           
+
+	       // 新建窗口WindowState对象 注意这里的parentWindow 是父窗口的WindowState
+           WindowState win = new WindowState(this, session, client, token, parentWindow,
+                    appOp[0], seq, attrs, viewVisibility, session.mUid,
+                    session.mCanAddInternalSystemWindow);
+	       ...
+			//添加更新全部map
+			mWindowMap.put(client.asBinder(), win);
+			win.mToken.addWindow(win);
+
+	
+	}
+
+- `PopupWindow`属于子窗口,其对应的父类的`WindowState`是存在的
+
+- 这里获取到的`PopupWindow`对应的`WindowToken`是其父窗口的,`PopupWindow`属于父窗口那组
+
+# 4. 窗口的Z次序管理:窗口的分配序号,次序调整等
