@@ -461,3 +461,138 @@ Dialog的窗口类型属于应用窗口，如果采用Application作为context�
 - 这里获取到的`PopupWindow`对应的`WindowToken`是其父窗口的,`PopupWindow`属于父窗口那组
 
 # 4. 窗口的Z次序管理:窗口的分配序号,次序调整等
+Android 的坐标体系实际上是包含x,z,y三个维度
+
+
+![](http://ww1.sinaimg.cn/large/6ab93b35ly1g1tyc2cr9gj20rs0qk0sl.jpg)
+
+
+在WMS中，`WindowState`代表一个窗口，内部采用三个个int值`mBaseLayer+ mSubLayer + mLayer `来标志窗口所处的位置，前两个主要是根据窗口类型确定窗口位置，mLayer才是真正的值，`WindowToken`则是窗口进行分组的依据。 
+
+
+	class WindowState extends WindowContainer<WindowState> implements WindowManagerPolicy.WindowState {
+	
+	    final int mBaseLayer;
+	    final int mSubLayer;
+
+	    int mLayer;
+	
+	}
+	
+
+- `mBaseLayer`用来标志窗口的主次序，面向的是一个窗口组，而`mSubLayer`主要面向单独窗口，要来标志一个窗口在这组窗口中的位置，对两者来说值越大，窗口越靠前，
+
+	从此final属性知道，两者的值是不能修改的，而`mLayer`可以修改，对于系统窗口，一般不会同时显示两个，因此，可以用主序决定，比较特殊的就是Activity与子窗口，首先子窗口的主序肯定是父窗口决定的，子窗口只关心次序就行。
+	
+- 父窗口的主序相对麻烦，比如对于应用窗口来说，他们的主序都是一样的，因此还要有一个其他的维度来作为参考，比如对于Activity，主序都是一样的，怎么定他们真正的Z-order呢？其实Activity的顺序是由AMS保证的，这个顺序定了，WMS端Activity窗口的顺序也是定了，这样下来次序也方便定了。
+
+
+## 4.1 WindowState的构造函数
+
+
+    WindowState(WindowManagerService service, Session s, IWindow c, WindowToken token,
+           WindowState parentWindow, int appOp, int seq, WindowManager.LayoutParams a,
+           int viewVisibility, int ownerId, boolean ownerCanAddInternalSystemWindow) {
+			
+			// 计算子窗口的层级
+			// 在这里决定了mBaseLayer 和 mSubLayer
+        if (mAttrs.type >= FIRST_SUB_WINDOW && mAttrs.type <= LAST_SUB_WINDOW) {
+            // The multiplier here is to reserve space for multiple
+            // windows in the same type layer.
+            mBaseLayer = mPolicy.getWindowLayerLw(parentWindow)
+                    * TYPE_LAYER_MULTIPLIER + TYPE_LAYER_OFFSET;
+            mSubLayer = mPolicy.getSubWindowLayerFromTypeLw(a.type);
+            mIsChildWindow = true;
+
+				// 将代表子窗口的WindowState添加到代表父窗口的WindowState中
+            parentWindow.addChild(this, sWindowSubLayerComparator);
+
+            mLayoutAttached = mAttrs.type !=
+                    WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG;
+            mIsImWindow = parentWindow.mAttrs.type == TYPE_INPUT_METHOD
+                    || parentWindow.mAttrs.type == TYPE_INPUT_METHOD_DIALOG;
+            mIsWallpaper = parentWindow.mAttrs.type == TYPE_WALLPAPER;
+            
+            // 计算普通窗口的层级
+        } else {
+            // The multiplier here is to reserve space for multiple
+            // windows in the same type layer.
+            mBaseLayer = mPolicy.getWindowLayerLw(this)
+                    * TYPE_LAYER_MULTIPLIER + TYPE_LAYER_OFFSET;
+				// 普通窗口不需要
+            mSubLayer = 0;
+            mIsChildWindow = false;
+            mLayoutAttached = false;
+            mIsImWindow = mAttrs.type == TYPE_INPUT_METHOD
+                    || mAttrs.type == TYPE_INPUT_METHOD_DIALOG;
+            mIsWallpaper = mAttrs.type == TYPE_WALLPAPER;
+        }
+
+        mLayer = 0;
+		
+    }
+    
+- 由于窗口所能选择的类型是确定的，因此`mBaseLayer`与`mSubLayer`所能选择的值只有固定几个，很明显这两个参数不能精确的确定Z-order，还会有其他微调的手段，也仅限微调，在系统层面，决定了不同类型窗口所处的位置，比如系统Toast类型的窗口一定处于所有应用窗口之上
+
+
+不过我们最关心的是Activity类的窗口如何确定Z-order的，在`new WindowState`之后，只是粗略的确定了Activity窗口的次序，看一下添加窗口的示意代码：  
+
+## 4.2 WindowManagerService.addWindow()
+
+
+		public int addWindow(Session session, IWindow client, int seq,
+            WindowManager.LayoutParams attrs, int viewVisibility, int displayId,
+            Rect outContentInsets, Rect outStableInsets, Rect outOutsets,
+            InputChannel outInputChannel) {
+            ............
+            
+			final WindowState win = new WindowState(this, session, client, token, parentWindow,
+                    appOp[0], seq, attrs, viewVisibility, session.mUid,
+                    session.mCanAddInternalSystemWindow);
+
+				// 根据窗口的type 添加不同的限制flag
+			mPolicy.adjustWindowParamsLw(win.mAttrs);
+            
+            // Don't do layout here, the window must call
+            // relayout to be displayed, so we'll do it there.
+			displayContent.assignWindowLayers(false /* setLayoutNeeded */);
+
+        return res;
+    }		
+
+- 这里的`mPolicy`指的是`PhoneWindowManager`,在`SystemServer`中创建WMS时就被创建出来并传入WMS
+
+
+## 4.3 DisplayContent.assignWindowLayers()
+
+    /** Updates the layer assignment of windows on this display. */
+    void assignWindowLayers(boolean setLayoutNeeded) {
+        mLayersController.assignWindowLayers(this);
+        if (setLayoutNeeded) {
+            setLayoutNeeded();
+        }
+    }
+    
+### 4.3.1 WindowLayersController.assignWindowLayers()
+
+    final void assignWindowLayers(DisplayContent dc) {
+    
+        reset();
+        dc.forAllWindows(mAssignWindowLayersConsumer, false /* traverseTopToBottom */);
+
+        adjustSpecialWindows();
+
+        if (mService.mAccessibilityController != null && mAnyLayerChanged
+                && dc.getDisplayId() == DEFAULT_DISPLAY) {
+            mService.mAccessibilityController.onWindowLayersChangedLocked();
+        }
+    }
+    
+- 在这个方法中计算了窗口的层级关系
+
+
+![](http://ww1.sinaimg.cn/large/6ab93b35ly1g1u2be7iohj20rs0ewwep.jpg)
+
+
+
+
