@@ -118,8 +118,30 @@ lambda表达式有三个部分：
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1fn9d03nueuj20ot0aon15.jpg)
 
+## 1.7 示例
+
+	Runnable runnable = new Runnable() {
+		@Override
+		public void run() {
+                
+		}
+ 	};
+        
+	Runnable runnable = () -> {
+
+	};
 
 
+	Comparator<Integer> comparator = new Comparator<Integer>() {
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			return 0;
+		}
+	};
+
+	Comparator<Integer> comparator = (Integer a, Integer b) -> {
+		return 0;
+	};
 
 
 
