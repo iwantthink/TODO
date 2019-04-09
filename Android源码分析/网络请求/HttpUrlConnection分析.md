@@ -6,6 +6,8 @@
 
 [OkUrlFactory 源码](https://android.googlesource.com/platform/external/okhttp/+/refs/heads/oreo-release/okhttp-urlconnection/src/main/java/com/squareup/okhttp/OkUrlFactory.java)
 
+[ConfigAwareConnectionPool 源码](https://android.googlesource.com/platform/external/okhttp/+/refs/heads/oreo-release/android/main/java/com/squareup/okhttp/ConfigAwareConnectionPool.java)
+
 [HttpURLConnection 源码分析](https://www.jianshu.com/p/35ecbc09c160)
 
 
@@ -291,6 +293,8 @@
 
 # 4. HttpUrlConnection的创建
 
+**具体来说是`HttpURLConnectionImpl`或`HttpsURLConnectionImpl`的创建**
+
 ## 4.1 HttpHandler.openConnection()
 
     @Override 
@@ -314,6 +318,58 @@
         okUrlFactory.client().setConnectionPool(configAwareConnectionPool.get());
         return okUrlFactory;
     }
+
+### 4.2.1 HttpHandler.ConfigAwareConnectionPool
+
+	private final ConfigAwareConnectionPool configAwareConnectionPool =
+            ConfigAwareConnectionPool.getInstance();
+
+### 4.2.2 ConfigAwareConnectionPool.get()
+
+	  /**
+	   * Returns the current {@link ConnectionPool} to use.
+	   */
+	  public synchronized ConnectionPool get() {
+	    if (connectionPool == null) {
+	      if (!networkEventListenerRegistered) {
+	        networkEventDispatcher.addListener(new NetworkEventListener() {
+	          @Override
+	          public void onNetworkConfigurationChanged() {
+	            synchronized (ConfigAwareConnectionPool.this) {
+				  // 如果网络配置发生改变,那就将connectionPool 置空以确保下次不再重复使用,而是重新生成
+	              connectionPool = null;
+	            }
+	          }
+	        });
+	        networkEventListenerRegistered = true;
+	      }
+	      connectionPool = new ConnectionPool(
+	          CONNECTION_POOL_MAX_IDLE_CONNECTIONS, CONNECTION_POOL_KEEP_ALIVE_DURATION_MS);
+	    }
+	    return connectionPool;
+	  }
+
+- `CONNECTION_POOL_MAX_IDLE_CONNECTIONS`和`CONNECTION_POOL_KEEP_ALIVE_DURATION_MS`作为默认值会优先从系统配置中取值
+
+### 4.2.3 ConnectionPool的构造函数
+
+	  public ConnectionPool(int maxIdleConnections, long keepAliveDurationMs) {
+	    this(maxIdleConnections, keepAliveDurationMs, TimeUnit.MILLISECONDS);
+	  }
+
+	  public ConnectionPool(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
+	    this.maxIdleConnections = maxIdleConnections;
+	    this.keepAliveDurationNs = timeUnit.toNanos(keepAliveDuration);
+	    // Put a floor on the keep alive duration, otherwise cleanup will spin loop.
+	    if (keepAliveDuration <= 0) {
+	      throw new IllegalArgumentException("keepAliveDuration <= 0: " + keepAliveDuration);
+	    }
+	  }
+
+- `maxIdleConnections`:`ConnectionPool`中空闲TCP连接的最大数量.
+
+- `keepAliveDuration`:`ConnectionPool`中TCP连接最长的空闲时长.
+
 
 ## 4.3 HttpHandler.createHttpOkUrlFactory()
 
@@ -379,3 +435,75 @@
 - `CleartextURLFilter`用来判断是否能够与指定URL的host 进行明文通信
 
 ## 4.4 OkUrlFactory.open()
+
+	public HttpURLConnection open(URL url) {
+		return open(url, client.getProxy());
+	}
+  
+	HttpURLConnection open(URL url, Proxy proxy) {
+		String protocol = url.getProtocol();
+    	OkHttpClient copy = client.copyWithDefaults();
+    	copy.setProxy(proxy);
+    	if (protocol.equals("http")) {
+			return new HttpURLConnectionImpl(url, copy, urlFilter);
+    	}
+
+		if (protocol.equals("https")) {
+			return new HttpsURLConnectionImpl(url, copy, urlFilter);
+		}    		
+
+		throw new IllegalArgumentException("Unexpected protocol: " + protocol);
+	}
+
+- 根据协议创建`HttpUrlConnectionImpl`或`HttpsUrlConnectionImpl`
+
+# 5. HttpsUrlConnection的创建
+
+`HttpsHandler` 重写了`HttpHandler`的`newOkUrlFactory()`方法
+
+
+## 5.1 HttpsHandler.newOkUrlFactory()
+
+    @Override
+    protected OkUrlFactory newOkUrlFactory(Proxy proxy) {
+        OkUrlFactory okUrlFactory = createHttpsOkUrlFactory(proxy);
+
+        okUrlFactory.client().setConnectionPool(configAwareConnectionPool.get());
+        return okUrlFactory;
+    }
+
+### 5.1.1 HttpsHandler.createHttpsOkUrlFactory()
+
+    public static OkUrlFactory createHttpsOkUrlFactory(Proxy proxy) {
+
+		// 创建一个 进行Https通信的Client,只需要在OkHttpClient的基础上添加一些额外配置
+        OkUrlFactory okUrlFactory = HttpHandler.createHttpOkUrlFactory(proxy);
+		// 允许所有的HTTPS 请求
+        okUrlFactory.setUrlFilter(null);
+        OkHttpClient okHttpClient = okUrlFactory.client();
+
+        // Only enable HTTP/1.1 (implies HTTP/1.0). Disable SPDY / HTTP/2.0.
+        okHttpClient.setProtocols(HTTP_1_1_ONLY);
+        okHttpClient.setConnectionSpecs(Collections.singletonList(TLS_CONNECTION_SPEC));
+
+        // Android support certificate pinning via NetworkSecurityConfig so there is no need to
+        // also expose OkHttp's mechanism. The OkHttpClient underlying https HttpsURLConnections
+        // in Android should therefore always use the default certificate pinner, whose set of
+        // {@code hostNamesToPin} is empty.
+        okHttpClient.setCertificatePinner(CertificatePinner.DEFAULT);
+
+        // OkHttp does not automatically honor the system-wide HostnameVerifier set withHttpsURLConnection.setDefaultHostnameVerifier().
+        okUrlFactory.client().setHostnameVerifier(HttpsURLConnection.getDefaultHostnameVerifier());
+
+        // OkHttp does not automatically honor the system-wide SSLSocketFactory set with
+        // HttpsURLConnection.setDefaultSSLSocketFactory().
+        // See https://github.com/square/okhttp/issues/184 for details.
+        okHttpClient.setSslSocketFactory(HttpsURLConnection.getDefaultSSLSocketFactory());
+        return okUrlFactory;
+    }
+
+- `ConnectionSpecs`:值为`TLS_CONNECTION_SPEC`,代表需要支持TLS,即密文传输
+
+- `Protocols`:表示TLS握手阶段时，通过ALPN协商应用层协议时客户端ClientHello携带的应用层协议列表
+
+- `SSLSocketFactory`
