@@ -20,9 +20,56 @@
 
 7. CallServerInterceptor——负责向服务器发送请求数据、从服务器读取响应数据(实际网络请求)
 
+拦截器链(`RealInterceptorChain`)使用责任链模式将开发者设置的拦截器，OKHttp Corem,全部的网络拦截器,网络调用者组合在一起. 
+
+## 1.1 拦截器链的功能
+
+使用下面的伪代码来表示`RealInterceptorChain`的功能:
+
+    Response getResponseWithInterceptorChain() throws IOException {
+
+        List<Interceptor> interceptors = new ArrayList<>();
+        interceptors.addAll(client.interceptors());
+        interceptors.add(retryAndFollowUpInterceptor);
+        interceptors.add(new BridgeInterceptor(client.cookieJar()));
+        interceptors.add(new CacheInterceptor(client.internalCache()));
+        interceptors.add(new ConnectInterceptor(client));
+        if (!forWebSocket) {
+            interceptors.addAll(client.networkInterceptors());
+        }
+        interceptors.add(new CallServerInterceptor(forWebSocket));
+
+        Interceptor.Chain chain = new RealInterceptorChain(interceptors, null, null, null, 0,
+                originalRequest, this, eventListener, client.connectTimeoutMillis(),
+                client.readTimeoutMillis(), client.writeTimeoutMillis());
+
+        return chain.proceed(originalRequest);
+    }
+
+	public Response proceed(Request request, StreamAllocation streamAllocation, HttpCodec httpCodec,RealConnection connection){
+		 // index用来控制具体使用哪个拦截器
+        RealInterceptorChain next = new RealInterceptorChain(interceptors, streamAllocation, httpCodec,
+                connection, index + 1, request, call, eventListener, connectTimeout, readTimeout,
+                writeTimeout);
+        Interceptor interceptor = interceptors.get(index);
+        Response response = interceptor.intercept(next);
+		 return response;
+	}
+
+    public Response intercept(RealInterceptorChain chain) {
+    	// 当前拦截器处理
+       // 交给下一个拦截器去操作
+		response = realChain.proceed(request, streamAllocation, null, null);
+		// 当前拦截器处理
+		return response;
+    }
+
+
+
 # 2. RetryAndFollowUpInterceptor
 
 `RetryAndFollowUpInterceptor`主要作用就是判断当前请求是否需要重试或重定向
+
 
 ## 2.1 RetryAndFollowUpInterceptor的构造函数
 
@@ -149,6 +196,10 @@
     }
 
 - **该拦截器在正常情况下并没有什么逻辑，只有当出现异常，例如重试和重定向时，这个拦截器才起作用**
+
+- `StreamAllocation`在初始化时许多参数都为空，它在之后的链式调用中才会陆续的创建一系列的参数
+
+	其主要的功能是协调`Connections,Streams,Calls`三者之间的关系
 
 - `StreamAllocation`:主要是在ConnectInterceptor中使用,用于创建跟请求相关的网络组件
 
