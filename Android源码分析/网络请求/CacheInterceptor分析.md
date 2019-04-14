@@ -19,7 +19,7 @@
 	}
 
     public Response proceed(Request request) throws IOException {
-    	 // 之类的 streamAllocation,httpCodec,connection 使用拦截链中的值
+    	 // streamAllocation,httpCodec,connection 使用拦截链中的值
     	 // 除了streamAllocation 在 RAFInterceptor中被创建，其余仍未被创建
         return proceed(request, streamAllocation, httpCodec, connection);
     }
@@ -93,7 +93,7 @@
         try {
               networkResponse = chain.proceed(networkRequest);
         } finally {
-            // 碰到了I/O问题，关闭缓存响应的body
+            // 碰到了I/O问题，关闭缓存响应的资源
             if (networkResponse == null && cacheCandidate != null) {
                 closeQuietly(cacheCandidate.body());
             }
@@ -149,9 +149,7 @@
         return response;
     }
     
-- `InternalCache`的具体实现类就是 `CacheAdapter`    
-
-	在`CacheInterceptor`拦截器被创建时，会将`OKHttpClient`的`Cache`传递进来
+- 在`CacheInterceptor`拦截器被创建时，会将`OKHttpClient`的`Cache`传递进来
 	
 	
 - `Request strategy.networkRequest`:表示发送给网络的请求，如果为null则表示当前请求不需要使用网络
@@ -465,7 +463,7 @@
 
 ### 4.1.3 DiskLruCache
 
-`DiskLruCache`在文件系统上使用有限的空间进行缓存操作，每个缓存的条目都存在一个字符串key和固定数量的值，每个密钥必须与正则表达式<strong> [a-z0-9 _-] {1,64} </ strong>匹配
+`DiskLruCache`在文件系统上使用有限的空间进行缓存操作，每个缓存的条目都存在一个字符串key和固定数量的值，每个密钥必须与正则表达式`<strong> [a-z0-9 _-] {1,64} </ strong>`匹配
 
 值如果是字节序列，那么可以作为流或文件来访问，其长度必须介于`0-Integet.MAX_VALUE`
 
