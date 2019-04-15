@@ -37,6 +37,15 @@
 	
 - `HttpCodec`和`RealConnection`未创建，`StreamAllocation`已经在`RAFInterceptor`中创建	
 
+## 1.2 BridgeInteceptor构造函数
+
+    private final CookieJar cookieJar;
+
+    public BridgeInterceptor(CookieJar cookieJar) {
+        this.cookieJar = cookieJar;
+    }
+
+
 
 # 2. BridgeInterceptor.intercept()
 
