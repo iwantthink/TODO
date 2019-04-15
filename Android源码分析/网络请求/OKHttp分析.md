@@ -4,6 +4,10 @@
 
 [Github- okhttp 库](https://github.com/square/okhttp)
 
+[InetAddress类](http://moranshouwang.com/articles/2018/08/26/1535282929258.html)
+
+[[疯狂Java]代理服务器：Proxy（代理连接）、ProxySelector（自动代理选择器）、默认代理选择器](https://blog.csdn.net/Lirx_Tech/article/details/51005281)
+
 
 # 1. 简介
 
@@ -79,7 +83,7 @@
       connectionSpecs = DEFAULT_CONNECTION_SPECS;
       // 定义一个工厂，返回了一个实现为空的EventListener
       eventListenerFactory = EventListener.factory(EventListener.NONE);
-      // 代理选择器
+      // 代理选择器，默认可能为空
       proxySelector = ProxySelector.getDefault();
       if (proxySelector == null) {
         proxySelector = new NullProxySelector();
@@ -89,15 +93,15 @@
       socketFactory = SocketFactory.getDefault();
       // 主机名验证
       hostnameVerifier = OkHostnameVerifier.INSTANCE;
-      // 证书链
+      // 证书验证
       certificatePinner = CertificatePinner.DEFAULT;
       // 代理身份验证
       proxyAuthenticator = Authenticator.NONE;
       // 本地身份验证
       authenticator = Authenticator.NONE;
-      // 链接池
+      // 连接池，复用连接
       connectionPool = new ConnectionPool();
-      // 域名
+      // 域名解析，通过连接DNS服务器查询，获取host对应的ip
       dns = Dns.SYSTEM;
       // 是否支持SSL重定向
       followSslRedirects = true;
@@ -115,6 +119,14 @@
       writeTimeout = 10_000;
       pingInterval = 0;
     }    
+    
+    
+- `CertificatePinner `：该类用来约束哪些证书是可信的（固定证书可以防御对证书验证的攻击）
+
+- `SSLSocket`:扩展自Socket，使用SSL或TLS协议的安全套接字
+
+- `DNS`: 解析Host 获取对应的ip地址，返回`InetAddress`列表，(`InetAddress`保存`ip`)
+    
     
 # 4. Request的创建
 
