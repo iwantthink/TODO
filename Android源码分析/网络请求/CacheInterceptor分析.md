@@ -34,6 +34,14 @@
         Response response = interceptor.intercept(next);
 		 return response;
 	}
+
+## 1.2 CacheInterceptor构造函数
+
+    InternalCache cache;
+
+    public CacheInterceptor(@Nullable InternalCache cache) {
+        this.cache = cache;
+    }	
 	
 # 2. CacheInterceptor.intercept()
 
