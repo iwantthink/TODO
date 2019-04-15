@@ -305,6 +305,10 @@
     
 - 判断是否还有其他可用的路由
 
+
+### 3.1.4 StreamAllocation.streamFailed()
+
+根据异常对当前流进行处理，例如记录失败的路由，标记Connection需要进行释放，标记Connection无法创建新的流等等操作
     
 ## 3.2 Response priorResponse的含义
 
@@ -544,7 +548,7 @@
 
 - `DNS`: 解析Host 获取对应的ip地址，返回`InetAddress`列表，(`InetAddress`保存`ip`)
 
-- `Client.proxy`:
+- `Client.proxy`: 默认不会创建
 
 ### 4.2.2 Address 构造函数
 

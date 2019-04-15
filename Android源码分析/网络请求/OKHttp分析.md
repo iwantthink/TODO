@@ -127,6 +127,8 @@
 
 - `DNS`: 解析Host 获取对应的ip地址，返回`InetAddress`列表，(`InetAddress`保存`ip`)
     
+- `DEFAULT_CONNECTION_SPECS `:包含`ConnectionSpec.MODERN_TLS`,`ConnectionSpec.CLEARTEXT  ` .简单的理解，前者支持Https，后者支持Http。此外 前者是OkHttp默认的
+    
     
 # 4. Request的创建
 

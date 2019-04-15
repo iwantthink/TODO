@@ -251,15 +251,17 @@
             }
         }
 
-        // 如果第二次 有找到，那么直接返回
+        // 切换路由之后从连接池中找到，那么需要调用回调并返回
         if (foundPooledConnection) {
             eventListener.connectionAcquired(call, result);
             return result;
         }
 
+		  // Connection是新创建的
         // 进行 TCP + TLS handshakes操作(阻塞的操作)
         result.connect(connectTimeout, readTimeout, writeTimeout, pingIntervalMillis,
                 connectionRetryEnabled, call, eventListener);
+        // 将该路由从错误缓存记录中移除
         routeDatabase().connected(result.route());
 
         Socket socket = null;
@@ -269,9 +271,8 @@
             // 将Connection加入连接池
             Internal.instance.put(connectionPool, result);
 
-            // If another multiplexed connection to the same address was created concurrently, then
-            // release this connection and acquire that one.
-            // 存在多路复用，则合并
+            // 去重操作
+            // 存在多个Connection连接至相同的Address，则合并
             if (result.isMultiplexed()) {
                 socket = Internal.instance.deduplicate(connectionPool, address, this);
                 result = connection;
@@ -425,7 +426,7 @@
         }
     }
 
-#### 2.3.4.1 RealConnection.isEligible()
+#### 2.3.6.1 RealConnection.isEligible()
 
     public boolean isEligible(Address address, @Nullable Route route) {
         // 如果当前Connection 最大并发数已经达到上限 || 无法创建新的流 。 则匹配失败
@@ -476,7 +477,7 @@
 
 	2. 如果是Http/2 ,通过其特性合并连接复用
 
-#### 2.3.4.2 StreamAllocation.acquire
+#### 2.3.6.2 StreamAllocation.acquire
 
     public void acquire(RealConnection connection, boolean reportedAcquired) {
         assert (Thread.holdsLock(connectionPool));
@@ -490,3 +491,58 @@
     }
 
 - 创建一个包装引用（弱引用），用来保存当前StreamAllocation. 即往当前Connection中添加一条流
+
+
+
+### 2.3.7 RealConnection.connect()
+
+真正建立了连接的地方。。等学习了Http的知识之后 再回来分析看看。。。
+//TODO
+
+
+### 2.3.8 routeDatabase().connected()
+
+	public final class RouteDatabase {
+	    private final Set<Route> failedRoutes = new LinkedHashSet<>();
+	
+	    /**
+	     * Records a failure connecting to {@code failedRoute}.
+	     */
+	    public synchronized void failed(Route failedRoute) {
+	        failedRoutes.add(failedRoute);
+	    }
+	
+	    /**
+	     * Records success connecting to {@code route}.
+	     */
+	    public synchronized void connected(Route route) {
+	        failedRoutes.remove(route);
+	    }
+	
+	    /**
+	     * Returns true if {@code route} has failed recently and should be avoided.
+	     */
+	    public synchronized boolean shouldPostpone(Route route) {
+	        return failedRoutes.contains(route);
+	    }
+	}
+
+- OKHttp会记录
+
+## 2.4 RealConnection.newCodec()
+
+    public HttpCodec newCodec(OkHttpClient client, Interceptor.Chain chain,
+                              StreamAllocation streamAllocation) throws SocketException {
+         // 如果连接是Http/2,则返回Http/2 对应的Http2Codec
+        if (http2Connection != null) {
+            return new Http2Codec(client, chain, streamAllocation, http2Connection);
+        } else {
+        	  //Http1.1
+            socket.setSoTimeout(chain.readTimeoutMillis());
+            source.timeout().timeout(chain.readTimeoutMillis(), MILLISECONDS);
+            sink.timeout().timeout(chain.writeTimeoutMillis(), MILLISECONDS);
+            return new Http1Codec(client, streamAllocation, source, sink);
+        }
+    }
+    
+- 根据不同的根据Connection
