@@ -64,6 +64,13 @@
 		return response;
     }
 
+## 1.2 RetryAndFollowUpInterceptor构造函数
+
+    private final OkHttpClient client;
+
+    public RetryAndFollowUpInterceptor(OkHttpClient client) {
+        this.client = client;
+    }
 
 
 # 2. RetryAndFollowUpInterceptor
@@ -450,6 +457,111 @@
 
 - **总结一下：根据返回码，决定是否需要重新构建一个`Request`，如果不需要则直接返回null**
 
+
+
+
+# 4. StreamAllocation
+
+这个类协调三个实体（`Conneciton,Stream,Call`）之间的关系
+
+1. `Connection`:连接到远程服务器的物理套接字，可能建立耗时很久，因此可以进行取消当前进行连接的Connection
+
+
+2. `Stream`:在连接上分层的逻辑Http Request/Response 对 .
+
+	每个连接都有自己的分配限制，该限制定义的是连接可以携带的并发流的数量
+	
+	Http/1.x 一次可以携带一个，Http/2 通常一次可以携带多个
+
+3. `Call`: 流的逻辑序列，通常是初始请求和后续请求 
+
+	对单个请求的所有流通常都保存在一个Conneciton中，以此获取更便捷的操作行为
+	
+	
+## 4.1 StreamAllocation中重要的成员
+
+`boolean 	noNewStreams`: 表示Connection无法再被新的流使用
+
+`Method streamFinished()`:从此次分配中释放活动的流
+
+`boolean release`:移除请求对Connection的连接。 当流仍然存在时，不会立即移除连接
+
+	
+	
+## 4.2 StreamAllocation的创建
+
+在`RetryAndFollowUpInterceptor`拦截器中创建了`StreamAllocation`
+
+    StreamAllocation streamAllocation = new StreamAllocation(client.connectionPool(),
+            createAddress(request.url()), call, eventListener, callStackTrace);
+            
+    public StreamAllocation(ConnectionPool connectionPool, Address address, Call call,
+                            EventListener eventListener, Object callStackTrace) {
+        this.connectionPool = connectionPool;
+        this.address = address;
+        this.call = call;
+        this.eventListener = eventListener;
+        this.routeSelector = new RouteSelector(address, routeDatabase(), call, eventListener);
+        this.callStackTrace = callStackTrace;
+    }
+    
+    
+- `ConnectionPool connectionPool`:连接池
+
+- `Address adress`: 与连接相关的信息，主机名，端口，代理，`SSLSocketFactory`,`HostNameVerifier`,`protocols`等等信息
+
+- `Call call`:对应`RealCall`
+            
+- `EventListener eventListener`: 默认实现为空
+
+- `RouteSelector`:用来选择一个连接至服务器的路由，每个连接都需要选择代理服务器，IP地址和TLS模式
+            
+            
+### 4.2.1 StreamAllocation.createAddress()    
+
+    private Address createAddress(HttpUrl url) {
+    	 // 创建SSlSocket的工厂类
+        SSLSocketFactory sslSocketFactory = null;
+        //主机名验证
+        HostnameVerifier hostnameVerifier = null;
+        //证书验证
+        CertificatePinner certificatePinner = null;
+        // 只有请求是Https 才需要设置
+        if (url.isHttps()) {
+            sslSocketFactory = client.sslSocketFactory();
+            hostnameVerifier = client.hostnameVerifier();
+            certificatePinner = client.certificatePinner();
+        }
+
+        return new Address(url.host(), url.port(), client.dns(), client.socketFactory(),
+                sslSocketFactory, hostnameVerifier, certificatePinner, client.proxyAuthenticator(),
+                client.proxy(), client.protocols(), client.connectionSpecs(), client.proxySelector());
+    }
+
+- `CertificatePinner `：该类用来约束哪些证书是可信的（固定证书可以防御对证书验证的攻击）
+
+- `SSLSocket`:扩展自Socket，使用SSL或TLS协议的安全套接字
+
+- `DNS`: 解析Host 获取对应的ip地址，返回`InetAddress`列表，(`InetAddress`保存`ip`)
+
+- `Client.proxy`:
+
+### 4.2.2 Address 构造函数
+
+    public Address(String uriHost, int uriPort, Dns dns, SocketFactory socketFactory,
+                   @Nullable SSLSocketFactory sslSocketFactory, @Nullable HostnameVerifier hostnameVerifier,
+                   @Nullable CertificatePinner certificatePinner, Authenticator proxyAuthenticator,
+                   @Nullable Proxy proxy, List<Protocol> protocols, List<ConnectionSpec> connectionSpecs,
+                   ProxySelector proxySelector) {
+		//对参数进行验证以及赋值
+
+    }
+
+- `Address`:表示连接至源服务器的规格。
+
+	对于简单的连接来说，仅包含主机名和端口 . 如果请求添加了代理，那这里还会包含代理信息。 对于安全连接，还包含`SSLSocketFactory`,`HostNameVerifier`以及`certificate pinner`
+
+### 4.2.3 RouteSelector
 
 
 
