@@ -189,6 +189,8 @@ c++学习
 	
 - 分析OKHttp
 
-	- 基本流程+拦截器
+	- ~~基本流程+拦截器~~
 
-	- 学习Http知识，然后再次分析OKHttp中 关于网络连接相关的逻辑	
+	- 学习Http知识，然后再次分析OKHttp中 关于网络连接相关的逻辑（`RealConnection.connect()`）	
+
+	- 分析OKHttp中测量事件耗时的类(EventListener),该类用于了解OKHttp中各个流程的耗时
