@@ -19,10 +19,11 @@
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1g1vdjbn4eoj20jw03v3yd.jpg)
 
+
 功能| 方法名称 | 值
----|---
+---|---|---
 获得URL的协议 |`String getProtocol()`|`http`
-获得授权机构信息（包括用户信息、主机和端口） |`String getAuthority()`|`user:pass@www.example.com:80`
+获得授权机构信息（包括用户信息、主机和端口） |`String getAuthority()`|`user:pass@www.example.com:80`|
 获得用户信息（用户名和密码） |`String getUserInfo()`|`user:pass`
 获取主机地址（域名或ip地址） |`String getHost()`|`www.example.com`
 获得端口 |`int getPort()`|`80`
@@ -31,6 +32,25 @@
 获取查询参数信息 |`String getQuery()`|`uid=1`
 获得片段信息 |`String getRef()`|`fragmentid`
 获得该协议默认端口 |`int getDefaultPort()`|`80`
+
+
+## 1.2 Socket
+
+在`TCP/IP`的五层协议模型中，**Socket是对传输层协议的封装**
+
+- 目前传输层协议有TCP、UDP协议两种
+
+- Socket本身并不是协议，而是一个调用接口（API），其可以指定使用的传输层协议，当使用TCP协议进行连接时，该Socket连接就是一个TCP连接。HttpURLConnection建立的连接是TCP连接，TCP连接的建立需要经过三次握手过程，然后开始慢启动。
+
+
+## 1.3 HTTP的发展
+
+### 1.3.1 HTTP/1.0 
+
+
+
+
+### 1.3.2 HTTP/1.1
 
 
 # 2. HttpUrlConnection的使用方式
