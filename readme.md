@@ -183,9 +183,13 @@ c++学习
 
 **Android基础概念**
 
-- 网络请求-HttpUrlConnection
+- HttpUrlConnection框架分析
 
-	具体的请求实体, 证书设置,SSLSocketFactory等概念
+	- 框架基本流程
+
+- Http概念
+
+	- 具体的请求实体, 证书设置,SSLSocketFactory等概念
 	
 - 分析OKHttp
 
