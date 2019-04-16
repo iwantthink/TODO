@@ -496,8 +496,90 @@
 
 ### 2.3.7 RealConnection.connect()
 
-真正建立了连接的地方。。等学习了Http的知识之后 再回来分析看看。。。
-//TODO
+真正建立了连接的地方。。
+
+
+    public void connect(int connectTimeout, int readTimeout, int writeTimeout,
+                        int pingIntervalMillis, boolean connectionRetryEnabled, Call call,
+                        EventListener eventListener) {
+         // protocol 已经创建则表示连接已经建立
+        if (protocol != null) throw new IllegalStateException("already connected");
+
+        RouteException routeException = null;
+        List<ConnectionSpec> connectionSpecs = route.address().connectionSpecs();
+        ConnectionSpecSelector connectionSpecSelector = new ConnectionSpecSelector(connectionSpecs);
+
+        if (route.address().sslSocketFactory() == null) {
+            if (!connectionSpecs.contains(ConnectionSpec.CLEARTEXT)) {
+                throw new RouteException(new UnknownServiceException(
+                        "CLEARTEXT communication not enabled for client"));
+            }
+            String host = route.address().url().host();
+            if (!Platform.get().isCleartextTrafficPermitted(host)) {
+                throw new RouteException(new UnknownServiceException(
+                        "CLEARTEXT communication to " + host + " not permitted by network security policy"));
+            }
+        } else {
+            if (route.address().protocols().contains(Protocol.H2_PRIOR_KNOWLEDGE)) {
+                throw new RouteException(new UnknownServiceException(
+                        "H2_PRIOR_KNOWLEDGE cannot be used with HTTPS"));
+            }
+        }
+
+        while (true) {
+            try {
+            	   // 判断当前是否是https请求 && 请求需要http代理
+                if (route.requiresTunnel()) {
+                    connectTunnel(connectTimeout, readTimeout, writeTimeout, call, eventListener);
+                    if (rawSocket == null) {
+                        // We were unable to connect the tunnel but properly closed down our resources.
+                        break;
+                    }
+                } else {
+                		// 创建Socket
+                    connectSocket(connectTimeout, readTimeout, call, eventListener);
+                }
+                // 根据http版本，分别创建http1codec 或 http2codec
+                establishProtocol(connectionSpecSelector, pingIntervalMillis, call, eventListener);
+                eventListener.connectEnd(call, route.socketAddress(), route.proxy(), protocol);
+                break;
+            } catch (IOException e) {
+                closeQuietly(socket);
+                closeQuietly(rawSocket);
+                socket = null;
+                rawSocket = null;
+                source = null;
+                sink = null;
+                handshake = null;
+                protocol = null;
+                http2Connection = null;
+
+                eventListener.connectFailed(call, route.socketAddress(), route.proxy(), null, e);
+
+                if (routeException == null) {
+                    routeException = new RouteException(e);
+                } else {
+                    routeException.addConnectException(e);
+                }
+
+                if (!connectionRetryEnabled || !connectionSpecSelector.connectionFailed(e)) {
+                    throw routeException;
+                }
+            }
+        }
+
+        if (route.requiresTunnel() && rawSocket == null) {
+            ProtocolException exception = new ProtocolException("Too many tunnel connections attempted: "
+                    + MAX_TUNNEL_ATTEMPTS);
+            throw new RouteException(exception);
+        }
+
+        if (http2Connection != null) {
+            synchronized (connectionPool) {
+                allocationLimit = http2Connection.maxConcurrentStreams();
+            }
+        }
+    }
 
 
 ### 2.3.8 routeDatabase().connected()
@@ -527,7 +609,7 @@
 	    }
 	}
 
-- OKHttp会记录
+- OKHttp会记录Connection连接到目标地址时，出现过错误的路由
 
 ## 2.4 RealConnection.newCodec()
 
