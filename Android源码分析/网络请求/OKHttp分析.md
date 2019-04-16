@@ -1,4 +1,5 @@
 # OKHttp分析
+[OkHttp 源码分析（一）—— 请求流程](https://zhuanlan.zhihu.com/p/58981410)
 
 [okhttp源码分析（一）——基本流程（超详细）](https://www.jianshu.com/p/37e26f4ea57b)
 
@@ -127,7 +128,7 @@
 
 - `DNS`: 解析Host 获取对应的ip地址，返回`InetAddress`列表，(`InetAddress`保存`ip`)
     
-- `DEFAULT_CONNECTION_SPECS `:包含`ConnectionSpec.MODERN_TLS`,`ConnectionSpec.CLEARTEXT  ` .简单的理解，前者支持Https，后者支持Http。此外 前者是OkHttp默认的
+- `DEFAULT_CONNECTION_SPECS `:包含`ConnectionSpec.MODERN_TLS`,`ConnectionSpec.CLEARTEXT  ` .简单的理解，前者支持Https，后者支持Http。此外 前者是OkHttp默认的配置
     
     
 # 4. Request的创建
@@ -593,4 +594,4 @@
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1g1yspd9jpsj20rs18gjs3.jpg)
     
-
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1g249uu2bhbj20k00hndgh.jpg)
