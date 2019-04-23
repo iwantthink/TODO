@@ -85,7 +85,7 @@ Gradle Wrapper 提供了一个batch文件，当使用脚本时，当前的gradle
                    	└── etc.
 
 
-- **setting.gradle **
+- **setting.gradle**
 
 	这个 setting 文件定义了哪些module 应该被加入到编译过程，对于单个module 的项目可以不用需要这个文件，但是对于 multimodule 的项目我们就需要这个文件，否则gradle 不知道要加载哪些项目。这个文件的代码在初始化阶段就会被执行。
 
