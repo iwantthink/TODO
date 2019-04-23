@@ -34,3 +34,11 @@ configurations{
 }
  
 println "mydep class = "+ configurations.myDep.class
+
+
+task hello {
+
+	doLast{
+		println 'Hello Gradle!'
+	}
+}
