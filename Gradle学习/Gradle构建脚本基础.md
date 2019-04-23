@@ -1,4 +1,4 @@
-[Tutorial Using Tasks](https://docs.gradle.org/current/userguide/tutorial_using_tasks.html)
+
 
 # 1.1 项目和任务
 Gradle中所有的内容都是基于俩个基本概念：**项目和任务**
