@@ -57,25 +57,24 @@ Gradle支持俩种类型的Task：
 
 - 可以替任务类 添加属性，这样在定义任务类的时候 就可以设置这个属性的值
 
-
-	public class GreetingTask extends DefaultTask{
-		// 定义了一个属性,使用默认值
-		public String name = 'name from greetingTask'
-
-		@TaskAction
-		def greet(){
-			println 'hello from greetingTask'
+		public class GreetingTask extends DefaultTask{
+			// 定义了一个属性,使用默认值
+			public String name = 'name from greetingTask'
+	
+			@TaskAction
+			def greet(){
+				println 'hello from greetingTask'
+			}
 		}
-	}
 
-	//use the default greeting
-	task hello(type:GreetingTask)
-
-	//customize the greeting
-	task greeting(type:GreetingTask){
-		// 配置时,修改name属性的值
-		name = 'hello from greeting'
-	}
+		//use the default greeting
+		task hello(type:GreetingTask)
+	
+		//customize the greeting
+		task greeting(type:GreetingTask){
+			// 配置时,修改name属性的值
+			name = 'hello from greeting'
+		}
 
 - **慎用name这个属性名...会导致任务执行错误(找不到该任务,实际上是存在的)**
 
