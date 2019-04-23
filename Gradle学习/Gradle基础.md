@@ -256,16 +256,16 @@ Settings script | Settings
 
 	1. 加载插件
 
-	通过`Project`对象的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
+		通过`Project`对象的`apply(key:value)`函数来加载插件，`apply plugin:'com.android.library'`
 	
 		- 除了加载二进制文件,还可以加载gradle文件
 
-		1. **from**: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
-		
-		2. **plugin**: Plugin的Id或者是插件的具体实现类 
-
-		3. **to**: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
+			1. **from**: 被添加的脚本. Accepts any path supported by Project.uri(java.lang.Object).
+			
+			2. **plugin**: Plugin的Id或者是插件的具体实现类 
 	
+			3. **to**: The target delegate object or objects. The default is this plugin aware object. Use this to configure objects other than this object.
+		
 	2. 配置插件。例如设置哪里读取源文件。
 	
 	3. 设置属性
