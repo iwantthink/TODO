@@ -1,18 +1,20 @@
-# Groovy介绍
+# Groovy学习
+[Groovy核心类源码讲解(上)](https://www.imooc.com/article/44004)
 
-- Groovy是一种动态语言，运行于JVM。定义：Groovy是在java平台上的，具有像Python,Ruby和smalltalk 语言特性的灵活动态语言
+[Groovy官方文档](http://www.groovy-lang.org/documentation.html)
 
-- Groovy类似于脚本(shell)的存在，执行Groovy脚本时，Groovy会先将其编译为java类字节码，然后通过JVM 执行这个java类
+[GDK API 示例(具体例子)](http://www.groovy-lang.org/groovy-dev-kit.html)
 
-- Groovy 除了使用JDK之外，还可以使用[GDK-API](http://www.groovy-lang.org/api.html)
+[Differences with Java](http://www.groovy-lang.org/differences.html)
 
-- 参考链接：
+# 简介
 
-	[Groovy官方文档](http://www.groovy-lang.org/documentation.html)
+Groovy是一种动态语言，运行于JVM。定义：Groovy是在java平台上的，具有像Python,Ruby和smalltalk 语言特性的灵活动态语言
 
-	[GDK API 示例(具体例子)](http://www.groovy-lang.org/groovy-dev-kit.html)
+Groovy类似于脚本(shell)的存在，执行Groovy脚本时，Groovy会先将其编译为java类字节码，然后通过JVM 执行这个java类
 
-	[Differences with Java](http://www.groovy-lang.org/differences.html)
+Groovy 除了使用JDK之外，还可以使用[GDK-API](http://www.groovy-lang.org/api.html)
+
 
 # 1. Groovy与Java的差异
 
