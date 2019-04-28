@@ -331,10 +331,119 @@ Gradle 的核心提供了很少的自动操作. 所有的实用特性,类似编�
 	    }
 	}
 
-- 这告诉Gradle使用指定的插件的实现工件，而不是使用内置默认的 从插件ID到Maven / Ivy仓库的映射
+- 这告诉Gradle使用指定的插件实现工件，而不是使用内置默认的 从插件ID到Maven / Ivy仓库的映射
 
 - 除了实际实现插件的工件之外，自定义Maven和Ivy插件存储库必须包含插件标记工件。 有关将插件发布到自定义存储库的更多信息，请阅读Gradle Plugin Development Plugin。
 
 
+# 12. Plugin Marker Artifacts
+
+因为`plugins {}`块仅允许通过全局唯一的插件id和版本属性来声明插件， Gradle需要一种方法来查找插件实现工件(`plugin implementation artifact`)的坐标
+
+- 为此，Gradle将通过使用坐标`plugin.id:plugin.id.gradle.plugin:plugin.version`,这个标记需要依赖于实际的插件实现。发布这些标记是由[java-grade-plugin](https://docs.gradle.org/current/userguide/java_gradle_plugin.html#java_gradle_plugin)自动完成的
 
 
+## 12.1 完整的插件发布示例
+
+下面是一个示例，存在于`sample-plugins`项目中，显示了如何使用`java-gradle-plugin`,`maven-publish-plugin`和`ivy-publish-plugin`将`org.gradle.sample.hello`插件和`org.gradle.sample.goodbye`插件发布到Ivy和Maven存储库
+
+	//build.gradle
+	plugins {
+	    id 'java-gradle-plugin'
+	    id 'maven-publish'
+	    id 'ivy-publish'
+	}
+	
+	group 'org.gradle.sample'
+	version '1.0.0'
+	
+	gradlePlugin {
+	    plugins {
+	        hello {
+	            id = 'org.gradle.sample.hello'
+	            implementationClass = 'org.gradle.sample.hello.HelloPlugin'
+	        }
+	        goodbye {
+	            id = 'org.gradle.sample.goodbye'
+	            implementationClass = 'org.gradle.sample.goodbye.GoodbyePlugin'
+	        }
+	    }
+	}
+	
+	publishing {
+	    repositories {
+	        maven {
+	            url '../../consuming/maven-repo'
+	        }
+	        ivy {
+	            url '../../consuming/ivy-repo'
+	        }
+	    }
+	}
+	
+- [Maven Publish Plugin](https://docs.gradle.org/current/userguide/publishing_maven.html#publishing_maven)	
+	
+- [Ivy Publish Plugin](https://docs.gradle.org/current/userguide/publishing_ivy.html#publishing_ivy)	
+	
+在项目中执行`gradle publish`命名后，就能得到以下的仓库布局：
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1g2i57c9f72j20oc0bhaay.jpg)
+
+
+
+# 13. 旧版的插件应用
+
+随着`plugins{}`DSL的引入，用户应该没有理由使用传统的应用插件的方法。如果构建作者由于当前工作方式的限制而不能使用插件DSL，这里将对其进行文档说明
+
+
+## 13.1 应用二进制插件(使用插件id)
+
+	build.gradle
+	apply plugin: 'java'
+
+- **插件可以通过插件id被应用**，上面的例子中，使用了缩写`java`去应用了[`JavaPlugin`](https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/JavaPlugin.html)
+
+
+## 13.2 应用二进制插件(使用类)
+
+**除了使用插件id，还可以通过简单地指定插件的类来应用插件**
+
+	//build.gradle
+	apply plugin: JavaPlugin
+
+- 上面的`JavaPlugin`符号指向了`JavaPlugin`类
+
+	由于`org.gradle.api.plugins`包在所有构建脚本中被自动导入，因此不需要严格导入`JavaPlugin`（[请参阅默认导入](https://docs.gradle.org/current/userguide/writing_build_scripts.html#script-default-imports)）
+
+
+此外，没有必要附加`.class`来标识Groovy中的类文字，就像在Java中一样。
+
+
+## 13.3 使用构建脚本块来应用插件
+
+通过将插件添加到构建脚本`classpath`然后应用插件，可以将已发布为外部jar文件的二进制插件添加到项目中
+
+- Gradle提供了`buildscript {}`块用来实现 将外部jar添加到构建脚本`classpath`中，如构建脚本的外部依赖项中所述
+
+### 13.3.1 使用buildscript块应用插件
+
+	buildscript {
+	    repositories {
+	        jcenter()
+	    }
+	    dependencies {
+	        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:0.4.1'
+	    }
+	}
+	
+	apply plugin: 'com.jfrog.bintray'
+
+
+# 14. 寻找社区插件
+
+Gradle提供了[plugin portal](https://plugins.gradle.org/)，开发者可能在这上面寻找插件
+
+
+# 15. 更多关于插件的信息
+
+本章旨在介绍插件和Gradle及其扮演的角色。 有关插件内部工作方式的更多信息，请参阅[自定义插件](https://docs.gradle.org/current/userguide/custom_plugins.html#custom_plugins)
