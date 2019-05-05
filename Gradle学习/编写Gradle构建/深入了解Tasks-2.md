@@ -5,25 +5,24 @@
 
 # 1. 简介
 
-Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自己的属性和方法. 这一点正是和 Ant targets 不一样的地方. 这些强大的任务既可以由你自己创建也可以使用 Gradle 内建好的
+Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自己的属性和方法. 这一点正是和 Ant targets 不一样的地方. 既可以使用自己创建的增强任务，也可以使用Gradle内置的增强任务
 
 
 # 2. 任务输出
 
+当Gradle执行任务时，会通过Tooling API在在控制台UI中使用标签标记任务的不同结果。这些标签是基于任务是否有要执行的动作，是否应执行这些动作，是否执行了这些动作，以及这些动作是否发生了变化
 
-当Gradle执行任务时，会通过Tooling API在在控制台UI中使用标签标记任务的不同结果。这些标签是基于任务是否有要执行的动作，是否应执行这些动作，是否执行了这些动作，以及这些动作是否发生了变化。
-
-- **标签：** (no label) or EXECUTED    
+- **标签：** `(no label) or EXECUTED  `  
  
-	**说明：**任务已经执行完成
+	**说明：**任务的动作已经执行完成
 	
 	**情况：**
 	
-	1. 当任务有动作且gradle确定task 是作为构建的一部分
+	1. 当任务有动作，并且gradle确定task是作为构建的一部分
 	2. 当任务没有动作或一些依赖，以及任何依赖已经被执行
 
 
-- **标签：**UP-TO-DATE    
+- **标签：** `UP-TO-DATE `
 
 	**说明：**任务输出没有改变
 	
@@ -34,7 +33,7 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	 3. 当一个任务没有action，但是有 dpendencies 。并且这些dependencies 已经是UP-TO-DATE,SKIPPED or from CACHE
 	 4. 当一个任务没有acton，也没有dependencies
 
-- **标签:**FROM-CACHE 
+- **标签:**` FROM-CACHE `
 
 	**说明：**任务的输出是从之前的执行结果中获得
 
@@ -43,9 +42,9 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	1. 当任务的输出恢复自构建缓存中
 
 
-- **标签：**SKIPPED 
+- **标签：** `SKIPPED `
 
-	**说明：**任务action'被跳过，没有执行其动作
+	**说明：**任务action被跳过，没有执行其动作
 
 	**情况:**
 
@@ -53,9 +52,9 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	2. 当一个任务拥有一个`onlyIf`断言，且返回了false
 
 
-- **标签：**NO-SOURCE 
+- **标签：** `NO-SOURCE `
 
-	**说明：**任务无需执行其action
+	**说明：**任务不需要执行其action
 
 	**情况:**
 		
@@ -65,12 +64,12 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 
 # 3. 定义 tasks
 
-**除了构建脚本基础中定义任务的形式 (keyword 形式). 还有一些变化的定义形式来适应某些特殊的情况**.
+**除了[构建脚本基础]()中定义任务的形式 (keyword 形式). 还有一些变化的定义形式来适应某些特殊的情况**.
 
 
 ## 3.1 方式1(使用字符串作为任务名称)
 	
-	build.gradle
+	// build.gradle
 	
 	task('hello') {
 		doLast{
@@ -81,29 +80,33 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	task('copy', type: Copy) {
 	    from(file('srcDir'))
 	    into(buildDir)
-	}
+	}	
 	
 ## 3.2 方式2(使用tasks容器定义任务)
 
 	
-	build.gradle
+	// build.gradle
 	
-	tasks.create(name: 'hello') << {
-	    println "hello"
+	tasks.create('hello') {
+	    doLast {
+	        println "hello"
+	    }
 	}
 	
-	tasks.create(name: 'copy', type: Copy) {
+	tasks.create('copy', Copy) {
 	    from(file('srcDir'))
 	    into(buildDir)
 	}
 	
-- 这里实际上我们把任务加入到 tasks collection 中. 可以看一看 [TaskContainer](https://docs.gradle.org/current/javadoc/org/gradle/api/tasks/TaskContainer.html) 来深入了解下.
+- 这里实际上我们把任务加入到 `tasks`中,`tasks`就是一个集合，类型为[TaskContainer](https://docs.gradle.org/current/javadoc/org/gradle/api/tasks/TaskContainer.html)
 
 
 ## 3.3 方式3(Defining tasks using a DSL specific syntax)
+
+Groovy DSL提供了特定的语法用于定义任务
 	
-	build.gradle
-	
+	// build.gradle
+	// Using Groovy dynamic keywords
 	task(hello) {
 		doLast{
 			println "hello"
@@ -115,15 +118,16 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	    into(buildDir)
 	}
 
+- 这里使用了Groovy动态关键字
+
 # 4. 定位任务
 
 为了配置任务或者使用任务作为依赖,经常需要在构建文件里找到已经定义的任务
 
 
 ## 4.1 方式1(Accessing tasks using a DSL specific syntax)
+Groovy DSL 提供了特定的语法用于定位任务
 
-
-	
 	task hello
 	task copy(type: Copy)
 	
@@ -135,18 +139,26 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	println copy.destinationDir
 	println project.copy.destinationDir
 	
-- 每一个任务都是一个 project 的有效属性, 该属性使用任务名来作为属性名	
+-  **在Project上使用Groovy动态属性访问任务**
 	
-## 4.2 方式2(使用tasks容器定定位任务)
+## 4.2 方式2(使用tasks容器定位任务)
 			
-	build.gradle
-	
 	task hello
+	task copy(type: Copy)
 	
 	println tasks.hello.name
-	println tasks['hello'].name
+	println tasks.named('hello').get().name
+	
+	println tasks.copy.destinationDir
+	println tasks.named('copy').get().destinationDir
 	
 ## 4.3 方式3	(使用路径定位任务)
+
+通过`tasks.getByPath()`方法可以在任意项目中访问任务
+
+- 该方法可以传递任务名称，相对路径或者绝对路径
+
+示例：
 	
 	project(':projectA') {
 	    task hello
@@ -168,35 +180,27 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	
 - 参考 [TaskContainer](https://docs.gradle.org/current/javadoc/org/gradle/api/tasks/TaskContainer.html) 可以知道跟多关于定位 tasks 的选项
 
-- `tasks.getByPath()` 方法通过任务的路径来使用任何 project 里的任务
-
-	`getByPath()` 方法的输入可以使用 任务的名字, 任务的相对路径或者绝对路径作为
-
 
 # 5. 配置任务
 
 举一个例子, 创建一个自定义的Copy任务，并对其进行配置:
 
-例子 15.7. 创建一个 copy task
-	
-	build.gradle
-	
 	task myCopy(type: Copy)
 	
-- 它创建了一个没有默认行为的 copy 任务. 这个任务可以通过它的 API 来配置(参考 Copy). 
+- 上面创建了一个没有默认行为的`Copy`类型任务. 这个任务可以通过`Copy`API 来配置
 
-- 补充说明一下, 这个 task 的名字是 “myCopy”, 但是它是 “Copy” 类(type). 
+- **Gradle可以有许多具有同样type，但是名字不同的任务. 这个在实现特定类型的所有任务的 cross-cutting concerns 时特别有用**
 
-	**Gradle可以有许多具有同样type，但是名字不同的任务. 这个在实现特定类型的所有任务的 cross-cutting concerns 时特别有用**
+以下展示了多种方式来实现同一个配置
 
-## 5.1 方式1（使用API配置一个任务）
+## 5.1 方式1（使用API配置任务）
 		
 	Copy myCopy = task(myCopy, type: Copy)
 	myCopy.from 'resources'
 	myCopy.into 'target'
 	myCopy.include('**/*.txt', '**/*.xml', '**/*.properties')
 	
-- 这跟在Java中配置对象是一样的形式. 每次都必须在语句里重复上下文 (myCopy). 这种方式写起来有点多余
+- 这跟在Java中配置对象是一样的形式. 每次都必须在语句里重复上下文 (`myCopy`). 这种方式写起来有点多余
 
 ## 5.2 方式2(Configuring a task using a DSL specific syntax)
 	
@@ -208,13 +212,11 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	}
 	myCopy.include('**/*.txt', '**/*.xml', '**/*.properties')
 	
-- 这种方式适用于任何任务
-
-- 这里访问任务的方式是`tasks.getByName()`的快捷方式
+- 使用Groovy的动态任务配置块对任务进行配置	
+	
+- 这种方式适用于任何任务.这里访问任务的方式只是`tasks.getByName()`方法的快捷方式
 
 - **特别注意:这里使用的闭包会在 task 配置的时候执行而不是在 task 运行的时候执行**
-
-- **通过闭包配置任务是公认的最具可读性的方式**
 
 
 ## 5.3 方式3（定义task时使用闭包配置）
@@ -225,13 +227,15 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	   include('**/*.txt', '**/*.xml', '**/*.properties')
 	}
 	
+- **通过闭包配置任务是公认的最具可读性的方式**	
+	
 - **请不要忘了构建的各个阶段**
 
-	一个任务有配置和动作. 当使用doLast时, 只是简单的使用捷径定义了动作. **定义在配置区域的代码只会在构建的配置阶段执行, 而且不论执行哪个任务**
+	一个任务有配置和动作. 当使用doLast时, 只是简单的使用快捷方式定义了动作. **定义在配置区域的代码只会在构建的配置阶段执行, 而且不论执行哪个任务**
 	
 	
 # 6. 传递参数给任务构造函数	
-不仅可以在任务创建之后再传递属性给任务，任务允许在创建时通过构造函数向其传递参数。 为了将值传递给Task构造函数，必须使用注解`@javax.inject.Inject`进行声明
+不仅可以在任务创建之后再给任务设置属性，任务允许通过任务类的构造函数向其传递参数。 为了将值传递给Task构造函数，必须使用注解`@javax.inject.Inject`对相关构造函数进行注解
 
 
 ## 6.1 方式1(使用`@Inject`注释构造函数)
@@ -247,33 +251,31 @@ Gradle 可以创建更为强大复杂的任务. 这些任务可以有它们自�
 	    }
 	}
 	
-在定义完类之后，就在创建时向其传递参数：	
+在定义完类之后，就可以在创建时向其传递参数：	
 
 1. 使用`TaskContainer`创建带参数的任务,将构造函数所需的参数附加在参数列表的最后
 
 		tasks.create('myTask', CustomTask, 'hello', 42)
 
-2. 使用`constructorArgs`映射参数
+2. 使用Map创建带构造函数的任务
 
 		task myTask(type: CustomTask, constructorArgs: ['hello', 42])
 		
 - **推荐使用`TaskContainer`去创建任务**		
 
-- 参数必须非空，否则Gradle会抛出一个`NullPointException`
-
-
-	
-# 7. 对任务添加依赖
-
-Gradle提供了许多种对任务添加依赖的方法. [构建脚本基础-第四小节]()已经介绍了**如何使用任务的名称定义依赖.**
-
-- 任务名称可以指向同一个项目里的任务, 或者其他项目里的任务. **为了指向其他项目, 你必须在任务的名称前加入项目的路径.**
-
-## 7.1 方式1(从另外一个项目给任务加入依赖)
-
-下面的例子给 projectA:taskX 加入依赖 projectB:taskY :
+- 在任何情况下，参数都必须非空，否则Gradle会抛出一个`NullPointException`
 
 	
+# 7.  向任务添加依赖
+
+Gradle提供了许多种定义任务依赖的方法. [构建脚本基础-第四小节]()已经介绍了**如何使用任务的名称定义依赖**
+
+- 任务名称可以用来指向同一个项目里的任务, 或者其他项目里的任务. **为了指向其他项目, 必须在任务的名称前加入项目的路径**
+
+## 7.1 方式1(将任务依赖于另一个项目的任务)
+
+下面的例子中，任务`projectA:taskX `依赖于任务` projectB:taskY `
+
 	project('projectA') {
 	    task taskX {
 	        dependsOn ':projectB:taskY'
@@ -299,17 +301,20 @@ gradle -q taskX 的输出
 	
 
 ## 7.2 方式2(使用任务对象添加依赖)
+
+**除了使用任务名称, 还可以使用任务对象来定义依赖**
 	
-除了使用任务名称, 你也可以定义一个依赖对象y:
-	
-	build.gradle
-	
-	task taskX << {
-	    println 'taskX'
+	//build.gradle
+	task taskX {
+	    doLast {
+	        println 'taskX'
+	    }
 	}
 	
-	task taskY << {
-	    println 'taskY'
+	task taskY {
+	    doLast {
+	        println 'taskY'
+	    }
 	}
 	
 	taskX.dependsOn taskY
@@ -321,12 +326,12 @@ gradle -q taskX 的输出
 	taskX
 	
 ## 7.3 方式3(通过闭包(lazy block)设置依赖)	
-当计算时，`lazy block` 会被传递给当前正在被计算的任务，然后将`lazy block`返回的一个或者一组Task对象作为依赖对象
+当计算时，`lazy block` 会被传递给当前正在被计算其依赖关系的任务，然后将`lazy block`返回的一个或者一组Task对象作为依赖
 
 - `lazy block`使用闭包作为其表现形式
 
 
-接下来的例子给 taskX 加入了一个复杂的依赖, 所有以 lib 开头的任务都将在 taskX 之前执行:
+接下来的例子给任务`taskX `加入了一个复杂的依赖, 所有任务名称以`lib`开头的任务都将在`taskX` 之前执行:
 	
 	task taskX {
 	    doLast {
@@ -391,7 +396,7 @@ gradle -q taskX 的输出
 - `should run After`与`must run after`相似，但是有俩种情况会被忽略。**建议`should run after`用在不是特别严格要求的但是有帮助的地方**
 
 
-要指定俩个任务之间的`should run after`和`must run after`,通过`Task.mustRunAfter(java.lang.Object[])`和`Task.shouldRunAfter(java.lang.Object[])`方法指定
+要指定俩个任务之间的`should run after`和`must run after`,Gradle提供了`Task.mustRunAfter(java.lang.Object[])`和`Task.shouldRunAfter(java.lang.Object[])`方法
 
 - 这俩个方法可以接收 任务实例，任务名称或者任何其他`Task.dependsOn[java.lang.Object[]]`接收的参数。
 
@@ -428,7 +433,7 @@ gradle -q taskX 的输出
 		taskY
 		taskX
 
-2. 当使用并行执行，并且除了`should run after`的任务之外的所有任务的依赖都已经执行，那么任务就会忽略`should run after`的那个任务是否执行过
+2. 当使用并行执行，并且除了`shouldRunAfter`的任务之外的所有任务的依赖都已经执行，那么任务就会忽略`shouldRunAfter`的那个任务是否执行过
 
 
 3. 当声明了任务顺序，但仅执行一个任务，这时任务顺序将失效，**因为任务排序并不意味着任务执行**
@@ -464,14 +469,14 @@ gradle -q taskX 的输出
 	> gradle -q copy
 	I am the new one.
 
-- 用自定义的任务去替换了一个`Copy`类型的任务，因为它们使用相同的名称
-
-	必须将新任务的`overwrite`属性设置为true，否则Gradle会抛出一个异常提示任务名称已经存在
+- 用自定义的任务去替换了一个使用相同名称的`Copy`类型任务，则必须将新任务的`overwrite`属性设置为true，否则Gradle会抛出一个异常提示任务名称已经存在
 
 # 11. 跳过任务
+
 Gradle提供了多种方式来跳过任务执行
 
-- `predict`对使用Gradle内置任务非常有用，它允许给内置任务添加条件
+- 如果使用Gradle提供的任务，这个特性将非常有用。因为它允许向任务的内置action添加条件
+
 
 ## 11.1 使用断言(predicate)
 
@@ -496,13 +501,11 @@ Gradle提供了多种方式来跳过任务执行
 	> gradle hello -PskipHello
 	:hello SKIPPED
 	
-	BUILD SUCCESSFUL in 0s
-
 ## 11.2 使用StopExecutionException
 
 如果跳过任务的逻辑无法用predicate表示，那么可以使用一个`StopExecutionException`
 
-- 如果这个异常是由一个action抛出，那么这个action进一步的执行以及这个任务的下一个action都会被跳过，但是构建会继续执行下一个任务
+- 如果这个异常是在action中抛出，那么这个action之后的逻辑以及这个任务的下一个action都会被跳过，但是构建会继续执行下一个任务	
 
 **示例：**
 
@@ -529,7 +532,7 @@ Gradle提供了多种方式来跳过任务执行
 
 ## 11.3 启用或禁用任务
 
-每个任务都有一个`enabled`的标志，默认值是true。将其值设置为false会阻止任何该任务的action去执行
+每个任务都有一个`enabled`的标志，默认值是true。将其值设置为false会阻止该任务的任何action去执行
 
 - 一个被禁用的任务会被`SKIPPED`标签标记
 
@@ -544,15 +547,13 @@ Gradle提供了多种方式来跳过任务执行
 	
 	> gradle disableMe
 	:disableMe SKIPPED
-	
-	BUILD SUCCESSFUL in 0s
-	
+		
 	
 ## 11.4 设置任务超时
 
 每个任务都有一个`timeout`属性，该属性可以用来限制任务的执行时间。当一个任务超时后，执行该任务的线程会被中断，该任务会被认定为执行失败	
 
-- `Finalizer`任务在超时之后仍然能够执行
+- 终结任务(`Finalizer task`)将在超时之后继续被执行
 
 - 如果使用`--continue`选项，其他任务将在当前超时的任务之后接着执行
 
@@ -570,7 +571,7 @@ Gradle提供了多种方式来跳过任务执行
 
 	
 
-# 12 Up-to-date checks(AKA Incremental Build)
+# 12 Up-to-date checks(增量构建)
 
 任何构建工具的一个重要组成部分是能够避免执行已完成的工作
 
@@ -747,6 +748,9 @@ Gradle通过一个**Increamental Build 增量构建**的功能来支持这种行
 
 如果一个任务的生成，需要依托于已经定义好的取值范围或者特定规则，可以通过`Task rules`
 
+
+## 13.1 生成任务
+
 **示例1**：Task rule
 
 	tasks.addRule("Pattern: ping<ID>") { String taskName ->
@@ -764,9 +768,12 @@ Gradle通过一个**Increamental Build 增量构建**的功能来支持这种行
 
 - `addRule`传入的字符串参数的作用是对规则的描述，会在`gradle tasks`时显示
 
-- **闭包内是其具体的规则，这个规则会在命令行执行时生效**
+- **闭包内是其具体的规则，这个规则会在命令行执行时生效**,当命令中的执行的任务名称未定义时，会将其作为参数传递给闭包
 
-**规则并不只是在通过命令行使用任务的时候执行. 你也可以基于规则来创建依赖关系**
+
+## 13.2 依赖
+
+**规则并不只是在通过命令行调用任务的时使用. 还可以根据`dependsOn `关系创建基于规则的任务**
 
 **示例2：** 基于规则的任务依赖
 
@@ -788,16 +795,15 @@ Gradle通过一个**Increamental Build 增量构建**的功能来支持这种行
 	Pinging: Server1
 	Pinging: Server2
 
+# 14. 终结任务(`Finalizer tasks`)
 
-# 14. Finalizer tasks
-
-在任务列表中的最后一个任务执行结束后，`Finalizer task`会被添加到task graph中
+当计划运行终结任务时，终结任务将会被添加到任务图(`task graph`)中
 
 - `Finalizer task`指的是无论运行结果如何，最后都会执行的任务
 
 **要指定一个Finalizer task 可以使用`Task.finalizedBy(Java.lang.Object[])`**方法。这个方法可以接收 任务实例，任务名称，或者`Task.dependsOn(Obj)`方法可以接收的参数
 
-**示例1：** Finalizer tasks
+## 14.1 添加一个终结任务
 
 	task taskX {
 	    doLast {
@@ -818,7 +824,7 @@ Gradle通过一个**Increamental Build 增量构建**的功能来支持这种行
 
 - 即使最终任务失败，`Finalizer tasks`也会被执行
 
-**示例2：**
+## 14.2 为失败的任务添加终结任务
 
 	task taskX {
 	    doLast {
@@ -838,21 +844,24 @@ Gradle通过一个**Increamental Build 增量构建**的功能来支持这种行
 	taskX
 	taskY
 
-- `Finalizer task` 在最终任务不执行时不会执行，举个栗子，如果最终任务被认为是`up to date `或者 依赖的任务失败,那么`Finalizer task`不会执行
+	FAILURE: Build failed with an exception.
 
-- Finalizer task 在无论构建成功或失败都必须清理资源的情况下特别适合
+
+- 如何终结任务没有任何逻辑时并不会执行，举个栗子，如果终结任务被认为是`up to date`或者 终结任务所依赖的任务失败,那么终结任务不会执行
+
+- 终结任务适用于 无论构建成功或失败都必须清理资源的情况
 
 # 15. 生命周期任务
 
-**生命周期任务自身是不做什么事情的,并且通常没有任何action**
+**生命周期任务是不能自行完成的任务,它们通常没有任何action**
 
 生命周期任务可以表示几个概念：
 
-- 一个工作流程步骤(通过`check`进行检查)
+- 工作流程步骤(通过`check`进行检查)
 
-- 一个可构建的东西()
+- 可构建的东西
 
-- 一个可以执行许多相同逻辑任务的任务（通过`compileAll`执行所有编译任务）
+- 可以执行许多相同逻辑任务的任务（通过`compileAll`执行所有编译任务）
 
 Gradle基础插件定义了几个标准的生命周期任务，例如`build,assemble,check`等。所有语言的插件都会继承该基础插件，从而获得同样的一套生命周期任务
 
@@ -860,5 +869,5 @@ Gradle基础插件定义了几个标准的生命周期任务，例如`build,asse
 
 - [Base Plugin](https://docs.gradle.org/current/userguide/base_plugin.html#sec:base_tasks)
 
-除非生命周期任务有自己的action，否则结果由其依赖项决定，如果有任何任务的依赖项被执行，生命周期任务将被认为执行过了。如果所有的任务依赖项是up-to-date,skipped,or from cache 生命周期任务也将被认为已经是up-to-date
+除非生命周期任务有自己的action，否则结果由其依赖决定，如果有任何任务的依赖被执行，生命周期任务将被认为`EXECUTED `。如果所有的任务依赖是最新的,被忽略的,或来自缓存的,那么生命周期任务也将被认为已经是`UP-TO-DATE`
 	
