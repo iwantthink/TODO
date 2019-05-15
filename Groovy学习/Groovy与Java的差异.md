@@ -23,7 +23,7 @@
 
 # 2. Multi-methods
 
-**在Groovy中，在运行时才决定哪个方法被执行，这被称为`Multi-methods` 或 `runtime dispatch`，这意味着方法将在运行时根据参数类型被选择**
+**在Groovy中，在运行时才决定哪个方法被执行，这被称为`Multi-methods` 或 运行时路由(`runtime dispatch`)，这意味着将在运行时根据参数类型选择具体执行的方法**
 
 - **在Java中，方法在编译时期根据声明的类型进行选择**。
 
@@ -47,7 +47,7 @@
 
 # 3. 数组初始化
 
-**在Groovy中,`{.....}`被保留用作`closures`**
+**在Groovy中,`{.....}`被保留用作定义闭包**
 
 这意味着，以下的语法无法用来创建数组：
 
@@ -65,9 +65,10 @@
 	    String name
 	}
 
-在Groovy中，上述语法行为会创建一个属性，也就是说被声明为一个私有字段，并且会提供关联的`getter`和`setter`方法
+在Groovy中，上述语法行为会创建一个属性，也就是说一个附带关联的`getter`和`setter`方法
+的私有字段
 
-可以通过`@packageScope`创建**包专用字段**
+**可以通过`@packageScope`创建包专用字段**
 
 	class Person {
 	    @PackageScope String name
@@ -75,7 +76,10 @@
 
 # 5. ARM blocks
 
-Groovy并不支持从Java 7开始的ARM(`Automatic Resource Management`)block.但是Groovy提供了依赖于闭包的方法实现同样的效果
+Groovy并不支持从Java 7开始的ARM(`Automatic Resource Management`)块.但是Groovy提供了依赖于闭包的方法实现同样的效果
+
+
+**Java实现方式:**
 
 	Path file = Paths.get("/path/to/file");
 	Charset charset = Charset.forName("UTF-8");
@@ -93,7 +97,7 @@ Groovy并不支持从Java 7开始的ARM(`Automatic Resource Management`)block.�
 
 - ARM是从`Java 7 build 105 `版本开始,Java 7 的编译器和运行环境支持新的`try-with-resources`语句,称为ARM block(Automatic Resource Management),自动化资源管理 
 
-Groovy实现方式：
+**Groovy实现方式：**
 
 	new File('/path/to/file').eachLine('UTF-8') {
 	   println it
@@ -121,7 +125,7 @@ Groovy实现方式：
 	
 	new A.B()
 
-- 静态内部类的使用是最支持的，如果必须要使用内部类，请使用静态内部类。
+- 如果必须要使用内部类，请使用静态内部类，因为Groovy对静态内部类的支持最好
 
 ## 6.2 匿名内部类
 
@@ -177,7 +181,7 @@ Java 8 支持 lambdas和方法引用
 	// 方法引用
 	list.forEach(System.out::println);
 
-Groovy不支持这种语法，但是提供了closures:
+Groovy不支持这种语法，但是提供了闭包:
 
 	Runnable run = { println 'run' }
 	list.each { println it } // or list.each(this.&println)
@@ -186,9 +190,9 @@ Groovy不支持这种语法，但是提供了closures:
 
 被双引号包括的字符串会被认为是`GString`类型，如果`GString`带有`$`符号，可以会造成编译错误或生成不同的值
 
-正常情况下，如果一个API声明了参数类型为`GString`或`String`，俩者会被自动转换
+通常，如果接口上明确定义了参数类型，Groovy会自动转换`GString`和`String`
 
-- 注意Java API中接收`Object`类型作为参数的方法
+- 注意Java API中接收`Object`类型作为参数的方法,检查其实际类型
 
 # 9. String and Character literals
 Groovy中被单引号包括的字符用来表示`String`,被双引号包括的字符可以表示`String`或`GString`(具体取决于表达式中是否存在插值)
@@ -199,7 +203,7 @@ Groovy中被单引号包括的字符用来表示`String`,被双引号包括的�
 
 Groovy只有在为`char`类型的变量赋值时才会自动将单个字符串转换为`char`
 
-- **当调用一个参数为`char`类型的方法时，需要明确地转换类型 或 确保参数已经提前被转换了类型。**
+- **当调用一个参数为`char`类型的方法时，需要明确地转换类型 或 确保参数已经提前被转换了类型**
 
 		char a ='a'
 		assert Character.digit(a, 16)==10 : 'But Groovy does boxing'
@@ -212,7 +216,7 @@ Groovy只有在为`char`类型的变量赋值时才会自动将单个字符串�
 		} catch(MissingMethodException e) {
 		}
 
-Groovy支持俩种转换风格(直接添加`(char)`或添加 `as char`)，这俩种风格在转换`String`(拥有多个字符)-> `char`时会有差异.
+**Groovy支持俩种转换风格(直接添加`(char)`或添加 `as char`)，这俩种风格在转换`String`(拥有多个字符)至`char`时会有差异.**
 
 - `Groovy`风格的转换会使用多个字符的字符串的第一个字符
 
@@ -237,7 +241,7 @@ Groovy支持俩种转换风格(直接添加`(char)`或添加 `as char`)，这俩
 
 # 10. Primitives and wrappers
 
-Groovy使用对象处理一切事物，**会自动包装原始类型**。因此，Groovy不遵循Java的扩展(`widening `)优先于拆箱(`boxing`)的行为:
+**Groovy使用对象处理一切事物**，**原始类型会被自动包装为引用**。**因此，Groovy不遵循Java的扩展(`widening `)优先于拆箱(`boxing`)的行为:**
 
 	int i
 	m(i)
@@ -252,15 +256,15 @@ Groovy使用对象处理一切事物，**会自动包装原始类型**。因此�
 
 - 方法1，是java会调用的，因为扩展优先于拆箱
 
-- 方法2，是Groovy会调用的,因为所有的原始引用都使用了它们自身的包装器类
+- 方法2，是Groovy会调用的,因为所有的原始引用都使用了它们自身的包装类
 
 # 11. `==`的行为
 
-在Java中`==`意味着基本类型相同 或者对象标识相同
+**在Java中`==`意味着原始类型相等或对象地址相同**
 
- **在Groovy中,如果`==`俩边是可比较的对象，那么`==`翻译为`a.compareTo(b)==0`,否则被翻译为`a.equals(b)`**
+**在Groovy中,如果`==`俩边是可比较的对象，那么`==`翻译为`a.compareTo(b)==0`,否则被翻译为`a.equals(b)`**
 
-如果要确定对象的引用是否相同，可以使用 `is`。[Groovy==和equals](http://blog.csdn.net/hivon/article/details/2291559)
+**如果要确定对象的引用是否相同，可以使用 `is`。[Groovy==和equals](http://blog.csdn.net/hivon/article/details/2291559)**
 
 # 12. Conversions
 
@@ -277,7 +281,7 @@ long|N|C|C|C|C|-|T|T
 float|N|C|C|C|C|C|-|Y
 double|N|C|C|C|C|C|C|-
 
-- `Y`表示Java可以进行转换，`C`表示在显式转换时Java可以进行转换，`T`表示Java可以进行转换，但数据被截断，`N`表示Java不能进行转换
+- `Y`表示Java自动转换，`C`表示需要指定明确的类型转换，`T`表示数转换过程中有数据丢失，`N`表示Java不能进行转换
 
 
 ## 12.2 Groovy转换
