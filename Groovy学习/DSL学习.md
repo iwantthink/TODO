@@ -117,22 +117,22 @@ Groovy允许在调用方法时，省略参数周围的圆括号.命令链扩展�
 # 3.3 Alternate abstract method
 # 4 Adding properties to numbers
 # 5 @DelegatesTo
-## 5.1. Explaining delegation strategy at compile time
-## 5.2. @DelegatesTo
-## 5.3. DelegatesTo modes
-### 5.3.1. Simple delegation
-### 5.3.2. Delegation strategy
-### 5.3.3. Delegate to parameter
-### 5.3.4. Multiple closures
-### 5.3.5. Delegating to a generic type
-### 5.3.6. Delegating to an arbitrary type
+## 5.1 Explaining delegation strategy at compile time
+## 5.2 @DelegatesTo
+## 5.3 DelegatesTo modes
+### 5.3.1 Simple delegation
+### 5.3.2 Delegation strategy
+### 5.3.3 Delegate to parameter
+### 5.3.4 Multiple closures
+### 5.3.5 Delegating to a generic type
+### 5.3.6 Delegating to an arbitrary type
 # 6 Compilation customizers
-6.1 Introduction
-6.2 Import customizer
-6.3 AST transformation customizer
-6.4 Secure AST customizer
-6.5 Source aware customizer
-6.6 Customizer builder
+## 6.1 Introduction
+## 6.2 Import customizer
+## 6.3 AST transformation customizer
+## 6.4 Secure AST customizer
+## 6.5 Source aware customizer
+## 6.6 Customizer builder
 6.6.1 Import customizer
 6.6.2 AST transformation customizer
 6.6.3 Secure AST customizer
