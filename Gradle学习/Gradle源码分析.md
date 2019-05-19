@@ -683,10 +683,41 @@
         }
     }
 
-- 实际上也就是调用`DefaultGradleLauncher.run()`方法    
+- **实际上也就是调用`DefaultGradleLauncher.run()`方法** 
 
 
 # 9. DefaultGradleLauncher
 
-## 9.1 
+**前面的一些逻辑，仅仅是为了做一些准备工作。从这里开始，正式的进入了`Gradle`的编译流程，即`Load->Configure->Build`**
 
+- Load: 9.1 - 9.xxxx
+
+- Configure:
+
+- Build:
+
+## 9.1 run()
+
+    public BuildResult run() {
+        return doBuild(Stage.Build);
+    }
+
+## 9.2 doBuild()
+
+    private BuildResult doBuild(final Stage upTo) {
+        Throwable failure = null;
+        try {
+            buildListener.buildStarted(gradle);
+            doBuildStages(upTo);
+            flushPendingCacheOperations();
+        } catch (Throwable t) {
+            failure = exceptionAnalyser.transform(t);
+        }
+        BuildResult buildResult = new BuildResult(upTo.name(), gradle, failure);
+        buildListener.buildFinished(buildResult);
+        if (failure != null) {
+            throw new ReportedException(failure);
+        }
+
+        return buildResult;
+    }
