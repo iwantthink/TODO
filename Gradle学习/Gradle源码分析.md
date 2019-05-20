@@ -707,7 +707,9 @@
     private BuildResult doBuild(final Stage upTo) {
         Throwable failure = null;
         try {
+        	  // 注释1
             buildListener.buildStarted(gradle);
+            // 注释2
             doBuildStages(upTo);
             flushPendingCacheOperations();
         } catch (Throwable t) {
@@ -721,3 +723,294 @@
 
         return buildResult;
     }
+
+- 注释1，通知gradle构建已经开始，那么`BuildListener buildListener`就是接收者，它具体是什么类型?查看9.2.1
+
+- 注释2, 在`doBuildStages()`这个方法中已经可以清晰的看到 构建的三个步骤`Load->Configure->Build`
+
+
+### 9.2.1 buildListener的创建
+
+在`DefaultGradleLauncher `的构造函数中，`BuildListener buildListener`被传入。 而`DefaultGradleLauncher `是在`DefaultGradleLauncherFactory`类中被创建
+
+	private final BuildListener buildListener;
+    public DefaultGradleLauncher(.......
+    					BuildListener buildListener
+    					............) {
+        ..........
+        this.buildListener = buildListener;
+		 ........
+    }
+
+
+`DefaultGradleLauncherFactory `调用`newInstance()`创建实例，最终在`doNewInstance()`方法中可以找到`DefaultGradleLauncher `的初始化过程
+
+    private DefaultGradleLauncher doNewInstance(....){
+    
+            DefaultGradleLauncher gradleLauncher = new DefaultGradleLauncher(
+			  ........省略........
+            gradle.getBuildListenerBroadcaster(),
+            .........省略.......
+        );
+    }
+
+- `gradle`是`DefaultGradle`类型
+
+`DefaultGradle`的构造函数中创建了这个接收者
+
+    public DefaultGradle(GradleInternal parent, StartParameter startParameter, ServiceRegistryFactory parentRegistry) {
+    
+        buildListenerBroadcast = getListenerManager().createAnonymousBroadcaster(BuildListener.class);
+        projectEvaluationListenerBroadcast = getListenerManager().createAnonymousBroadcaster(ProjectEvaluationListener.class);
+        buildListenerBroadcast.add(new BuildAdapter() {
+            @Override
+            public void projectsLoaded(Gradle gradle) {
+                rootProjectActions.execute(rootProject);
+                rootProjectActions = null;
+            }
+        });
+    }
+
+## 9.3 doBuildStages(Stage.Build)
+
+	// upTo表示执行到哪一步结束
+    private void doBuildStages(Stage upTo) {
+       
+        if (stage == Stage.Build) {
+            throw new IllegalStateException("Cannot build with GradleLauncher multiple times");
+        }
+		  // stage 默认为空
+        if (stage == null) {
+            // Evaluate init scripts
+            initScriptHandler.executeScripts(gradle);
+
+            // Build `buildSrc`, load settings.gradle, and construct composite (if appropriate)
+            settings = settingsLoader.findAndLoadSettings(gradle);
+
+            stage = Stage.Load;
+        }
+
+        if (upTo == Stage.Load) {
+            return;
+        }
+
+        if (stage == Stage.Load) {
+            // Configure build
+            buildOperationExecutor.run("Configure build", new Action<BuildOperationContext>() {
+                @Override
+                public void execute(BuildOperationContext buildOperationContext) {
+                    buildConfigurer.configure(gradle);
+
+                    if (!gradle.getStartParameter().isConfigureOnDemand()) {
+                        buildListener.projectsEvaluated(gradle);
+                    }
+
+                    modelConfigurationListener.onConfigure(gradle);
+                }
+            });
+
+            stage = Stage.Configure;
+        }
+
+        if (upTo == Stage.Configure) {
+            return;
+        }
+
+        // After this point, the GradleLauncher cannot be reused
+        stage = Stage.Build;
+
+        // Populate task graph
+        buildOperationExecutor.run("Calculate task graph", new Action<BuildOperationContext>() {
+            @Override
+            public void execute(BuildOperationContext buildOperationContext) {
+                buildConfigurationActionExecuter.select(gradle);
+                if (gradle.getStartParameter().isConfigureOnDemand()) {
+                    buildListener.projectsEvaluated(gradle);
+                }
+            }
+        });
+
+        // Execute build
+        buildOperationExecutor.run("Run tasks", new Action<BuildOperationContext>() {
+            @Override
+            public void execute(BuildOperationContext buildOperationContext) {
+                buildExecuter.execute(gradle);
+            }
+        });
+    }
+
+- 这里可以很清晰的看到构建的三个步骤,下面会拆分开来进行分析
+
+# 10 Load步骤
+
+	  // Stage stage 默认为空
+    if (stage == null) {
+        // Evaluate init scripts
+        initScriptHandler.executeScripts(gradle);
+
+        // Build `buildSrc`, load settings.gradle, and construct composite (if appropriate)
+        settings = settingsLoader.findAndLoadSettings(gradle);
+
+        stage = Stage.Load;
+    }
+
+- 计算`init.gradle`内容,并加载`setting.gradle`内容
+
+## 10.1 InitScriptHandler.executeScripts()
+
+    public void executeScripts(final GradleInternal gradle) {
+        // 找到需要在构建之前执行的.gradle文件
+        final List<File> initScripts = gradle.getStartParameter().getAllInitScripts();
+        if (initScripts.isEmpty()) {
+            return;
+        }
+		 // 用来保存构建的一些基本信息,例如进程名称
+        BuildOperationDetails operationDetails = BuildOperationDetails.displayName("Run init scripts").progressDisplayName("init scripts").build();
+        // 处理脚本文件
+        buildOperationExecutor.run(operationDetails, new Action<BuildOperationContext>() {
+            @Override
+            public void execute(BuildOperationContext buildOperationContext) {
+                for (File script : initScripts) {
+                    processor.process(new UriScriptSource("initialization script", script), gradle);
+                }
+            }
+        });
+    }
+
+- **这个类主要包含俩个作用**
+
+	1. **找到当前构建中所有的初始化脚本**
+
+	2. **执行找到的初始化脚本**
+
+### 10.1.1 StartParameter.getAllInitScripts()
+
+    public List<File> getAllInitScripts() {
+        CompositeInitScriptFinder initScriptFinder = new CompositeInitScriptFinder(
+            new UserHomeInitScriptFinder(getGradleUserHomeDir()), new DistributionInitScriptFinder(gradleHomeDir)
+        );
+
+        List<File> scripts = new ArrayList<File>(getInitScripts());
+        initScriptFinder.findScripts(scripts);
+        return Collections.unmodifiableList(scripts);
+    }
+    
+- `CompositeInitScriptFinder`只是一个装饰类，它会调用`UserHomeInitScriptFinder `和`DistributionInitScriptFinder `去具体的实现
+
+- 主要就是三个作用:
+
+	1. 尝试找到环境变量`GRADLE_USER_HOME`目录下的`init.gradle`文件，并加入列表
+
+		如果没有配置环境变量`GRADLE_USER_HOME`，那么目录就是`~/.gradle`
+
+	2. 找到环境变量`GRADLE_USER_HOME`下面`init.d`目录下的 `*.gradle`配置文件，并加入列表。
+
+	3. 找到`GRADLE_HOME`目录下`init.d`目录的`*.gradle`配置文件，并加入列表
+
+- `GRADLE_USER_HOME`：默认情况下是`~/.gradle/`,如果通过命令指定了值，那么就是用手动设置的值 . 实际上就是保存gradle信息的地方，例如wrapper 或者缓存.
+
+- `GRADLE_HOME`: 根据`gradle-wrapper.properties`文件中的信息(Gradle版本)，选择的指定文件夹，例如`~/.gradle/wrapper/dists/gradle-4.10.1-all/455itskqi2qtf0v2sja68alqd/gradle-4.10.1`
+
+
+- `init.d` 目录下可以用来添加`.gradle`文件，每一个都会在构建之前执行
+
+		// init.d 下的readme.txt
+		You can add .gradle init scripts to this directory. Each one is executed at the start of the build.
+
+
+### 10.1.2 UserHomeInitScriptFinder.findScripts()
+
+    public void findScripts(Collection<File> scripts) {
+        File userInitScript = new File(userHomeDir, "init.gradle");
+        if (userInitScript.isFile()) {
+            scripts.add(userInitScript);
+        }
+        findScriptsInDir(new File(userHomeDir, "init.d"), scripts);
+    }
+
+- 将`GRADLE_USER_HOME`下的`init.gradle`文件添加到集合中
+
+- 将`GRADLE_USER_HOME`下`init.d`文件夹中所有扩展名为`.gradle`文件添加到集合中
+
+    
+### 10.1.3 DistributionInitScriptFinder.findScripts()
+
+    public void findScripts(Collection<File> scripts) {
+        if (gradleHome == null) {
+            return;
+        }
+        findScriptsInDir(new File(gradleHome, "init.d"), scripts);
+    }
+
+- 将`GRADLE_HOME`下的`init.d`文件夹中所有扩展名`.gradle`的文件添加到集合    
+
+
+### 10.1.4 执行逻辑
+**简而言之就是将之前获取到的脚本文件进行解析，并读取其内容中的属性**
+
+
+    for (File script : initScripts) {
+        processor.process(new UriScriptSource("initialization script", script), gradle);
+    }
+
+- `initScirpts`就是需要执行的脚本集合,`UriScriptSource `用来解析传入的脚本文件
+
+- `processor`是`DefaultInitScriptProcessor `类型
+
+
+`DefaultInitScriptProcessor.process()`
+
+	public class DefaultInitScriptProcessor implements InitScriptProcessor {
+	    ...
+		
+	    public void process(final ScriptSource initScript, GradleInternal gradle) {
+	        ....
+	        configurer.apply(gradle);
+	    }
+	}
+
+- `configurer`是`DefaultScriptPluginFactory`类的内部类`ScriptPluginImpl`
+
+**`ScriptPluginImpl`的`apply()`方法主要有俩个步骤：**
+
+1. extract plugin requests and plugin repositories and execute buildscript {}, ignoring (i.e. not even compiling) anything else
+
+
+2. compile everything except buildscript {}, pluginRepositories{}, and plugin requests, then run
+
+
+## 10.2 NotifyingSettingsLoader.findAndLoadSettings(gradle)
+
+	 // Build `buildSrc`, load settings.gradle, and construct composite (if appropriate)
+	settings = settingsLoader.findAndLoadSettings(gradle);
+	
+- `SettingsLoader settingsLoader`	在`DefaultGradleLauncherFactory`中被创建
+
+### 10.2.1 DefaultGradleLauncherFactory.doNewInstance()
+
+    SettingsLoaderFactory settingsLoaderFactory = serviceRegistry.get(SettingsLoaderFactory.class);
+    SettingsLoader settingsLoader = parent != null ? settingsLoaderFactory.forNestedBuild() : settingsLoaderFactory.forTopLevelBuild();
+    
+- 这里的`parent`为空！
+
+### 10.2.2 settingsLoaderFactory.forTopLevelBuild()
+
+    public SettingsLoader forTopLevelBuild() {
+        return new NotifyingSettingsLoader(
+            new CompositeBuildSettingsLoader(
+                new DefaultSettingsLoader(
+                    settingsFinder,
+                    settingsProcessor,
+                    buildSourceBuilder
+                ),
+                buildServices
+            ),
+            buildLoader);
+    }
+
+- 一层层的调用.. `NotifyingSettingsLoader -> CompositeBuildSettingsLoader -> DefaultSettingsLoader `
+
+- **`DefaultSettingsLoader`主要处理项目目录下的`setting.gradle`文件，同时处理`buildSrc`模块**
+
+
+
