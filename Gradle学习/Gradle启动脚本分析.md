@@ -13,7 +13,7 @@
 
 `gradlew`脚本就是去执行`project/gradle/wrapper/gradle-wrapper.jar`中的  `org.gradle.wrapper.GradleWrapperMain`类，并将命令的参数传入
 
-# 1 GradleWrapper
+# 1 GradleWrapperMain
 
 ## 1.1 main()
 
