@@ -841,16 +841,26 @@
 
 - 这里可以很清晰的看到构建的三个步骤,下面会拆分开来进行分析
 
+	1. 配置文件加载
+	
+	2. 加载`.gradle`文件以及相应的插件中的类
+	
+	3. 选择待执行的任务
+	
+	4. 执行任务
+
+	
 # 10 Load步骤
 
 	  // Stage stage 默认为空
     if (stage == null) {
-        // Evaluate init scripts
+        // 找出一些需要初始化的脚本，并对其进行执行
         initScriptHandler.executeScripts(gradle);
 
         // Build `buildSrc`, load settings.gradle, and construct composite (if appropriate)
+        // 构建`buildSrc`模块，加载`settings.gradle`文件，以及`gradle.properties`文件,并处理项目结构
         settings = settingsLoader.findAndLoadSettings(gradle);
-
+		 // 标记状态为Load
         stage = Stage.Load;
     }
 
@@ -986,12 +996,14 @@
 	
 - `SettingsLoader settingsLoader`	在`DefaultGradleLauncherFactory`中被创建
 
-### 10.2.1 DefaultGradleLauncherFactory.doNewInstance()
+### 10.2.1 SettingsLoader的创建
+
+`SettingsLoader`的创建过程在`DefaultGradleLauncherFactory.doNewInstance()`方法中:
 
     SettingsLoaderFactory settingsLoaderFactory = serviceRegistry.get(SettingsLoaderFactory.class);
     SettingsLoader settingsLoader = parent != null ? settingsLoaderFactory.forNestedBuild() : settingsLoaderFactory.forTopLevelBuild();
     
-- 这里的`parent`为空！
+- 这里的`parent`为空！,因此会调用`settingsLoaderFactory.forTopLevelBuild ()`
 
 ### 10.2.2 settingsLoaderFactory.forTopLevelBuild()
 
@@ -1012,5 +1024,721 @@
 
 - **`DefaultSettingsLoader`主要处理项目目录下的`setting.gradle`文件，同时处理`buildSrc`模块**
 
+#### 10.2.2.1 DefaultSettingsLoader.findAndLoadSettings()
 
 
+    public SettingsInternal findAndLoadSettings(GradleInternal gradle) {
+        StartParameter startParameter = gradle.getStartParameter();
+        // 注释1
+        SettingsInternal settings = findSettingsAndLoadIfAppropriate(gradle, startParameter);
+
+        ProjectSpec spec = ProjectSpecs.forStartParameter(startParameter, settings);
+
+        if (spec.containsProject(settings.getProjectRegistry())) {
+            setDefaultProject(spec, settings);
+            return settings;
+        }
+
+        // Try again with empty settings
+        StartParameter noSearchParameter = startParameter.newInstance();
+        noSearchParameter.useEmptySettings();
+        settings = findSettingsAndLoadIfAppropriate(gradle, noSearchParameter);
+
+        // Set explicit build file, if required
+        if (noSearchParameter.getBuildFile() != null) {
+            ProjectDescriptor rootProject = settings.getRootProject();
+            rootProject.setBuildFileName(noSearchParameter.getBuildFile().getName());
+        }
+        setDefaultProject(spec, settings);
+
+        return settings;
+    }
+
+- 注释1：
+
+	`findSettingsAndLoadIfAppropriate()`方法实现俩个功能:
+	
+	1. 获取俩个`gradle.properties`,并读取其中的属性，例如`org.gradle.jvmargs=-Xmx1536m` 。然后通过`addSystemProperties()`将这些属性添加到集合中
+	
+		1. 项目路径下的`gradle.properties`
+	
+		2. `gradle_user_home`路径下的`gradle.properties`
+
+	2. 获取项目目录下`settings.gradle`属性
+
+#### 10.2.2.2 NotifyingSettingsLoader
+
+    public SettingsInternal findAndLoadSettings(GradleInternal gradle) {
+        SettingsInternal settings = settingsLoader.findAndLoadSettings(gradle);
+        // 通知settings配置文件处理完毕
+        gradle.getBuildListenerBroadcaster().settingsEvaluated(settings);
+        buildLoader.load(settings.getRootProject(), settings.getDefaultProject(), gradle, settings.getRootClassLoaderScope());
+        gradle.getBuildListenerBroadcaster().projectsLoaded(gradle);
+        return settings;
+    }	
+    
+- `buildLoader.load()`方法中配置了`gradle project`的层级关系，例如项目根目录，以及各个模块
+
+
+
+
+# 11. Configure步骤
+
+	private void doBuildStages(Stage upTo) {
+	        ....
+	        // 如果只允许构建到Load阶段
+			 if (upTo == Stage.Load) {
+            	return;
+        	 }
+	
+	        if (stage == Stage.Load) {
+	            // Configure build
+	            buildOperationExecutor.run("Configure build", new Runnable() {
+	                @Override
+	                public void run() {
+	                    buildConfigurer.configure(gradle);
+	
+	                    if (!gradle.getStartParameter().isConfigureOnDemand()) {
+	                        buildListener.projectsEvaluated(gradle);
+	                    }
+	
+	                    modelConfigurationListener.onConfigure(gradle);
+	                }
+	            });
+	
+	            stage = Stage.Configure;
+	        }
+	        ...
+	}
+
+- 这个阶段主要就是加载了配置文件中的各种`Plugin`,它的调用方法是通过加载生成的class文件进行的，这样不同的配置文件可以用不同的类来执行加载动作，而代码保持一致
+
+		D:\gradle_jar_cache\caches\3.1-snapshot-1\scripts-remapped\quality_cjfs2g3ij3bqjjsmf9bhahspf\2n69on6v0v04xd0c8c445muqy\dsld7eae713beda1bd9e69f8461da734880\classes
+
+	
+
+## 11.1 DefaultBuildConfigurer.configure()
+
+
+    public void configure(GradleInternal gradle) {
+        maybeInformAboutIncubatingMode(gradle);
+        if (gradle.getStartParameter().isConfigureOnDemand()) {
+            projectConfigurer.configure(gradle.getRootProject());
+        } else {
+            projectConfigurer.configureHierarchy(gradle.getRootProject());
+        }
+    }
+
+- 前提条件是运行在当前进程中，所以走的是`projectConfigurer.configureHierarchy()`方法
+
+### 11.1.1 TaskPathProjectEvaluator. configureHierarchy()
+
+    public void configureHierarchy(ProjectInternal project) {
+        configure(project);
+        for (Project sub : project.getSubprojects()) {
+            configure((ProjectInternal) sub);
+        }
+    }
+    
+	public void configure(ProjectInternal project) {
+        if (cancellationToken.isCancellationRequested()) {
+            throw new BuildCancelledException();
+        }
+        project.evaluate();
+    }
+
+- 首先执行根项目的`evaluate()`,然后遍历所有的子项目 对其执行`evaluate()`
+
+### 11.1.2 DefaultProject.evaluate()
+
+    public DefaultProject evaluate() {
+        getProjectEvaluator().evaluate(this, state);
+        return this;
+    }
+
+- `getProjectEvaluator()`方法返回一个`LifecycleProjectEvaluator`
+
+### 11.1.3 LifecycleProjectEvaluator.evaluate()
+
+	public void evaluate(final ProjectInternal project, final ProjectStateInternal state) {
+        if (state.getExecuted() || state.getExecuting()) {
+            return;
+        }
+
+        String displayName = "project " + project.getIdentityPath().toString();
+        buildOperationExecutor.run(BuildOperationDetails.displayName("Configure " + displayName).name(StringUtils.capitalize(displayName)).build(), new Action<BuildOperationContext>() {
+            @Override
+            public void execute(BuildOperationContext buildOperationContext) {
+                doConfigure(project, state);
+                state.rethrowFailure();
+            }
+        });
+    }
+
+
+    private void doConfigure(ProjectInternal project, ProjectStateInternal state) {
+        ProjectEvaluationListener listener = project.getProjectEvaluationBroadcaster();
+        try {
+            listener.beforeEvaluate(project);
+        } catch (Exception e) {
+            addConfigurationFailure(project, state, e);
+            return;
+        }
+
+        state.setExecuting(true);
+        try {
+            delegate.evaluate(project, state);
+        } catch (Exception e) {
+            addConfigurationFailure(project, state, e);
+        } finally {
+            state.setExecuting(false);
+            state.executed();
+            notifyAfterEvaluate(listener, project, state);
+        }
+    }
+
+- `delegate`就是`ConfigureActionsProjectEvaluator `    
+
+
+### 11.1.4 ConfigureActionsProjectEvaluator.evaluate()
+
+    public void evaluate(ProjectInternal project, ProjectStateInternal state) {
+        for (ProjectConfigureAction configureAction : configureActions) {
+            configureAction.execute(project);
+        }
+    }
+
+### 11.1.5 BuildScriptProcessor.evaluate()
+
+    public void execute(ProjectInternal project) {
+        LOGGER.info("Evaluating {} using {}.", project, project.getBuildScriptSource().getDisplayName());
+        final Timer clock = Timers.startTimer();
+        try {
+            ScriptPlugin configurer = configurerFactory.create(project.getBuildScriptSource(), project.getBuildscript(), project.getClassLoaderScope(), project.getBaseClassLoaderScope(), true);
+            configurer.apply(project);
+        } finally {
+            LOGGER.debug("Timing: Running the build script took {}", clock.getElapsed());
+        }
+    } 
+
+- `ScriptPlugin`的实际类是`ScriptPluginImpl`,这个类位于`DefaultScriptPluginFactory`类中
+
+- 解析配置文件，加载配置的plugin插件
+
+### 11.1.6 调用堆栈
+
+	at org.gradle.api.internal.plugins.ClassloaderBackedPluginDescriptorLocator.findPluginDescriptor(ClassloaderBackedPluginDescriptorLocator.java:31)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry$1.load(DefaultPluginRegistry.java:59)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry$1.load(DefaultPluginRegistry.java:51)
+	at com.google.common.cache.LocalCache$LoadingValueReference.loadFuture(LocalCache.java:3524)
+	at com.google.common.cache.LocalCache$Segment.loadSync(LocalCache.java:2317)
+	at com.google.common.cache.LocalCache$Segment.lockedGetOrLoad(LocalCache.java:2280)
+	at com.google.common.cache.LocalCache$Segment.get(LocalCache.java:2195)
+	at com.google.common.cache.LocalCache.get(LocalCache.java:3934)
+	at com.google.common.cache.LocalCache.getOrLoad(LocalCache.java:3938)
+	at com.google.common.cache.LocalCache$LocalLoadingCache.get(LocalCache.java:4821)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry.uncheckedGet(DefaultPluginRegistry.java:149)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry.lookup(DefaultPluginRegistry.java:138)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry.lookup(DefaultPluginRegistry.java:127)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry.lookup(DefaultPluginRegistry.java:121)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry.lookup(DefaultPluginRegistry.java:121)
+	at org.gradle.api.internal.plugins.DefaultPluginRegistry.lookup(DefaultPluginRegistry.java:121)
+	at org.gradle.api.internal.plugins.DefaultPluginManager.apply(DefaultPluginManager.java:108)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction.applyType(DefaultObjectConfigurationAction.java:113)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction.access$200(DefaultObjectConfigurationAction.java:36)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction$3.run(DefaultObjectConfigurationAction.java:80)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction.execute(DefaultObjectConfigurationAction.java:136)
+	at org.gradle.groovy.scripts.DefaultScript.apply(DefaultScript.java:114)
+	at org.gradle.api.Script$apply$0.callCurrent(Unknown Source)
+	at org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCallCurrent(CallSiteArray.java:52)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:154)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:166)
+	at quality_cjfs2g3ij3bqjjsmf9bhahspf.run(E:\work_space\Android-Prototype\config\quality.gradle:2)
+	
+	at org.gradle.groovy.scripts.internal.DefaultScriptRunnerFactory$ScriptRunnerImpl.run(DefaultScriptRunnerFactory.java:90)
+	at org.gradle.configuration.DefaultScriptPluginFactory$ScriptPluginImpl$2.run(DefaultScriptPluginFactory.java:176)
+	at org.gradle.configuration.DefaultScriptTarget.addConfiguration(DefaultScriptTarget.java:74)
+	at org.gradle.configuration.DefaultScriptPluginFactory$ScriptPluginImpl.apply(DefaultScriptPluginFactory.java:181)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction.applyScript(DefaultObjectConfigurationAction.java:102)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction.access$000(DefaultObjectConfigurationAction.java:36)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction$1.run(DefaultObjectConfigurationAction.java:62)
+	at org.gradle.api.internal.plugins.DefaultObjectConfigurationAction.execute(DefaultObjectConfigurationAction.java:136)
+	at org.gradle.api.internal.project.AbstractPluginAware.apply(AbstractPluginAware.java:44)
+	at org.gradle.api.internal.project.ProjectScript.apply(ProjectScript.java:34)
+	at org.gradle.api.Script$apply$0.callCurrent(Unknown Source)
+	at org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCallCurrent(CallSiteArray.java:52)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:154)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:166)
+	at build_840r8chxz90tc75jy1mlavsji.run(E:\work_space\Android-Prototype\app\build.gradle:3)
+	at org.gradle.groovy.scripts.internal.DefaultScriptRunnerFactory$ScriptRunnerImpl.run(DefaultScriptRunnerFactory.java:90)
+	at org.gradle.configuration.DefaultScriptPluginFactory$ScriptPluginImpl$2.run(DefaultScriptPluginFactory.java:176)
+	at org.gradle.configuration.ProjectScriptTarget.addConfiguration(ProjectScriptTarget.java:77)
+	at org.gradle.configuration.DefaultScriptPluginFactory$ScriptPluginImpl.apply(DefaultScriptPluginFactory.java:181)
+	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:38)
+	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:25)
+	at org.gradle.configuration.project.ConfigureActionsProjectEvaluator.evaluate(ConfigureActionsProjectEvaluator.java:34)
+	at org.gradle.configuration.project.LifecycleProjectEvaluator.evaluate(LifecycleProjectEvaluator.java:55)
+	at org.gradle.api.internal.project.DefaultProject.evaluate(DefaultProject.java:573)
+	at org.gradle.api.internal.project.DefaultProject.evaluate(DefaultProject.java:125)
+	at org.gradle.execution.TaskPathProjectEvaluator.configureHierarchy(TaskPathProjectEvaluator.java:47)
+	at org.gradle.configuration.DefaultBuildConfigurer.configure(DefaultBuildConfigurer.java:38)
+	at org.gradle.initialization.DefaultGradleLauncher$2.run(DefaultGradleLauncher.java:151)
+	at org.gradle.internal.Factories$1.create(Factories.java:22)
+	at org.gradle.internal.progress.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:91)
+	at org.gradle.internal.progress.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:53)
+	at org.gradle.initialization.DefaultGradleLauncher.doBuildStages(DefaultGradleLauncher.java:148)
+	at org.gradle.initialization.DefaultGradleLauncher.access$200(DefaultGradleLauncher.java:33)
+	at org.gradle.initialization.DefaultGradleLauncher$1.create(DefaultGradleLauncher.java:112)
+	at org.gradle.initialization.DefaultGradleLauncher$1.create(DefaultGradleLauncher.java:106)
+	at org.gradle.internal.progress.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:91)
+	at org.gradle.internal.progress.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:63)
+	at org.gradle.initialization.DefaultGradleLauncher.doBuild(DefaultGradleLauncher.java:106)
+	at org.gradle.initialization.DefaultGradleLauncher.run(DefaultGradleLauncher.java:92)
+	at org.gradle.launcher.exec.GradleBuildController.run(GradleBuildController.java:67)
+	at org.gradle.tooling.internal.provider.ExecuteBuildActionRunner.run(ExecuteBuildActionRunner.java:31)
+	at org.gradle.launcher.exec.ChainingBuildActionRunner.run(ChainingBuildActionRunner.java:43)
+	at org.gradle.launcher.exec.InProcessBuildActionExecuter.execute(InProcessBuildActionExecuter.java:42)
+	at org.gradle.launcher.exec.InProcessBuildActionExecuter.execute(InProcessBuildActionExecuter.java:26)
+	at org.gradle.tooling.internal.provider.ContinuousBuildActionExecuter.execute(ContinuousBuildActionExecuter.java:79)
+	at org.gradle.tooling.internal.provider.ContinuousBuildActionExecuter.execute(ContinuousBuildActionExecuter.java:51)
+	at org.gradle.launcher.cli.RunBuildAction.run(RunBuildAction.java:54)
+	at org.gradle.internal.Actions$RunnableActionAdapter.execute(Actions.java:173)
+	at org.gradle.launcher.cli.CommandLineActionFactory$ParseAndBuildAction.execute(CommandLineActionFactory.java:250)
+	at org.gradle.launcher.cli.CommandLineActionFactory$ParseAndBuildAction.execute(CommandLineActionFactory.java:217)
+	at org.gradle.launcher.cli.JavaRuntimeValidationAction.execute(JavaRuntimeValidationAction.java:33)
+	at org.gradle.launcher.cli.JavaRuntimeValidationAction.execute(JavaRuntimeValidationAction.java:24)
+	at org.gradle.launcher.cli.ExceptionReportingAction.execute(ExceptionReportingAction.java:33)
+	at org.gradle.launcher.cli.ExceptionReportingAction.execute(ExceptionReportingAction.java:22)
+	at org.gradle.launcher.cli.CommandLineActionFactory$WithLogging.execute(CommandLineActionFactory.java:210)
+	at org.gradle.launcher.cli.CommandLineActionFactory$WithLogging.execute(CommandLineActionFactory.java:174)
+	at org.gradle.launcher.Main.doAction(Main.java:33)
+	at org.gradle.launcher.bootstrap.EntryPoint.run(EntryPoint.java:45)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.gradle.launcher.bootstrap.ProcessBootstrap.runNoExit(ProcessBootstrap.java:60)
+	at org.gradle.launcher.bootstrap.ProcessBootstrap.run(ProcessBootstrap.java:37)
+	at org.gradle.launcher.GradleMain.main(GradleMain.java:24)
+
+### 11.1.7 ClassloaderBackedPluginDescriptorLocator. findPluginDescriptor()
+
+    public PluginDescriptor findPluginDescriptor(String pluginId) {
+        URL resource = classLoader.getResource("META-INF/gradle-plugins/" + pluginId + ".properties");
+        if (resource == null) {
+            return null;
+        } else {
+            return new PluginDescriptor(resource);
+        }
+    }
+
+- 这里会去找`META-INF/gradle-plugins/'pluginid'.properties`这个文件    
+
+	以`pmd`插件为例，其配置文件路径就是`subprojects\code-quality\src\main\resources\META-INF\gradle-plugins\org.gradle.pmd.properties`
+	
+	内容是 `implementation-class=org.gradle.api.plugins.quality.PmdPlugin ` 它表示pmd插件的描述类是`PmdPlugin.java`，需要去加载这个类
+
+
+# 12. Build步骤 - 查找任务
+
+	private void doBuildStages(Stage upTo) {
+		 ..........................
+        // After this point, the GradleLauncher cannot be reused
+        stage = Stage.Build;
+	
+        // Populate task graph
+        buildOperationExecutor.run("Calculate task graph", new Action<BuildOperationContext>() {
+            @Override
+            public void execute(BuildOperationContext buildOperationContext) {
+                buildConfigurationActionExecuter.select(gradle);
+                if (gradle.getStartParameter().isConfigureOnDemand()) {
+                    buildListener.projectsEvaluated(gradle);
+                }
+            }
+        });
+		......................
+	}
+	
+- 在这个阶段，gradle会计算task入口，选择逻辑如下:
+
+	1. 如果命令中输入了任务名称，比如这样的指令`gradle pmd`，那么就执行pmd这个任务
+
+	2. 如果命令中没有输入任务名称，比如直接输入`gradle`，那么会去查看是否有默认任务
+
+	3. 如果命令中没有输入任务名称，并且没有默认任务，那就执行`help`这个任务
+
+
+## 12.1 DefaultBuildConfigurationActionExecuter.select()
+
+    public void select(GradleInternal gradle) {
+        List<BuildConfigurationAction> processingBuildActions = CollectionUtils.flattenCollections(BuildConfigurationAction.class, configurationActions, taskSelectors);
+        configure(processingBuildActions, gradle, 0);
+    }
+    
+    private void configure(final List<BuildConfigurationAction> processingConfigurationActions, final GradleInternal gradle, final int index) {
+        if (index >= processingConfigurationActions.size()) {
+            return;
+        }
+        processingConfigurationActions.get(index).configure(new BuildExecutionContext() {
+            public GradleInternal getGradle() {
+                return gradle;
+            }
+
+            public void proceed() {
+                configure(processingConfigurationActions, gradle, index + 1);
+            }
+
+        });
+    }
+
+- `processingConfigurationActions`集合里有三个成员,这三个成员分别处理不同的逻辑
+
+	1. org.gradle.execution.ExcludedTaskFilteringBuildConfigurationAction@3ee68eb2 index: 0
+	2. org.gradle.execution.DefaultTasksBuildExecutionAction@49cd08f9 index: 1
+	3. org.gradle.execution.TaskNameResolvingBuildConfigurationAction@4eace42b index: 2
+
+
+### 12.1.1 ExcludedTaskFilteringBuildConfigurationAction.configure()
+
+    public void configure(BuildExecutionContext context) {
+        GradleInternal gradle = context.getGradle();
+        Set<String> excludedTaskNames = gradle.getStartParameter().getExcludedTaskNames();
+        if (!excludedTaskNames.isEmpty()) {
+            final Set<Spec<Task>> filters = new HashSet<Spec<Task>>();
+            for (String taskName : excludedTaskNames) {
+                filters.add(taskSelector.getFilter(taskName));
+            }
+            gradle.getTaskGraph().useFilter(Specs.intersect(filters));
+        }
+
+        context.proceed();
+    }
+
+- 如果用户设置了过滤指定任务，那么就会过滤掉不执行的任务
+
+### 12.1.2 DefaultTasksBuildExecutionAction.configure()
+
+    public void configure(BuildExecutionContext context) {
+        StartParameter startParameter = context.getGradle().getStartParameter();
+		 // 判断是否有输入任务名称
+        for (TaskExecutionRequest request : startParameter.getTaskRequests()) {
+            if (!request.getArgs().isEmpty()) {
+                // 执行输入的任务
+                context.proceed();
+                return;
+            }
+        }
+
+        // Gather the default tasks from this first group project
+        ProjectInternal project = context.getGradle().getDefaultProject();
+
+        //so that we don't miss out default tasks
+        projectConfigurer.configure(project);
+		 // 查询是否存在默认任务
+        List<String> defaultTasks = project.getDefaultTasks();
+        if (defaultTasks.size() == 0) {
+        // 不存在默认任务，执行help任务
+            defaultTasks = Collections.singletonList(ProjectInternal.HELP_TASK);
+            LOGGER.info("No tasks specified. Using default task {}", GUtil.toString(defaultTasks));
+        } else {
+            LOGGER.info("No tasks specified. Using project default tasks {}", GUtil.toString(defaultTasks));
+        }
+
+        startParameter.setTaskNames(defaultTasks);
+        context.proceed();
+    }
+
+- 逻辑如下:
+
+	1. 指定了待执行的任务，执行该任务
+
+	2. 未指定任务，使用默认任务，
+
+	3. 不存在默认任务，执行help任务
+
+### 12.1.3 TaskNameResolvingBuildConfigurationAction.configure()
+
+    public void configure(BuildExecutionContext context) {
+        GradleInternal gradle = context.getGradle();
+        TaskGraphExecuter executer = gradle.getTaskGraph();
+
+        List<TaskExecutionRequest> taskParameters = gradle.getStartParameter().getTaskRequests();
+        for (TaskExecutionRequest taskParameter : taskParameters) {
+            List<TaskSelector.TaskSelection> taskSelections = commandLineTaskParser.parseTasks(taskParameter);
+            for (TaskSelector.TaskSelection taskSelection : taskSelections) {
+                LOGGER.info("Selected primary task '{}' from project {}", taskSelection.getTaskName(), taskSelection.getProjectPath());
+                executer.addTasks(taskSelection.getTasks());
+            }
+        }
+
+        context.proceed();
+    }
+
+- 把任务添加到`TaskGraphExecuter `中,例如命令中指定的任务，默认任务，help任务...
+
+
+# 13. Build步骤 - 执行任务
+
+	private void doBuildStages(Stage upTo) {
+			....................
+        // Execute build
+        buildOperationExecutor.run("Run tasks", new Action<BuildOperationContext>() {
+            @Override
+            public void execute(BuildOperationContext buildOperationContext) {
+                buildExecuter.execute(gradle);
+            }
+        });
+    }
+
+
+## 13.1 DefaultBuildExecuter.execute()
+
+    public void execute(GradleInternal gradle) {
+        execute(gradle, 0);
+    }
+
+    private void execute(final GradleInternal gradle, final int index) {
+        if (index >= executionActions.size()) {
+            return;
+        }
+        executionActions.get(index).execute(new BuildExecutionContext() {
+            public GradleInternal getGradle() {
+                return gradle;
+            }
+
+            public void proceed() {
+                execute(gradle, index + 1);
+            }
+
+        });
+    }	
+
+- 递归执行集合中的`Action`
+
+- executionActions包含两个action
+
+	1. org.gradle.execution.DryRunBuildExecutionAction@1e4d93f7 index: 0
+
+	2. org.gradle.execution.SelectedTaskExecutionAction@76673ed index: 1    
+
+### 13.1.1 DryRunBuildExecutionAction.execute()
+
+	public void execute(BuildExecutionContext context) {
+        GradleInternal gradle = context.getGradle();
+        if (gradle.getStartParameter().isDryRun()) {
+            for (Task task : gradle.getTaskGraph().getAllTasks()) {
+                task.setEnabled(false);
+            }
+        }
+        context.proceed();
+    }
+
+- 通过`setEnabled(false)`禁止所有的任务执行,即跳过任务执行
+
+- 命令选项中添加`--dry-run`就会跳过任务执行过程
+
+### 13.1.2 SelectedTaskExecutionAction.execute()
+
+    public void execute(BuildExecutionContext context) {
+        GradleInternal gradle = context.getGradle();
+        TaskGraphExecuter taskGraph = gradle.getTaskGraph();
+        if (gradle.getStartParameter().isContinueOnFailure()) {
+            taskGraph.useFailureHandler(new ContinueOnFailureHandler());
+        }
+
+        taskGraph.addTaskExecutionGraphListener(new BindAllReferencesOfProjectsToExecuteListener());
+        taskGraph.execute();
+    }
+
+#### 13.1.2.1 DefaultTaskGraphExecuter.execute()
+
+    public void execute() {
+        Timer clock = Timers.startTimer();
+        ensurePopulated();
+
+        graphListeners.getSource().graphPopulated(this);
+        try {
+            taskPlanExecutor.process(taskExecutionPlan, new EventFiringTaskWorker(taskExecuter.create(), buildOperationExecutor.getCurrentOperation()));
+            LOGGER.debug("Timing: Executing the DAG took " + clock.getElapsed());
+        } finally {
+            taskExecutionPlan.clear();
+        }
+    }
+
+#### 13.1.2.2 DefaultTaskPlanExecutor.process()
+
+    public void process(TaskExecutionPlan taskExecutionPlan, Action<? super TaskInternal> taskWorker) {
+        taskWorker(taskExecutionPlan, taskWorker, buildOperationWorkerRegistry).run();
+        taskExecutionPlan.awaitCompletion();
+    }
+
+-  `taskWorker `是`AbstractTaskPlanExecutor`中的内部类
+
+#### 13.1.2.3 AbstractTaskPlanExecutor.TaskExecutorWorker.run()
+
+	private static class TaskExecutorWorker implements Runnable {
+	    ...
+	
+	    public void run() {
+	        ...
+	        while ((task = taskExecutionPlan.getTaskToExecute()) != null) {
+	            BuildOperationWorkerRegistry.Completion completion = buildOperationWorkerRegistry.operationStart();
+	            try {
+	                ...
+	                processTask(task);
+	                ...
+	            } finally {
+	                completion.operationFinish();
+	            }
+	        }
+	        ...
+	    }
+	
+	    protected void processTask(TaskInfo taskInfo) {
+	        ...
+	        taskWorker.execute(taskInfo.getTask());
+	        ...
+	    }
+	}
+
+#### 13.1.2.4 DefaultTaskGraphExecuter.EventFiringTaskWorker.execute()
+
+    public void execute(final TaskInternal task) {
+        TaskOperationDescriptor taskOperation = new TaskOperationDescriptor(task);
+        BuildOperationDetails buildOperationDetails = BuildOperationDetails.displayName("Task " + task.getIdentityPath()).name(task.getIdentityPath().toString()).parent(parentOperation).operationDescriptor(taskOperation).build();
+        buildOperationExecutor.run(buildOperationDetails, new Action<BuildOperationContext>() {
+            @Override
+            public void execute(BuildOperationContext buildOperationContext) {
+                // These events are used by build scans
+                TaskOperationInternal legacyOperation = new TaskOperationInternal(task, buildOperationExecutor.getCurrentOperation().getId());
+                internalTaskListener.beforeExecute(legacyOperation, new OperationStartEvent(0));
+                TaskStateInternal state = task.getState();
+                taskListeners.getSource().beforeExecute(task);
+                taskExecuter.execute(task, state, new DefaultTaskExecutionContext());
+                taskListeners.getSource().afterExecute(task, state);
+                buildOperationContext.failed(state.getFailure());
+                internalTaskListener.afterExecute(legacyOperation, new OperationResult(0, 0, state.getFailure()));
+            }
+        });
+    }
+
+- 这里的`taskExecuter.execute()`又使用了装饰者模式。。嵌套了一大堆。。。。
+
+## 13.2 TaskExecutionServices
+
+    TaskExecuter createTaskExecuter(TaskArtifactStateRepository repository, TaskOutputPacker packer, StartParameter startParameter, ListenerManager listenerManager, GradleInternal gradle, TaskOutputOriginFactory taskOutputOriginFactory) {
+        // TODO - need a more comprehensible way to only collect inputs for the outer build
+        //      - we are trying to ignore buildSrc here, but also avoid weirdness with use of GradleBuild tasks
+        boolean isOuterBuild = gradle.getParent() == null;
+        TaskInputsListener taskInputsListener = isOuterBuild
+            ? listenerManager.getBroadcaster(TaskInputsListener.class)
+            : TaskInputsListener.NOOP;
+
+        TaskOutputsGenerationListener taskOutputsGenerationListener = listenerManager.getBroadcaster(TaskOutputsGenerationListener.class);
+        return new CatchExceptionTaskExecuter(
+            new ExecuteAtMostOnceTaskExecuter(
+                new SkipOnlyIfTaskExecuter(
+                    new SkipTaskWithNoActionsExecuter(
+                        new ResolveTaskArtifactStateTaskExecuter(
+                            repository,
+                            new SkipEmptySourceFilesTaskExecuter(
+                                taskInputsListener,
+                                new ValidatingTaskExecuter(
+                                    new SkipUpToDateTaskExecuter(
+                                        createSkipCachedExecuterIfNecessary(
+                                            startParameter,
+                                            gradle.getBuildCache(),
+                                            packer,
+                                            taskOutputsGenerationListener,
+                                            taskOutputOriginFactory,
+                                            createVerifyNoInputChangesExecuterIfNecessary(
+                                                startParameter,
+                                                repository,
+                                                new ExecuteActionsTaskExecuter(
+                                                    taskOutputsGenerationListener,
+                                                    listenerManager.getBroadcaster(TaskActionListener.class)
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        );
+    }
+    
+
+最后会调用到ExecuteActionsTaskExecuter里面。
+
+- ExecuteAtMostOnceTaskExecuter：检查是否已经执行过
+
+- SkipOnlyIfTaskExecuter:检查是否是skip(这个估计是个属性配置，暂时还没有找到在哪里配)
+
+- SkipTaskWithNoActionsExecuter：检查是否有action,没有则返回
+
+- SkipEmptySourceFilesTaskExecuter：检查是否有source file    
+
+
+## 13.3 ExecuteActionsTaskExecuter.execute()
+
+    public void execute(TaskInternal task, TaskStateInternal state, TaskExecutionContext context) {
+        listener.beforeActions(task);
+        if (!task.getTaskActions().isEmpty()) {
+            outputsGenerationListener.beforeTaskOutputsGenerated();
+        }
+        state.setExecuting(true);
+        try {
+            GradleException failure = executeActions(task, state, context);
+            if (failure != null) {
+                state.setOutcome(failure);
+            } else {
+                state.setOutcome(
+                    state.getDidWork() ? TaskExecutionOutcome.EXECUTED : TaskExecutionOutcome.UP_TO_DATE
+                );
+            }
+        } finally {
+            state.setExecuting(false);
+            listener.afterActions(task);
+        }
+    }
+
+    private GradleException executeActions(TaskInternal task, TaskStateInternal state, TaskExecutionContext context) {
+        LOGGER.debug("Executing actions for {}.", task);
+        final List<ContextAwareTaskAction> actions = new ArrayList<ContextAwareTaskAction>(task.getTaskActions());
+        for (ContextAwareTaskAction action : actions) {
+            state.setDidWork(true);
+            task.getStandardOutputCapture().start();
+            try {
+                executeAction(task, action, context);
+            } catch (StopActionException e) {
+                // Ignore
+                LOGGER.debug("Action stopped by some action with message: {}", e.getMessage());
+            } catch (StopExecutionException e) {
+                LOGGER.info("Execution stopped by some action with message: {}", e.getMessage());
+                break;
+            } catch (Throwable t) {
+                return new TaskExecutionException(task, t);
+            } finally {
+                task.getStandardOutputCapture().stop();
+            }
+        }
+        return null;
+    }
+
+    private void executeAction(TaskInternal task, ContextAwareTaskAction action, TaskExecutionContext context) {
+        action.contextualise(context);
+        try {
+            action.execute(task);
+        } finally {
+            action.contextualise(null);
+        }
+    }
+
+- 执行任务对应的action
+
+
+
+    
