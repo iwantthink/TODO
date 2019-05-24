@@ -4,15 +4,17 @@
 
 # 1. 重要概念
 
-所有能够使用变量引用的都是对象， 每个对象都是一个类的实例
+所有能够使用变量引用的东西都是对象， 并且每个对象都是类的实例
 
-- 在 Dart 中 甚至连 数字、方法和 null 都是对象
+- 在 Dart 中 甚至连 数字、方法和 `null` 都是对象
 
 - 所有的对象都继承于 Object 类
 
-使用静态类型可以更清晰的表明意图，并且可以让静态分析工具来分析代码， 但这并不是强制性的
+**Dart是强类型语言**，但是类型注释并不是强制的，因为Dart可以推断类型
 
-- 在调试代码的时候可能注意到 没有指定类型的变量的类型为 `dynamic`
+- **特殊类型`dynamic`可以明确的指定一个变量不需要类型**
+
+Dart支持泛型(`generic type`),例如`List<int>`,`List<dynamic>`
 
 Dart 在运行之前会先解析代码。
 
@@ -22,23 +24,27 @@ Dart 支持顶级方法 (例如 `main()`)，同时还支持在类中定义函数
 
 - **还可以在方法中定义方法 （嵌套方法或者局部方法）**
 
-Dart 支持顶级变量，以及 在类中定义变量（静态变量和实例变量）
+Dart 支持顶级变量，以及在类中定义变量（静态变量和实例变量）
 
-- 实例变量有时候被称之为域（`Field`）或者属性（`Propertie`)
+- 实例变量有时候被称之为字段（`Field`）或者属性（`Propertie`)
 
-Dart与Java不同，没有 `public`,`protected`和`private`关键字
+**Dart与Java不同，没有 `public`,`protected`和`private`关键字**
 
 - 如果一个标识符以 (`_`) 开头，则表示该标识符 在库内是私有的
 
-标识符可以以字母或者 `_` 下划线开头，后面可以是 其他字符和数字的组合
+**标识符可以以字母或者 `_` 下划线开头，后面可以是 其他字符和数字的任意组合**
 
-表达式(` expression `)和 语句(`statement`)在特定情况下是有区别的
+Dart拥有表达式(` expression `)和语句(`statement`)，前者拥有运行时值，后者没有
 
-**Dart 工具可以指出两种问题：警告和错误**
+- 例如表达式`condition ? expr1 : expr2`拥有`expr1`和`expr2`俩个值，语句`if-else`就没有。
 
-- 警告只是说代码可能有问题， 但是并不会阻止代码执行
+- 语句可以包含一个或多个表达式，但是表达式通常不能直接包含语句
 
-- 错误可以是**编译时错误**也可以是**运行时错误**。遇到编译时错误时，代码将 无法执行；运行时错误将会在运行代码的时候导致一个异常
+**Dart 工具可能报告两种类型的问题：警告和错误**
+
+- 警告只是说代码可能有问题， 但是并不会阻止代码运行
+
+- 错误可以是**编译时错误**也可以是**运行时错误**。遇到编译时错误时，代码将无法执行；运行时错误将会在运行代码的时候导致一个异常
 
 # 2. 关键字
 
@@ -46,11 +52,15 @@ Dart与Java不同，没有 `public`,`protected`和`private`关键字
 
 # 3. 变量
 
-使用`var`对变量进行声明
+使用`var`对变量进行声明并初始化,Dart会对其进行类型推断.此外直接声明变量类型也是Dart支持的
 
 	var name = 'Ryan';
 	
-- 变量是一个引用，引用指向了内容为`Ryan`的String对象
+- **变量保存引用**，引用指向了内容为`Ryan`的String对象
+
+- 变量name的类型会被Dart推断为`String`
+
+如果一个变量意味着可以使用任意类型，可以使用`Object`或`dynamic`,[但是俩者的意义不相同](https://dart.dev/guides/language/effective-dart/design#do-annotate-with-object-instead-of-dynamic-to-indicate-any-object-is-allowed)
 
 ## 3.1 默认值
 
@@ -68,30 +78,38 @@ Dart与Java不同，没有 `public`,`protected`和`private`关键字
 
 - 添加具体的类型可以提供代码补全等等好处
 
-# 4 `final` 和 `const`
+## 3.3 `final` 和 `const`
 
-`final`和`const`都能表示变量无法被修改，区别是：
+`final`和`const`都能表示变量无法被修改
+
+- **`final`无法和`var`一起使用，但是可以和具体的类型一起使用**
+
+- **实例变量可以被`final`修饰，但是无法被`const`修饰。如果`const`变量在类中，请定义为 `static const`**
+
+- **`final`变量必须在构造函数主体开始执行前被初始化(即变量声明阶段). 通过构造函数参数或构造函数的初始化列表**
 
 - 被`final`声明的变量只能赋值一次 , 顶级的`final`变量 或者类中的`final`变量在第一次被使用时初始化
 
 		final name = 'Bob'; // Or: final String name = 'Bob';
 
 
-- 被`const`声明的变量是编译时常量(同时，其也是`final`变量)
+- 被`const`声明的变量是编译时常量(同时其也是隐式的`final`变量)
 
 		const bar = 1000000;       // Unit of pressure (dynes/cm2)
 		const atm = 1.01325 * bar; // Standard atmosphere
-		
-	- 如果`const`变量在类中，请定义为 `static const`
 
-	- 可以直接定义 `const` 和其值，也可以定义一个 `const` 变量使用其他 `const` 变量的值来初始化其值
+	- 可以直接定义 `const` 和其常量值，也可以定义一个 `const` 变量使用其他 `const` 变量的值来初始化其值
 
-- `const`关键字不仅仅只用来定义常量,还可以用来创建不变的值（任何变量都可以有一个不变的值）
+- **`const`关键字不仅仅只用来定义变量,还可以用来定义值（任何变量都可以有一个不变的值），或者定义一个创建不变值的构造函数**
 
-	定义构造函数为 `const` 类型时，该构造函数创建的对象是不可改变的。
+		var foo = const [];
+		final bar = const [];
+		const baz = []; // Equivalent to `const []`
 
 
-- **实例变量可以是`final`但是不能是`const`**
+	- 定义构造函数为 `const` 类型时，该构造函数创建的对象是不可改变的
+
+	- 非`final`和非`const`的变量可以被改变，但是其常量值是无法被改变的
 
 # 5 内置的类型
 
@@ -105,6 +123,8 @@ Dart 内置如下类型：
 
 - lists (也被称之为 arrays)
 
+- sets
+
 - maps
 
 - runes (用于在字符串中表示 Unicode 字符)
@@ -113,7 +133,7 @@ Dart 内置如下类型：
 
 上面的类型可以直接通过字面量来初始化，例如`this is a string`是一个字符串字面量，`true`是一个布尔字面量
 
-因为Dart中每个变量引用都是一个对象(类的实例)，因此通常使用构造函数来初始化变量.**一些内置的类型具有自己的构造函数**,例如map类型可以使用`Map()`构造函数来实例化
+因为Dart中每个变量引用都是一个对象(类的实例)，所以通常使用构造函数来初始化变量.**一些内置的类型具有自己的构造函数**,例如map类型可以使用`Map()`构造函数来实例化
 
 
 ## 5.1 数值
@@ -122,11 +142,11 @@ Dart 支持两种类型的数字：
 
 - `int`
 
-	整数值，其取值通常位于 -253 和 253 之间。整数就是不带小数点的数字。
+	整数值不会大于64位，并且其具体大小取决于平台。在Dart VM上，取值范围就是 `-2^63`至`2^63-1`之间
 
 - `double`
 
-	64-bit (双精度) 浮点数，符合 IEEE 754 标准。如果一个数带小数点，那么其就是`double`类型
+	64-bit (双精度) 浮点数，符合 IEEE 754 标准
 
 `int`和`double`都是`num`的子类
 
@@ -134,7 +154,13 @@ Dart 支持两种类型的数字：
 
 - 位操作符，例如 `>> `定义在 `int` 类中
 
-**字符串和数字之间允许进行转换:**
+- 如果在`num`或其子类中找不到的方法，可以从`dart:math`库中查询
+
+**整数就是不带小数点的数字,`double`类型就是带小数点的数字**
+
+- **从Dart2.1开始，整数可以被赋值给double类型变量而不抛出异常**
+
+**字符串和数字之间允许互相转换:**
 
 	// String -> int
 	var one = int.parse('1');
@@ -161,17 +187,24 @@ Dart 支持两种类型的数字：
 
 **数字字面量是编译时常量，在算数表达式中，如果操作数是变量，那么结果也是编译时常量**
 
+	const msPerSecond = 1000;
+	const secondsUntilRetry = 5;
+	const msUntilRetry = secondsUntilRetry * msPerSecond;
 
 ## 5.2 字符串
 
-Dart的字符串编码是`UTF_16`,可以使用单引号或者双引号来创建字符串,字符串类型可以使用`String`表示
+Dart提供了`String`类型来表示字符串类型
+
+Dart的字符串是由`UTF_16`编码单元组成的序列,可以使用单引号或者双引号来创建字符串
 
 	var s1 = "string one";
 	var s2 = 'string two';
 
-**在字符串中可以以`${expression}`的形式添加插值**。如果表达式是一个引用，则可以省略花括号
+**在字符串中可以以`${expression}`的形式添加插值**。如果`expression`是一个标识符，还可以省略花括号
 
 - 如果表达式的结果是一个对象，那么会调用对象的`toString()`函数来获取一个字符串
+
+操作符`==`用来判断俩个对象是否相等，对于字符串来说，如果俩者包含相同的编码单元序列，则它们相等
 
 **字符串之间可以通过操作符`+`进行链接,也可以直接将多个字符串放到一起来实现同样的功能**
 
@@ -193,6 +226,20 @@ Dart的字符串编码是`UTF_16`,可以使用单引号或者双引号来创建�
 
 字符串字面量是编译时常量， 如果字符串带有插值，并且插值表达式中引用的为编译时常量，那么该字符串结果也是编译时常量
 
+	// These work in a const string.
+	const aConstNum = 0;
+	const aConstBool = true;
+	const aConstString = 'a constant string';
+	
+	// These do NOT work in a const string.
+	var aNum = 0;
+	var aBool = true;
+	var aString = 'a string';
+	const aConstList = [1, 2, 3];
+	
+	const validConstString = '$aConstNum $aConstBool $aConstString';
+	// const invalidConstString = '$aNum $aBool $aString $aConstList';
+
 ## 5.3 布尔值
 
 Dart提供了`bool`类型来表示布尔值，只有`true`和`false`所创建的对象是布尔类型，此外这俩个对象也是编译时常量
@@ -202,19 +249,90 @@ Dart提供了`bool`类型来表示布尔值，只有`true`和`false`所创建的
 
 ## 5.4 列表
 
-Dart中提供`List`类型表示列表，列表包含了数组，列表的表示方式如下:
+Dart中提供`List`类型表示列表，列表就代表了数组，列表的表示方式如下:
 
 	var list = [1,2,3];
 	
 - 列表的下标从0开始
 
-- 列表长度通过`length()`方法获取
+- 列表长度通过其`length()`方法获取
 
 - **列表字面量之前添加 `const` 关键字，可以定义一个不变的列表对象（编译时常量)**
 
 		var constantList = const [1, 2, 3];
 		constantList[0]=222; //Cannot modify an unmodifiable list
 
+### 5.4.1 展开操作符
+
+Dart2.3开始加入了展开操作符(`...`)和非空展开操作符`...?`,它们可以用来简洁的将多个元素插入列表
+
+- 非空展开操作符会检查被展开的列表是否为空，防止抛出异常
+
+示例(将列表加入另外一个列表)
+
+	var list = [1, 2, 3];
+	var list2 = [0, ...list];
+	assert(list2.length == 4);
+
+### 5.4.2 `collection if/for`
+
+Dart2.3开始加入了`collection if`和`collection for`，这使得可以在列表初始化中可以使用条件(`if`)和循环(`for`)
+
+示例(`collection if`)
+
+	var nav = [
+	  'Home',
+	  'Furniture',
+	  'Plants',
+	  if (promoActive) 'Outlet'
+	];
+
+示例(`collection for`)
+
+	var listOfInts = [1, 2, 3];
+	var listOfStrings = [
+	  '#0',
+	  for (var i in listOfInts) '#$i'
+	];
+	assert(listOfStrings[1] == '#1');
+
+
+
+## 5.5 Set
+
+**Set无序且不重复的集合，Dart通过`Set`类型或字面量来表示`Set`**
+
+	var halogens = {'fluorine', 'chlorine', 'bromine', 'iodine', 'astatine'};
+
+- Dart2.2开始才支持用字面量表示Set
+
+**因为Set的字面量与Map的字面量相同，都是使用`{}`进行包裹，因此在创建空的Set时，会出现歧义(Dart会认为`{}`是一个`Map<dynamic,dynamic>`)**
+
+- 为了消除歧义,在创建一个空的Set，可以通过泛型+`{}`的形式。 或者将`{}`赋值给`Set`类型的变量
+
+		var names = <String>{};
+		// Set<String> names = {}; // This works, too.
+		// var names = {}; // Creates a map, not a set.
+
+Set通过`add()`或`addAll()`方法添加元素
+
+	var elements = <String>{};
+	elements.add('fluorine');
+	elements.addAll(halogens);
+
+Set通过`length`属性获取长度
+
+	assert(names.length == 0);
+
+为了创建一个作为编译时常量的Set，需要在Set字面量前添加一个`const`
+
+	final constantSet = const {
+	  'astatine',
+	};
+	// constantSet.add('helium'); // Uncommenting this causes an error.
+
+
+Dart2.3开始Set支持扩展操作符(`...`或`...?`),`collection if`,`collection for`
 
 ## 5.5 Map
 
@@ -228,24 +346,35 @@ Map是一个拥有键值对的对象，键和值可以是任何类型的对象�
 
 Map可以通过构造函数创建
 
-	var gifts = new Map();
-	// 添加新值
-	gifts['first'] = 'partridge';
-	gifts[1]= 123;
-	// 获取值
-	assert gifts[1]==123;
+	var gifts = new Map();	
+
 	// 如果key不存在，则返回null
 	assert gifts[123123] == null;
-	// 通过length属性获取键值对数量
-	assert gifts.length == 2;
 
-- 在Map字面量前添加`const`可以创建一个不可变的Map对象(编译时常量)
+- Map添加值
+
+		gifts['first'] = 'partridge';
+		gifts[1]= 123;
+
+- Map读取值
+
+		assert(gifts[1]==123);
+		
+- Map长度(键值对数量)
+
+		assert(gifts.length == 2)	
+		
+
+在Map字面量前添加`const`可以创建一个不可变的Map对象(编译时常量)
 
 		var m = const{1:123};
+		// m[1] = 'Helium'; // Uncommenting this causes an error.
+
+Dart2.3开始Map支持扩展操作符(`...`或`...?`),`collection if`,`collection for`
 
 ## 5.6 Runes
 
-`Runes`表示`UTF-32`编码的字符串
+`Runes`表示`UTF-32`码点的字符串
 
 - Unicode 为每一个字符,标点符号,表情符号等都定义了一个唯一的数值。 但是因为Dart字符串是 `UTF-16`编码字符序列，所以在字符串中表达 32-bit Unicode 值就需要新的语法
 
@@ -267,11 +396,11 @@ Map可以通过构造函数创建
 
 ## 5.7 Symbol
 
-`Symbol`对象代表Dart中声明的操作符或者标识符
+**`Symbol`对象代表Dart中声明的操作符或者标识符**
 
 - 混淆之后的代码，标识符名称会被混淆，但是`Symbol`的名称不会改变
 
-使用`#`字面量来获取标识符的Symbol对象
+**使用`#`字面量来获取标识符的Symbol对象**
 
 	#bar
 	#radix
@@ -280,9 +409,9 @@ Map可以通过构造函数创建
 
 # 6. 方法
 
-**Dart中的方法是`Function`类型的对象**，这意味着方法也可以赋值给变量，或者当做其他方法的参数
+Dart是一门面向对象语法，即使是方法也是对象，**Dart使用`Function`类型作为方法的类型**，这意味着方法也可以赋值给变量，或者当做其他方法的参数
 
-- **类的实例可以当做方法来调用**
+- **类的实例只要是方法，那就可以被调用**
 
 定义方法的示例:
 
@@ -290,12 +419,13 @@ Map可以通过构造函数创建
 	  return _nobleGases[atomicNumber] != null;
 	}
 
-- 方法的返回值类型可以省略
+- Dart不建议省略方法的返回值类型，但是省略了也可以工作
 
-- **对于只有一个表达式的方法，可以使用胖箭头`=>`来缩短语法的定义**
+- **对于只有一个表达式的方法，可以使用缩写语法来定义，即使用胖箭头`=>`来定义**
 
 		bool isNoble(int atomicNumber) => _nobleGases[atomicNumber] != null;
 
+	- `=> expr`语法就是`{return expr;}`的缩写
 
 	- 胖箭头和分号之间只能使用一个表达式，并且不能使用语句。 例如不能使用`if`语句，但是可以使用条件表达式
 
@@ -303,25 +433,31 @@ Map可以通过构造函数创建
 
 **方法参数分为 必选和可选， 必选参数需要位于参数列表的前面，后面的就是可选参数**
 
+- 可选命名参数也可以使用`@required`注解
+
 ### 6.1.1 Optional parameters（可选参数）
 
-可选参数可以是**命名参数**或者**基于位置的参数**，但是这两种参数不能同时当做可选参数
+可选参数可以是**命名参数**或者**位置参数**，但是这两种参数不能同时当做可选参数
 
-### 6.1.2 Optional named parameters（可选命名参数）
-
-调用方法的时候，可以使用`paramName: value`形式来指定命名参数
-
-	enableFlags(bold: true, hidden: false);
-
-在定义方法的时候，使用 `{paramTyp1 param1,paramTyp2 param2, …}` 的形式来指定命名参数：
+#### 6.1.1.1 Optional named parameters（可选命名参数）
+**在定义方法的时候，使用 `{paramTyp1 param1,paramTyp2 param2, …}` 的形式来指定命名参数.那么调用方法的时候，就可以使用`paramName: value`形式来指定命名参数**
 
 	enableFlags({bool bold, bool hidden}) {
 	  // ...
 	}
 
+	enableFlags(bold: true, hidden: false);
 
-### 6.1.3 Optional positional parameters（可选位置参数）
-把一些方法的参数放到 `[] `中就变成可选位置参数了
+- **注意这里有一个花括号!!!**
+
+Dart中任何命名参数都可以使用`@required`注解，它表示这个参数时一个必须的参数
+
+	const Scrollbar({Key key, @required Widget child})
+
+- 当构造`Scrollbar`时，如果缺少了`child`参数，那么编译器会报错
+
+#### 6.1.1.2 Optional positional parameters（可选位置参数）
+**把一些方法的参数放到 `[] `中就变成可选位置参数**
 
 	String say(String from, String msg, [String device]) {
 	  var result = '$from says $msg';
@@ -335,18 +471,17 @@ Map可以通过构造函数创建
 
 	assert(say('Bob', 'Howdy', 'smoke signal') =='Bob says Howdy with a smoke signal');
 
-### 6.1.4 Default parameter values（默认参数值）
+### 6.1.2 Default parameter values（默认参数值）
+**定义方法时，在可选参数定义后加上`=value`可以定义可选参数的默认值**
 
-定义方法时，在可选参数后加上`=value`可以定义可选参数的默认值
+- **默认值可以是list或map,只要其是编译时常量**
 
-- 默认值只能是编译时常量
+- 可选参数如果没有提供默认值，则默认值为`null`
 
-- 如果没有提供默认值，则默认值为 null
+- 只有可选参数能够添加默认值，包括可选位置参数和可选命名参数
 
-- 可选位置参数也可以添加默认值
-
-示例:
-
+示例(可选命名参数):
+	
 	void enableFlags({bool bold = false, bool hidden = false}) {
 	  // ...
 	}
@@ -354,12 +489,29 @@ Map可以通过构造函数创建
 	// bold will be true; hidden will be false.
 	enableFlags(bold: true);
 
+示例(可选位置参数):
+
+	String say(String from, String msg,
+	    [String device = 'carrier pigeon', String mood]) {
+	  var result = '$from says $msg';
+	  if (device != null) {
+	    result = '$result with a $device';
+	  }
+	  if (mood != null) {
+	    result = '$result (in a $mood mood)';
+	  }
+	  return result;
+	}
+	
+	assert(say('Bob', 'Howdy') ==
+	    'Bob says Howdy with a carrier pigeon');
+
 
 ## 6.2 入口函数
 
-**每个Dart应用都需要一个顶级`main()`入口方法才能执行**
+**每个Dart应用都需要一个顶级`main()`方法才能执行**
 
-- `main()`方法的返回值为`void`,并且有一个可选参数`List<String>`
+- **`main()`方法的返回值为`void`,并且有一个可选参数`List<String>`**
 
 示例:
 
@@ -392,8 +544,7 @@ Map可以通过构造函数创建
 	
 
 ## 6.4 匿名方法
-
-匿名方法即没有名称的方法，也被称为lambda或者闭包. 匿名方法可以赋值给一个变量，并在之后通过变量使用该匿名方法
+**匿名方法即没有名称的方法，也被称为lambda或者闭包. 匿名方法可以赋值给一个变量，并在之后通过变量使用该匿名方法**
 
 匿名方法与命名参数类似：
 
@@ -413,25 +564,25 @@ Map可以通过构造函数创建
 
 示例（使用匿名函数遍历输出列表）：
 
-	var list = ['apples', 'oranges', 'grapes', 'bananas', 'plums'];
-	list.forEach((i) {
-	  print(list.indexOf(i).toString() + ': ' + i);
+	var list = ['apples', 'bananas', 'oranges'];
+	list.forEach((item) {
+	  print('${list.indexOf(item)}: $item');
 	});
 
-**匿名参数也可以使用胖箭头语法进行表示**
+**匿名参数也可以使用缩写语法进行表示**
 
 	list.forEach( (i)=> print(list.indexOf(i).toString()+":"+i));
 
 
-# 7. 静态作用域(`Lexical scope`)
+## 6.5 静态作用域(`Lexical scope`)
 
 **Dart是静态作用域语言，即变量的作用域在编写代码的时候就确定了**
 
-- 基本上大括号里面定义的变量就 只能在大括号里面访问，和 Java 作用域 类似
+- 基本上花括号里面定义的变量就 只能在花括号里面访问，和 Java 作用域 类似
 
-# 8. 闭包(`Lexical closures`)
+## 6.6 闭包(`Lexical closures`)
 
-**一个闭包就是一个方法对象，无论该对象在何处被调用，都可以访问其在定义时的作用域内的变量**
+**闭包就是一个方法对象，其可以访问其定义所处范围内的变量，即使方法在定义之外被使用，也可以访问**
 
 	Function makeAdder(num addBy) {
 	  return (num i) => addBy + i;
@@ -449,7 +600,7 @@ Map可以通过构造函数创建
 	  assert(add4(3) == 7);
 	}
 
-# 9. 测试函数是否相等
+## 6.7 测试方法是否相等
 下面示例比较了顶级方法,静态函数，实例函数
 
 	foo() {}               // A top-level function
@@ -486,14 +637,23 @@ Map可以通过构造函数创建
 	  assert(v.baz != w.baz);
 	}
 
-# 10. 返回值
+## 6.8 返回值
 
-所有方法都需要返回一个值，如果没有指定返回值，那么默认将语句`return null;`作为方法的最后一个语句进行执行
+**所有方法都需要返回一个值，如果没有指定返回值，那么默认将语句`return null;`作为方法的最后一个语句进行执行**
 
+	foo() {}
+	
+	assert(foo() == null);
 
-# 11. 操作符
+# 7 操作符
 
-**使用操作符时就创建了表达式**
+**表达式中必有操作符!**下面的例子都是表达式:
+
+	a++
+	a + b
+	a = b
+	c ? a : b
+	a is T
 
 描述	|操作符
 :---:|:---:
@@ -518,39 +678,40 @@ assignment|	`=` `*=` `/=` `~/=` `%=` `+=` `-=` `<<=` `>>=` `&=` `^=` `|=` `??=`
 
 - **对于有俩个操作数的操作符表达式，左边的操作数决定了操作符的功能**，例如 有一条操作符表达式`Vector+Point`,则使用的是`Vector`实例中定义的操作符`+`
 
+- **操作符可以被重写**
 
-## 11.1 算数操作符
+## 7.1 算数操作符
 
 操作符	|解释
 ---|---
-+	|加号
-–	|减号
--expr	|负号
-*	|乘号
-/	|除号
-~/	|除号，但是返回值为整数
-%	|取模
+`+	`|加号
+`–	`|减号
+`-expr`	|负号
+`*	`|乘号
+`/	`|除号
+`~/`	|除号，但是返回值为整数
+`%`	|取模
 
-## 11.2 递增/递减操作符
+## 7.2 递增/递减操作符
 
 Operator	|Meaning
 ---|---
-++var	|`var = var + 1 (expression value is var + 1)`
-var++	|`var = var + 1 (expression value is var)`
---var	|`var = var – 1 (expression value is var – 1)`
-var--	|`var = var – 1 (expression value is var)`
+`++var`	|`var = var + 1 (expression value is var + 1)`
+`var++`	|`var = var + 1 (expression value is var)`
+`--var`	|`var = var – 1 (expression value is var – 1)`
+`var--`	|`var = var – 1 (expression value is var)`
 
 
-## 11.3 相等操作符
+## 7.3 相等和关系操作符
 
 操作符	|解释
 ---|---
-==	|相等
-!=	|不等
->	|大于
-<	|小于
->=	|大于等于
-<=	|小于等于
+`==	`|相等
+`!=	`|不等
+`>	`|大于
+`<	`|小于
+`>=	`|大于等于
+`<=`|小于等于
 
 **使用`==`操作符可以判断俩个对象代表的是否为相同内容**(如果要判断俩个对象是否相同则需要使用`identical()`方法)
 
@@ -561,21 +722,23 @@ var--	|`var = var – 1 (expression value is var)`
 - 操作符实际上是定义在表达式左侧对象上的函数，可以通过重写这些函数实现不同的功能
 
 
-## 13.4 类型判定操作符
+## 7.4 类型判定操作符
 
 **`as`,`is`和`is! `操作符是在运行时判定对象类型的操作符**
 
 操作符	|解释
 :---:|:---:
 `as`|类型转换
-`is	`|如果对象是指定的类型返回 True
-`is!`|如果对象是指定的类型返回 False
+`is	`|如果对象是指定的类型返回`True`
+`is!`|如果对象是指定的类型返回`False`
 
 - 所有的实例对象都继承自`Object`,因此`obje is Object`总是为`true`
 
-- 在使用`is`操作符时，如果被判断的对象是一个`null`或者类型不匹配，不会抛出异常。但是使用`as`操作符，如果被转换的对象为空时会抛出一个异常
+- **操作符`as`用来将一个对象转换为特定类型**
 
-`as`操作符可以简化`is`操作符:
+	在使用`is`操作符时，如果被判断的对象是一个`null`或者类型不匹配，不会抛出异常。但是使用`as`操作符，如果被转换的对象为空时会抛出一个异常
+
+**`as`操作符可以简化`is`操作符:**
 
 	if (emp is Person) { // Type check
 	  emp.firstName = 'Bob';
@@ -583,9 +746,14 @@ var--	|`var = var – 1 (expression value is var)`
 	
 	(emp as Person).firstName = 'Bob';
 
-## 13.5 赋值操作符
+## 7.5 赋值操作符
 
 **`=`操作符用来赋值，`??=`操作符用来为值为`null`的变量指定值**
+
+	// Assign value to a
+	a = value;
+	// Assign value to b if b is null; otherwise, b stays the same
+	b ??= value;
 
 **复合赋值操作符:**
 
@@ -596,13 +764,13 @@ var--	|`var = var – 1 (expression value is var)`
 
 **复合赋值操作符的原理:**
 
- |复合赋值操作符	|相等的表达式
+ |复合赋值操作符|对应的表达式
 :---:|:---:|:---: 	
 对于 操作符 op:|	`a op= b`	|`a = a op b`
 示例:	|`a += b`	|`a = a + b`
 
 
-## 13.6 逻辑操作符
+## 7.6 逻辑操作符
 
 操作符	|解释
 :---:|:---:
@@ -610,10 +778,8 @@ var--	|`var = var – 1 (expression value is var)`
 `||`	|逻辑 OR
 `&&`	|逻辑 AND
 
-## 13.7 位操作符&移位操作符
-
-**Dart 中可以单独操作数字的某一位， 下面操作符同样应用于整数**
-
+## 7.7 位操作符&移位操作符
+**Dart 中可以单独操作数字的某一位。通常会对整数使用下面操作符**
 
 操作符	|解释
 :---:|:---:
@@ -636,7 +802,7 @@ var--	|`var = var – 1 (expression value is var)`
 	assert((value << 4)       == 0x220); // Shift left
 	assert((value >> 4)       == 0x02);  // Shift right
 
-## 13.8 条件表达式
+## 7.8 条件表达式
 
 Dart有俩个特殊的操作符可以替换`if-else`语句:
 
@@ -664,7 +830,7 @@ Dart有俩个特殊的操作符可以替换`if-else`语句:
 	}
 
 
-## 13.9 级联调用
+## 7.9 级联操作符
 
 **Dart提供了级联操作符(`..`)对同一个对象进行连续调用(调用可以是方法或成员变量),使用级联操作符可以避免临时变量的创建**
 
@@ -709,7 +875,7 @@ Dart有俩个特殊的操作符可以替换`if-else`语句:
 
 **使用级联调用符需要注意返回值，如果对空值使用级联调用，那么就会报错**
 
-## 13.10 其他操作符
+## 7.10 其他操作符
 
 Operator	|Name	|Meaning
 ---|---|---
@@ -718,9 +884,9 @@ Operator	|Name	|Meaning
 `.`	|成员访问操作符	|访问元素，例如 foo.bar 代表访问 foo 的 bar 成员
 `?.`	|条件成员访问操作符	|和`.`类似，但是左边的操作对象不能为 null，例如 `foo?.bar` 如果foo 为 null 则返回 null，否则返回 bar 成员
 
-# 14. 流程控制语句
+# 8 流程控制语句
 
-## 14.1 `if- else`判断语句
+## 8.1 `if- else`判断语句
 
 Dart 支持 `if `语句以及可选的 `else`语句
 
@@ -732,7 +898,7 @@ Dart 支持 `if `语句以及可选的 `else`语句
 	  car.putTopDown();
 	}
 
-## 14.2 `For`循环语句
+## 8.2 `For`循环语句
 
 Dart 支持标准的`for`循环语句
 
@@ -741,7 +907,7 @@ Dart 支持标准的`for`循环语句
 	  message.write('!');
 	}
 
-Dart中`for`循环中的闭包会捕获循环的`index`索引值
+Dart`for`循环中的闭包可以获取到循环的`index`索引值
 
 	var callbacks = [];
 	for (var i = 0; i < 2; i++) {
@@ -759,7 +925,7 @@ Dart中`for`循环中的闭包会捕获循环的`index`索引值
 	  print(x);
 	}
 
-## 14.3 `while`&`do-while`循环语句
+## 8.3 `while`&`do-while`循环语句
 
 `while` 循环在执行循环之前先判断条件是否满足：
 
@@ -773,7 +939,7 @@ Dart中`for`循环中的闭包会捕获循环的`index`索引值
 	  printLine();
 	} while (!atEndOfPage());
 
-## 14.4 `break`&`continue`关键字
+## 8.4 `break`&`continue`关键字
 
 使用 break 来终止循环：
 
@@ -792,30 +958,29 @@ Dart中`for`循环中的闭包会捕获循环的`index`索引值
 	  candidate.interview();
 	}
 
-- 上述代码如果应用于实现了`Iterable`接口的对象，可以使用如下的形式:
+**上述代码如果应用于实现了`Iterable`接口的对象，可以使用如下的形式:**
 		
 		candidates.where((c) => c.yearsExperience >= 5)
 		          .forEach((c) => c.interview());
 
-## 14.5 `switch case`判断语句
+## 8.5 `switch case`判断语句
 
-Dart 中的Switch语句使用`==`操作符与`case`进行比较
+Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常量进行比较
 
-- 比较的对象必须都是同一个类的实例（并且不是其子类）
+- **被比较的对象必须都是同一个类的实例（并且不是其子类)**
 
-- 类必须没有覆写`==`操作符
+- **类必须没有重写`==`操作符**
 
-- **Dart中的Switch语句仅适用于有限的情况，例如在解释器或者扫描器中使用**
+**Dart中的Switch语句仅适用于有限的情况，例如在解释器或者扫描器中使用**
 
-
-**每个非空的`case`语句都必须有一个 `break` 语句**,如果省略了`break`将会抛出异常
+**每个非空的`case`语句都必须以`break` 语句结尾**,如果省略了`break`将会抛出异常
 
 - 另外还可以通过`continue`,`throw`,`return`来结束非空`case`语句
 
 **`switch`语句的`default`语句是可选的，当没有`case`语句匹配时，默认执行`default`语句**
 
 
-**`switch`语句中可以使用`continue`语句，用来跳转到指定的标签(`label`)**
+**`switch`语句中可以使用`continue`+`label`，用来跳转到指定的标签(`label`)**
 
 	var command = 'CLOSED';
 	switch (command) {
@@ -833,7 +998,7 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 
 **每个`case`语句都可以拥有局部变量，并且这个变量仅在这个语句内可见**
 
-# 15 断言(`assert`)
+## 8.6 断言(`assert`)
 
 **`assert`语句可以用来结束语句的执行**，断言中的表达式为true 则通过，为false则抛出异常`AssertionError`
 
@@ -848,32 +1013,39 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 
 - **断言仅在检查模式下运行有效，其在生产模式中不会执行！！！**
 
-# 16 异常
+`assert()`方法接收俩个参数，第一个参数用来接收布尔值（可以是任何解析为布尔值的表达式），第二个参数用来设置断言失败时输出的内容
 
-**Dart支持抛出异常以及捕获异常**
 
-- 异常用来表示一些错误情况，如果异常没有被捕获，则会导致代码执行终止
+# 9 异常
 
-- **Dart中的异常都是非检查异常**,方法不一定声明了它们可能抛出的异常，并且不会要求必须捕获异常
+**Dart支持抛出异常以及捕获异常**。异常用来表示一些错误情况，如果异常没有被捕获，则会导致代码执行终止
 
-- **Dart提供了`Exception`和`Error`类型，以及俩者的子类来表示异常，此外还可以自定义异常**
+- **Dart中的异常都是非检查异常**,方法不一定声明了它们可能抛出的异常，并且也不会要求必须捕获异常
 
-	**不仅如此，Dart允许将任何非空对象作为异常抛出,其并不需要实现`Exception`或`Error`**
+**Dart提供了`Exception`和`Error`类型，以及俩者的子类来表示异常，此外还可以自定义异常**
 
-## 16.1 `throw`语句
+- **不仅如此，Dart允许将任何非空对象作为异常抛出,其并不需要实现`Exception`或`Error`**
+
+## 9.1 `throw`语句
 **Dart使用`throw`语句来抛出异常**
 
 	throw new FormatException('Expected at least 1 section');
 	throw 'Out of llamas!';
 
-抛出异常的语句可以结合`=>`使用,也可以在任何能使用表达式的地方使用
+因为抛出异常是一个表达式，因此可以在任何能使用表达式的地方使用(抛出异常的语句可以结合`=>`使用)
 
 	distanceTo(Point other) =>
 	    throw new UnimplementedError();
 	    
 	    
-## 16.2 `catch`语句
-**Dart使用`catch`语句或`on .. catch`语句捕获异常**,`on catch`语句可以指定捕获异常类型
+## 9.2 `catch`语句
+**Dart使用`catch`和`on`俩个关键字来对抛出的异常进行处理,俩个关键字可以单独使用也可以组合使用**
+
+- `catch`可以在处理异常时提供异常对象
+
+- `on`可以用来指定处理的异常类型
+
+示例:
 
 	try {
 	  throwException();
@@ -892,19 +1064,19 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 		
 - 对于可能抛出多种类型异常的代码，可以指定多个捕获语句。每个语句分别对应一个异常类型， 如果捕获语句没有指定异常类型，则该语句可以捕获任何异常类型
 
-- **`catch`语句可以带有一个或者俩个参数，第一个参数为抛出的异常对象，第二参数为堆栈信息(`StackTrace`对象)**
+**`catch`语句可以带有一个或者俩个参数，第一个参数为抛出的异常对象，第二参数为堆栈信息(`StackTrace`对象)**
 
-- **通过`rethrow`异常可以将捕获的异常重新抛出**
+**通过`rethrow`异常可以将捕获的异常重新抛出**
 
-		final foo = '';
-		try {
-			foo = "You can't change a final variable's value.";
-		} catch (e) {
-			print('misbehave() partially handled ${e.runtimeType}.');
-			rethrow; // Allow callers to see the exception.
-		}
+	final foo = '';
+	try {
+		foo = "You can't change a final variable's value.";
+	} catch (e) {
+		print('misbehave() partially handled ${e.runtimeType}.');
+		rethrow; // Allow callers to see the exception.
+	}
 
-## 16.3 `finally`语句
+## 9.3 `finally`语句
 
 **Dart提供`finally`语句用来在异常语句中确保无论异常是否抛出，某些代码都必须执行**
 
@@ -914,14 +1086,30 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 
 
 
-# 17 类
+# 10 类
+
 **Dart 是一门面向对象的语言，同时支持基于`mixin`的继承机制**
 
 - 每个对象都是一个类的实例，并且所有类都继承自`Object`
 
 - 基于`mixin`的继承意味着每个类(除了`Object`)都只有一个超类，一个类的代码可以在其他多个类继承中重复使用
 
-**Dart使用`new`关键字和构造函数来创建对象，构造函数的名称可以是`ClassName`或者`ClassName.identifier`**
+
+**10.1-10.3 展示了如何使用类，其他的章节用来展示如何实现类**
+
+## 10.1 使用类成员
+对象的成员由函数和数据(分别是函数变量和实例变量)组成。当调用一个函数时，实际是对一个对象调用方法,该方法可以访问同一个对象内的函数和数据
+
+- Dart提供了(`.`)操作符来引用对象的变量或者方法
+
+- `?.`操作符也可以实现引用对象的变量和方法，此外它还对被调用对象进行了非空判断，避免被调用对象为空时的异常
+
+		var p;
+		p?.name;
+
+## 10.2 使用构造函数
+
+**Dart使用构造函数以及可选的`new`关键字来创建对象，构造函数的名称可以是`ClassName`或者`ClassName.identifier`**
 
 	var jsonData = JSON.decode('{"x":1, "y":2}');
 	
@@ -931,30 +1119,34 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	// Create a Point using Point.fromJson().
 	var p2 = new Point.fromJson(jsonData);
 
+- Dart 2.0开始`new`关键字是可选的
 
-**当调用一个方法时，是调用一个对象的方法，方法可能会访问对象的内容**.Dart提供了(`.`)操作符来引用对象的变量或者方法
-
-- `?.`操作符也可以实现引用对象的变量和方法，此外他还对被调用对象进行了非空判断，避免被调用对象为空时的异常
-
-		var p;
-		p?.name;
-
-
-**Dart提供了`const`关键字来使用常量构造函数，常量构造函数可以创建编译时常量，用法与`new`相似，只需要将`new`语句中的`new`替换掉即可**
+**Dart提供了`const`关键字来定义常量构造函数，常量构造函数可以创建编译时常量**
 
 	var p = const ImmutablePoint(2,2);
 	var p2 = const ImmutablePoint(2,2);
-	assert(identical(p,p2));
+	assert(identical(p,p2));// They are the same instance!
 
-- 两个一样的编译时常量是同一个对象
+**在一个具有常量的上下文中，可以省略掉构造函数或字面量前面的`const`。但是对于没有常量上下文的地方，不可以省略! **.示例：
 
+	// Lots of const keywords here.
+	const pointAndLine = const {
+	  'point': const [const ImmutablePoint(0, 0)],
+	  'line': const [const ImmutablePoint(1, 10), const ImmutablePoint(-2, 11)],
+	};
+
+- Dart 2.0 开始在具有常量上下文中字面量前的`const`可以省略
+
+## 10.3 获取对象的类型
 **`Object`类中的`runtimeType`属性可以用来判断实例的类型，该属性返回一个`Type`对象**
 
 	var a = 123;
 	print('The type of a is ${a.runtimeType}');
 
 
-## 17.1 定义类中的实例变量
+
+
+## 10.4 实例变量
 
 定义实例变量的示例:
 
@@ -966,7 +1158,7 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 
 - **所有未初始化的变量，其值都是`null`**
 
-- **每个实例变量都会自动生成一个`getter()`方法(隐式的)**。**每个非`final`的实例变量会自动生成一个`setter()`方法**
+- **每个实例变量都会自动生成一个隐式的`getter()`方法,此外每个非`final`的实例变量会自动生成一个隐式的`setter()`方法**
 
 		class Point {
 		  num x;
@@ -980,12 +1172,11 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 		  assert(point.y == null); //默认值都为`null`
 		}
 
-- 如果在实例变量定义时对其进行初始化(不是构造函数，或其他方法中对其进行初始化)，那么该值是在类实例创建时初始化，即在构造函数和初始化参数列表执行之前
+- **如果在实例变量定义时对其进行初始化(不是构造函数，或其他方法中对其进行初始化)，那么该值是在类实例创建时初始化，即在构造函数和初始化参数列表执行之前**
 
 
-## 17.2 构造函数
-
-构造函数就是一个名称和类名称相同的方法,此外还可以带有其他可选的标识符
+## 10.5 构造函数
+构造函数就是一个名称和类名称相同的方法,此外还可以接收参数
 
 	class Point {
 	  num x;
@@ -1012,14 +1203,20 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	  Point(this.x, this.y);
 	}
 
-### 17.2.1 默认构造函数
+### 10.5.1 默认构造函数
 
-**如果没有定义构造函数，那么Dart会提供一个默认的无参无名称的构造函数，并且该构造函数会调用父类的无参构造函数**
+**如果没有定义构造函数，那么Dart会提供一个默认的无参构造函数，并且该构造函数会调用父类的无参构造函数**
 
-**子类不会继承父类的构造函数，如果子类没有定义构造函数，那么只有一个无名称无参数的构造函数**
+### 10.5.2 构造函数无法被继承
 
-### 17.2.2 命名构造函数(` Named constructor`)
-**命名构造函数可以为一个类实现多个构造函数，使用命名构造函数可以更清晰的表明意图**
+**子类不会继承父类的构造函数，如果子类没有定义构造函数，那么只有一个无参构造函数**
+
+### 10.5.3 命名构造函数(` Named constructor`)
+**命名构造函数可以为一个类实现多个构造函数，此外还可以更清晰的表明意图**
+
+- **一个类中不能拥有多个普通的构造函数**
+
+示例:
 
 	class Point {
 	  num x;
@@ -1036,79 +1233,66 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 
 - **父类的命名构造函数同样不会被子类继承**
 
-### 17.2.3 调用父类构造函数
-
+## 10.6 调用父类构造函数
 **默认情况下，子类的构造函数会自动调用父类的 无名称无参数的默认构造函数**
 
-**如果父类中没有无名称无参数构造函数，那么需要在子类的构造函数中通过`:`+`super()`/`super.namedConstructor()` 手动调用父类的其他构造函数**(如果父类没有无名称无参数构造函数，并且不手动调用则会报错)
+- 如果父类中没有无参数的构造函数，那么必须手动调用父类的一个构造函数
 
-	class A {
-	  A(a){
-	    print('construct A with one parameter!!');
-	  }
-	
-	  A.namedConstructor(){
-	    print('construct A by namedConstructor!!!');
-	  }
-	}
-	
-	class B extends A{
-	  // 调用父类的命名构造函数
-	  B(a):super.namedConstructor(){
-	    print('construct B !');
-	  }
-	}
-	
-	class C extends A{
-	  // 调用父类拥有一个参数的构造函数	
-	  C(a):super(a){
-	    print('construct C !');
-	  }
-	}
-	
-	class D extends A{
-		// 默认会调用 父类无参无名称构造函数
-		D(){
-		// 由于A中没有，所以会报错
-		}
-	
-	}
-	
-	void main(List<String> args) {
-	  var b = new B(123);
-	  var c = new C(123);
-	}
+- 调用父类的构造函数的语法是 在构造函数参数之后，构造函数主体之前添加一个`:superConstructor(param)`
 
+	具体形式如`:super(param)`/`:super.namedConstructor(param)`
 
-**父类的构造函数在子类构造函数的主体最前面被执行，如果提供了一个初始化参数列表(`initializer list`),则初始化参数列表在父类构造函数执行之前被执行**. 具体的执行顺序如下:
+**父类的构造函数在子类构造函数的主体的开头被执行，如果提供了一个初始化参数列表(`initializer list`),则初始化参数列表在父类构造函数执行之前被执行**. 具体的执行顺序如下:
 
 1. `initializer list`（初始化参数列表）
 
-2. `superclass’s no-arg constructor`（父类的无名构造函数）
+2. `superclass’s no-arg constructor`（父类的无参构造函数）
 
-3. `main class’s no-arg constructor`（子类的无名构造函数）
+3. `main class’s no-arg constructor`（子类的无参构造函数）
 
-示例(无初始化参数列表):
 
-	class E extends A {
-	  static initialize(){
-	      print('initialize param!');
-	      return 'StringFromInitialize!';
-	  }
-	  E():super(initialize()){
-	    print('construct E!');
+示例：
+
+	class Person {
+	  String firstName;
+	  Person.fromJson(Map data) {
+	    print('in Person');
 	  }
 	}
+	
+	class Employee extends Person {
+	  // Person没有默认构造函数，所以必须手动调用
+	  Employee.fromJson(Map data) : super.fromJson(data) {
+	    print('in Employee');
+	  }
+	}
+	
+	main() {
+	  var emp = new Employee.fromJson({});
+	
+	  // Prints:
+	  // in Person
+	  // in Employee
+	  if (emp is Person) {
+	    // Type check
+	    emp.firstName = 'Bob';
+	  }
+	  (emp as Person).firstName = 'Bob';
+	}
 
-- **由于父类构造函数的参数会在子类构造函数之前执行，因此父类构造函数的参数可以是一个表达式或方法调用**
+**因为父类构造函数的参数是在调用构造函数之前被计算的，所以给父类构造函数的参数可以是一个表达式，比如函数调用**
 
-- 如果同时使用初始化列表和`super()`，那么必须将`super()`放在最后
+	class Employee extends Person {
+	  Employee() : super.fromJson(getDefaultData());
+	  // ···
+	}
 
-- **调用父类构造函数的参数将无法访问`this`. 例如，参数可以是静态函数，但是不能是实例函数**
+- 父类构造函数中的参数不能访问`this`,例如只能是静态方法,但是实例方法不行
 
-### 17.2.4 初始化列表(`Initializer List`)
 
-**构造函数执行前除了可以调用父类构造函数之外，还可以初始化实例参数**，初始化示例参数的表达式之间需要使用逗号`,`进行隔开
+## 10.7 初始化列表(`Initializer List`)
+
+**构造函数主体执行前除了可以调用父类构造函数之外，还可以初始化实例参数**，初始化示例参数的表达式之间需要使用逗号`,`进行隔开
 
 	class Point {
 	  num x;
@@ -1127,6 +1311,11 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 
 - **初始化表达式等号右边的部分不能访问`this`**
 
+**在开发阶段，可以通过`assert()`方法来对初始化列表进行校验**
+
+	Point.withAssert(this.x, this.y) : assert(x >= 0) {
+	  print('In Point.withAssert(): ($x, $y)');
+	}
 
 **初始化列表十分适合设置`final`变量的值**
 
@@ -1148,11 +1337,11 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	}
 
 
-### 17.2.5 重定向构造函数
+## 10.8 重定向构造函数
 
-**同一个类中的构造函数可以通过冒号`:`来调用另外一个构造函数**
+**同一个类中的构造函数可以通过冒号`:`重定向到另外一个构造函数**
 
-- **被重定向的构造函数不允许拥有代码块**
+- **被重定向的构造函数主体为空**
 
 示例:
 
@@ -1167,9 +1356,9 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	  Point.alongXAxis(num x) : this(x, 0);
 	}
 
-### 17.2.6 常量构造函数
+## 10.9 常量构造函数
 
-通过使用常量构造函数创建实例，可以提供一个状态不变的对象(即将对象定义为编译时常量)
+**通过使用常量构造函数创建实例，可以提供一个状态不变的对象(即返回编译时常量)**
 
 - **在构造函数前添加`const`关键字,同时声明所有类的变量为`final`**
 
@@ -1184,9 +1373,9 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	}
 
 
-### 17.2.7 工厂方法构造函数
+## 10.10 工厂构造函数
 
-**使用`factory`关键字标记的构造函数就是工厂方法构造函数，其表示构造函数并不总是返回一个新的对象!!!!**
+**使用`factory`关键字标记的构造函数就是工厂方法构造函数，它表示构造函数不会总是返回一个新的对象!!!!**
 
 - **在构造函数前添加`factory`关键字**
 
@@ -1224,14 +1413,19 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	var logger = new Logger('UI');
 	logger.log('Button clicked');
 	
-- 使用`new`关键字调用工厂构造函数	
+- 工厂构造函数就像任何其他构造函数一样去使用
+
+		var logger = Logger('UI');
+		logger.log('Button clicked');
 
 
-# 18 函数
-**函数就是在类中定义的方法，是类对象的行为**
+# 11 函数
+**函数就是为类提供行为的方法**
 
-## 18.1 实例函数
-**对象的实例函数可以访问`this`**,实例函数示例:
+## 11.1 实例函数
+**对象的实例函数可以访问`this`以及实例变量**
+
+示例：
 
 	import 'dart:math';
 	
@@ -1249,13 +1443,14 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 
 - `distanceTo()`就是一个实例函数
 
-## 18.2 `getter()`&`setter()`
+## 11.2 `getter()`&`setter()`
 
-`getter()`和`setter()` 是用来设置和访问对象属性的特殊函数
+**`getter()`和`setter()` 是用来设置和访问对象属性的特殊函数**
 
 - 每个实例变量都隐含的具有一个`getter()`方法， 如果变量没有被`final`修饰，那么还有一个 `setter()`方法
 
-- 使用`get`和`set`关键字可以定义变量的`getter()`和`setter()`方法
+- **使用`get`和`set`关键字定义变量的`getter()`和`setter()`方法
+，可以额外的创建属性**.俩者可以单独使用！
 
 示例:
 
@@ -1283,11 +1478,13 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	}
 	
 
-## 18.3 抽象函数
+## 11.3 抽象函数
 
 实例函数，`getter`函数,`setter`函数都可以为抽象函数
 
-- **抽象函数就是之定义了函数接口，但是没有提供具体的实现，其实现需要由子类提供**
+- **抽象函数就是只定义了函数接口，但是没有提供具体的实现，其实现需要由子类提供**
+
+- 抽象函数只能存在于抽象类中
 
 - **抽象函数的特征就是用分号代替函数体`{...}`**
 
@@ -1305,7 +1502,98 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	  }
 	}
 
-## 18.4 可重写的操作符
+
+# 12 抽象类
+**Dart使用`abstract`修饰符定义一个抽象类，抽象类无法被初始化**
+
+- 抽象类通常用来定义接口,它可以拥有任意个数的抽象函数或具有具体实现的函数(即一个抽象类中可以全是抽象函数或没有抽象函数)
+
+- **默认抽象类无法被实例化，但是通过定义 工厂构造函数，抽象类也可以实例化**
+
+示例:
+
+	// This class is declared abstract and thus
+	// can't be instantiated.
+	abstract class AbstractContainer {
+	  // Define constructors, fields, methods...
+	
+	  void updateChildren(); // Abstract method.
+	}
+
+# 13 隐式接口
+
+**每个类都隐式的定义了一个包含所有实例成员的接口，并且这个类实现了这个接口**
+
+- 如果想创建类A来支持类B的api，但是不通过继承来实现，那么就可以通过实现这个隐式接口
+
+**Dart通过`implements`关键字来实现一个或者多个接口**
+
+	// A person. The implicit interface contains greet().
+	class Person {
+	  // 在接口中，但是仅仅在此库中可见
+	  final _name;
+	
+	  // 不在接口中，因为是构造函数
+	  Person(this._name);
+	
+	  // 在接口中
+	  String greet(who) => 'Hello, $who. I am $_name.';
+	}
+	
+	// Person接口的实现类
+	class Imposter implements Person {
+	  // 必须重新定义它
+	  final _name = "";
+	
+	  String greet(who) => 'Hi $who. Do you know who I am?';
+	}
+	
+	greetBob(Person person) => person.greet('bob');
+	
+	main() {
+	  print(greetBob(new Person('kathy')));
+	  print(greetBob(new Imposter()));
+	}
+
+- 构造函数不会存在隐式接口中
+
+- 所以在隐式接口中的内容都需要被重写
+
+
+
+
+# 14 扩展类
+**Dart通过`extends`关键字实现继承，通过`super`关键字实现对父类的引用**
+
+子类可以重写实例函数,`getter()`函数和`setter()`函数
+
+	class A {
+	  // 重写了Object的noSuchMethod方法
+	  void noSuchMethod(Invocation mirror) {
+	    print('You tried to use a non-existent member:' +
+	          '${mirror.memberName}');
+	  }
+	}
+
+**通过`@override`注解可以标明函数是对父类函数的重写**
+
+	class A {
+	  @override
+	  void noSuchMethod(Invocation mirror) {
+	  }
+	}
+
+**如果希望借助`Object.noSuchMethod()`来实现所有函数功能，那么可以通过`@proxy`注解来避免警告信息,此外引用该类实例的变量必须是`dynamic`类型！**
+
+	@proxy
+	class A {
+	  void noSuchMethod(Invocation mirror) {
+	    // ...
+	  }
+	}
+	
+
+## 11.4 可重写的操作符
 
 类中的操作符实际上就是类中的方法，Dart支持重写该方法来实现自定义逻辑
 
@@ -1354,93 +1642,7 @@ Dart 中的Switch语句使用`==`操作符与`case`进行比较
 	}
 
 - 如果重写了`==`操作符，还应该重写对象的`hashCode`属性的`getter()`函数
-
-
-# 19 抽象类
-
-Dart使用`abstract`修饰符定义一个抽象类
-
-- 抽象类通常用来定义接口,它可以拥有任意个数的抽象函数或具有具体实现的函数(即一个抽象类中可以全是抽象函数或没有抽象函数)
-
-- **默认抽象类无法被实例化，但是通过定义 工厂构造函数，抽象类也可以实例化**
-
-示例:
-
-	abstract class AbstractContainer {
-	  // ...Define constructors, fields, methods...
 	
-	  void updateChildren(); // Abstract method.
-	}
-
-# 20 隐式接口
-
-**每个类都隐式的定义了一个包含所有实例成员的接口，并且这个类实现了这个接口**
-
-- 如果想创建类A来支持类B的api，但是不通过继承来实现，那么就可以通过实现这个隐式接口
-
-**Dart通过`implements`关键字来实现一个或者多个接口，子类必须实现每个接口定义的api**
-
-	// A person. The implicit interface contains greet().
-	class Person {
-	  // In the interface, but visible only in this library.
-	  final _name;
-	
-	  // Not in the interface, since this is a constructor.
-	  Person(this._name);
-	
-	  // In the interface.
-	  String greet(who) => 'Hello, $who. I am $_name.';
-	}
-	
-	// An implementation of the Person interface.
-	class Imposter implements Person {
-	  // We have to define this, but we don't use it.
-	  final _name = "";
-	
-	  String greet(who) => 'Hi $who. Do you know who I am?';
-	}
-	
-	greetBob(Person person) => person.greet('bob');
-	
-	main() {
-	  print(greetBob(new Person('kathy')));
-	  print(greetBob(new Imposter()));
-	}
-
-- 构造函数不会存在隐式接口中
-
-- 所以在隐式接口中的内容都需要被重写
-
-# 21 扩展类
-
-Dart通过`extends`关键字实现继承，通过`super`关键字实现对超类的引用
-
-子类可以重写实例函数,`getter()`函数和`setter()`函数
-
-	class A {
-	  // 重写了Object的noSuchMethod方法
-	  void noSuchMethod(Invocation mirror) {
-	    print('You tried to use a non-existent member:' +
-	          '${mirror.memberName}');
-	  }
-	}
-
-**通过`@override`注解可以标明函数是对父类函数的重写**
-
-	class A {
-	  @override
-	  void noSuchMethod(Invocation mirror) {
-	  }
-	}
-
-**如果希望借助`Object.noSuchMethod()`来实现所有函数功能，那么可以通过`@proxy`注解来避免警告信息,此外引用该类实例的变量必须是`dynamic`类型！**
-
-	@proxy
-	class A {
-	  void noSuchMethod(Invocation mirror) {
-	    // ...
-	  }
-	}
 
 # 22 枚举类型
 **Dart提供了`enum`关键字用来定义枚举类型,枚举通常用来表示一个固定数目的常量**
