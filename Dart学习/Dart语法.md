@@ -1565,35 +1565,42 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 # 14 扩展类
 **Dart通过`extends`关键字实现继承，通过`super`关键字实现对父类的引用**
 
-子类可以重写实例函数,`getter()`函数和`setter()`函数
+	class Television {
+	  void turnOn() {
+	    _illuminateDisplay();
+	    _activateIrSensor();
+	  }
+	  // ···
+	}
+	
+	class SmartTelevision extends Television {
+	  void turnOn() {
+	    super.turnOn();
+	    _bootNetworkInterface();
+	    _initializeMemory();
+	    _upgradeApps();
+	  }
+	  // ···
+	}
+
+## 14.1 重载成员
+
+
+子类可以重写实例函数,`getter()`函数和`setter()`函数,通过`@override`注解可以标明函数是对父类函数的重写
 
 	class A {
 	  // 重写了Object的noSuchMethod方法
+	  @override
 	  void noSuchMethod(Invocation mirror) {
 	    print('You tried to use a non-existent member:' +
 	          '${mirror.memberName}');
 	  }
 	}
 
-**通过`@override`注解可以标明函数是对父类函数的重写**
+要在类型安全的代码中缩小方法参数或实例变量的类型，可以使用`covariant`关键字
 
-	class A {
-	  @override
-	  void noSuchMethod(Invocation mirror) {
-	  }
-	}
 
-**如果希望借助`Object.noSuchMethod()`来实现所有函数功能，那么可以通过`@proxy`注解来避免警告信息,此外引用该类实例的变量必须是`dynamic`类型！**
-
-	@proxy
-	class A {
-	  void noSuchMethod(Invocation mirror) {
-	    // ...
-	  }
-	}
-	
-
-## 11.4 可重写的操作符
+## 14.2 可重载的操作符
 
 类中的操作符实际上就是类中的方法，Dart支持重写该方法来实现自定义逻辑
 
@@ -1606,6 +1613,10 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 
 - 上面表格中的操作符都支持重写
+
+- **`!=`不是一个可以重载的操作符。 表达式`e1 != e2`只是`!(e1 == e2)`的语法糖**
+
+- 如果重写了`==`操作符，还应该重写对象的`hashCode`属性的`getter()`函数
 
 **Dart通过`operator`关键字对操作符进行重写**
 
@@ -1641,17 +1652,35 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	  assert((v - w).x == 0 && (v - w).y == 1);
 	}
 
-- 如果重写了`==`操作符，还应该重写对象的`hashCode`属性的`getter()`函数
-	
 
-# 22 枚举类型
-**Dart提供了`enum`关键字用来定义枚举类型,枚举通常用来表示一个固定数目的常量**
+## 14.3 noSuchMethod()
+**Dart通过重载`noSuchMethod()`方法，来获取代码调用不存在的方法或实例变量的行为**
 
-	enum Color {
-	  red,
-	  green,
-	  blue
+	class A {
+	  // Unless you override noSuchMethod, using a
+	  // non-existent member results in a NoSuchMethodError.
+	  @override
+	  void noSuchMethod(Invocation invocation) {
+	    print('You tried to use a non-existent member: ' +
+	        '${invocation.memberName}');
+	  }
 	}
+
+无法调用一个未实现的函数，除非以下几种情况:
+
+1. 接收器拥有一个静态类型`dynamic`
+
+2. 接收器有一个定义未实现方法的静态类型（抽象也可以），接收器的动态类型有一个`noSuchMethod()`方法，它与Object类中的实现不同
+
+- [更多内容查看nosuchmethod-forwarding](https://github.com/dart-lang/sdk/blob/master/docs/language/informal/nosuchmethod-forwarding.md)
+
+# 15 枚举类型
+**枚举是一种特殊的类，用于表示固定数量的常量值**
+
+## 15.1 使用枚举
+**Dart提供了`enum`关键字用来定义枚举类型**
+
+	enum Color { red, green, blue }
 
 **枚举类型中的每个值都有一个被final修饰的`index`属性(即只有`getter()`函数),该`index`属性的值从0开始**
 
