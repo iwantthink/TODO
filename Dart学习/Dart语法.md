@@ -1695,10 +1695,10 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 - 枚举类型无法被继承,无法使用 mixin,无法实现一个枚举类型
 
-- 无法显示的初始化一个枚举类型
+- 无法显示的实例化一个枚举类型
 
-# 23 `mixin`
-**混入(`Mixin`)指的是在多重继承中重用类的代码. Dart通过在`with`关键字后添加一个或多个被混入的类名称来实现混入**
+# 16 `mixin`(给类添加功能)
+**混入(`Mixin`)指的是在多重类结构中重用代码. Dart通过在`with`关键字后添加一个或多个被混入的类名称来实现混入**
 
 示例(展示如何使用混入类):
 
@@ -1720,6 +1720,24 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 2. 此外还需要使用`mixin`关键字替代`class`关键字对类进行定义!
 
+- 定义混入类示例:
+
+		mixin Musical {
+		  bool canPlayPiano = false;
+		  bool canCompose = false;
+		  bool canConduct = false;
+		
+		  void entertainMe() {
+		    if (canPlayPiano) {
+		      print('Playing piano');
+		    } else if (canConduct) {
+		      print('Waving hands');
+		    } else {
+		      print('Humming to self');
+		    }
+		  }
+		}
+
 
 **混入类可以通过`on`关键字来指定 实现混入类的类必须继承的类型**
 
@@ -1735,16 +1753,16 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	class B extends C with A{
 	}
 
-# 24 类变量和类方法
+# 17 类变量和类方法
 
 Dart使用`static`关键字实现类范围的变量和方法
 
 - **类变量和类方法 又称为 静态变量和静态方法**
 
-- 静态变量和静态方法可以直接通过 类名.方法名 或 类名.变量名 调用
+- 静态变量和静态方法可以直接通过 **类名.方法名** 或 **类名.变量名** 调用
 
-## 24.1 静态变量
-静态变量适用于类范围的状态 和 常量
+## 17.1 静态变量
+**静态变量适用于类范围的状态和常量**
 
 	class Queue {
 	  static const initialCapacity = 16;
@@ -1757,7 +1775,7 @@ Dart使用`static`关键字实现类范围的变量和方法
 
 - **Dart中静态变量只有在被使用时才初始化**
 
-## 24.2 静态方法
+## 17.2 静态方法
 
 **静态方法不需要通过类实例来访问，因此无法使用`this`**
 
@@ -1771,10 +1789,10 @@ Dart使用`static`关键字实现类范围的变量和方法
 	  P.sayHi();
 	}
 
-- **对于通过的方法，建议使用顶级方法替代静态方法**
+- **对于通用的方法，建议使用顶级方法替代静态方法**
 
 
-# 25 泛型
+# 18 泛型
 **Dart通过`<>`标记法为类型指定泛型（参数化类型），例如文档中的列表为`List<E>`**
 
 - 按照惯例，大多数表示泛型的类型变量是大写的单个字母,如`E T S K`
@@ -1806,29 +1824,37 @@ Dart使用`static`关键字实现类范围的变量和方法
 	  void setByKey(String key, T value);
 	}
 
+- **在这段代码中，T是一个占位符**	
+
 - `ObjectCache`形式的类，如果想要修改value的类型，必须重新定义，但是使用泛型就不需要
 
 
-## 25.1 泛型集合
+## 18.1 泛型集合字面量
 
 **`List`,`Set`和`Map`都可以使用泛型，它可以指定集合的key类型或者value类型，只需要在集合定义的花括号之前添加`<T>`即可实现对集合添加泛型**
 
+	// 定义了泛型的列表
 	var names = <String>['Seth', 'Kathy', 'Lars'];
+	// 定义了泛型的Set
 	var uniqueNames = <String>{'Seth', 'Kathy', 'Lars'};
+	// 定义了泛型的Map
 	var pages = <String, String>{
 	  'index.html': 'Homepage',
 	  'robots.txt': 'Hints for web robots',
 	  'humans.txt': 'We are people, not machines'
 	};
 
-## 25.2 使用构造函数时使用泛型
-构造函数中可以使用一个或多个泛型，只需要将`<T...>`添加到实例化类语句中的类名称之后
+## 18.2 在使用构造函数时使用泛型
+**构造函数中可以使用一个或多个泛型，只需要将`<T...>`添加到实例化类语句中的类名称之后**
 
+	// 初始化了一个限定了类型的Set实例
 	var nameSet = Set<String>.from(names);
+	// 初始化了一个限定了类型的Map实例
+	var views = Map<int, View>();
 
-## 25.3 运行时使用泛型
+## 18.3 运行时使用泛型
 
-Dart的泛型被具体化，意味着泛型可以在运行时被使用，如下例子：
+**Dart中的泛型被具体化了，这意味着泛型可以在运行时被使用**，如下例子：
 
 	  var names = List<String>();
 	  names.addAll(['Seth', 'Kathy', 'Lars']);
@@ -1837,7 +1863,7 @@ Dart的泛型被具体化，意味着泛型可以在运行时被使用，如下�
 	
 - Java中的泛型在运行时会被删除，也就是说在Java中无法判断列表的泛型
 
-## 25.4 限制泛型
+## 18.4 限制泛型
 
 **Dart支持通过`extends`关键字对泛型进行限制**
 
@@ -1854,12 +1880,12 @@ Dart的泛型被具体化，意味着泛型可以在运行时被使用，如下�
 		var someBaseClassFoo = Foo<SomeBaseClass>();
 		//success 
 		var someBaseClassFoo = Foo();
-		// fail
+		// fail,不允许声明指定泛型之外的
 		var foo = Foo<Object>();
 
-## 25.5 泛型方法
 
-Dart初始不支持在方法上使用泛型，这是一项新功能,允许在方法上使用泛型
+## 18.5 泛型方法
+一开始Dart不支持在方法上使用泛型，这是一项新功能,允许在方法上使用泛型
 
 	T first<T>(List<T> ts) {
 	  // Do some initial work or error checking, then...
@@ -1877,36 +1903,35 @@ Dart初始不支持在方法上使用泛型，这是一项新功能,允许在方
 	3. 局部变量
 
 
-# 26 库和可见性
-
+# 19 库和可见性
 Dart提供了`import`和`library`指令来创建模块化和可共享的代码库
 
 - 库不仅提供api，还是一个隐私单元，在库中所有以下划线(`_`)开头的标识符都只在库中可见
 
-- 每个Dart程序都是一个库，即使它没有使用库指令
+- **每个Dart程序都是一个库，即使它没有使用`library`指令**
 
 - 库可以使用`package`关键字进行分发
 
-## 26.1 库的使用
-**使用`import`可以在一个库中引入另外一个库**
+## 19.1 库的使用
+**使用`import`可以通过命名空间在一个库中引入另外一个库**
 
 - 例如web应用程序通常使用`dart:html`库，其表示方式如下:
 
 		import 'dart:html';
 
-- 导入库需要一个`URI`参数，来表示库地址.
+**导入库需要一个表示库地址的`URI`参数**
 
-	1. 对于内置库，可以使用一个特殊的scheme`dart:`来表示
+1. 对于内置库，可以使用一个特殊的scheme:`dart:`来对其进行表示
 
-	2. 对于包管理器中的库，可以使用特殊的scheme(`package:`)来表示
+2. 对于包管理器中的库，可以使用特殊的scheme:`package:`来对其进行表示
 
-	3. 对于其他库，可以使用文件系统路径表示
+3. 对于其他库，可以使用文件系统路径表示
 
-			import 'package:test/test.dart';
+		import 'package:test/test.dart';
 
-	- URI表示统一资源标识符，URL(统一资源定位符)是一种常见的URI
+- URI表示统一资源标识符，URL(统一资源定位符)是一种常见的URI
 
-## 26.2 定义库内容的前缀
+## 19.2 指定库的前缀
 **如果导入了俩个标识符冲突的库，可以为一个或俩个库指定前缀**
 
 示例(lib1和lib2都有一个`Element`类)
@@ -1920,8 +1945,8 @@ Dart提供了`import`和`library`指令来创建模块化和可共享的代码�
 	// Uses Element from lib2.
 	lib2.Element element2 = lib2.Element();
 
-## 26.3 导入部分库
-**Dart允许选择性的导入库的内容**
+## 19.3 导入部分库
+**借助`show`和`hide`关键字，Dart允许选择性的导入库的内容**,示例如下:
 
 	// Import only foo.
 	import 'package:lib1/lib1.dart' show foo;
@@ -1930,7 +1955,7 @@ Dart提供了`import`和`library`指令来创建模块化和可共享的代码�
 	import 'package:lib2/lib2.dart' hide foo;
 
 
-## 26.4 延迟加载库
+## 19.4 延迟加载库
 **Dart支持仅在需要时才加载库**，延迟加载库的使用场景如下
 
 1. 减少App的启动时间
@@ -1963,52 +1988,55 @@ Dart提供了`import`和`library`指令来创建模块化和可共享的代码�
 
 3. Dart默认会将`loadLibrary()`添加到延迟库中。`loadLibrary()`方法返回一个`Future`
 
-## 26.5 实现库包并发布
+## 19.5 实现库包并发布
 
 [Create Library Packages](https://dart.dev/guides/libraries/create-library-packages)介绍了如果实现一个库包并发布
 
 
-# 27 异步(`asynchrony support`)
+# 20 异步(`asynchrony support`)
 
 Dart库中包含许多返回`Future`或`Stream`对象的函数
  
  - **这些函数是异步，并且这些异步函数在设置完耗时操作后（例如`I/O`）直接返回，而不会等待操作完成后返回**
 
-Dart提供了`async`和`await`关键字支持异步编程,它们可以像同步编程一样去使用异步编程
+Dart提供了`async`和`await`关键字支持异步编程,它们可以创建同步代码一样的异步代码
 
-
-## 27.1 处理`Future`
-`Future`表示一个异步任务，如果需要其结果，可以有俩种方式
+## 20.1 处理`Future`
+**`Future`表示一个异步任务，如果需要其结果，可以有俩种方式**
 
 1. 使用`async`和`await`
 
-	`async`和`await`是异步的代码，但是使用起来像是同步代码，例如下面使用`await`来等待一个异步函数执行结束
-	
-		Future checkVersion() async {
-		  var version = await lookUpVersion();
-		  // Do something with version
-		}
-	
-	- **`await`必须在一个异步方法中被使用(即被`async`标记的方法)**，`main()`方法也适用这条规则！
-	
-	- 可以使用`try-catch-finally`来处理`await`可能抛出的异常
-
-	- `await`可以在异步方法中多次使用
-
-			var entrypoint = await findEntrypoint();
-			var exitCode = await runExecutable(entrypoint, args);
-			await flushThenExit(exitCode);
-
-	- `await`表达式的值通常是一个`Future`,如果不是的话，Dart也会自动将其包装成一个`Future`(这个`Future`对象会返回表达式的值)。这时如果通过`Future`获取这个被包装的对象，会阻塞执行直到对象可用
-
 2. 使用`Future`的API
 
-### 27.1.1 定义异步方法
-异步方法就是方法体被`async`修饰符修饰的方法
+使用了`async`和`await`的代码就是异步的，但是这种代码看起来很像同步代码，例如下面使用`await`来等待一个异步函数执行结束
+	
+	Future checkVersion() async {
+	  var version = await lookUpVersion();
+	  // Do something with version
+	}
+	
+- **`await`必须在一个异步方法中被使用(即被`async`标记的方法)**，`main()`方法也适用这条规则！
 
-- 将`async`添加到方法之后，就会使得方法返回`Future`. 如果方法有返回值，那么会被`Future`自动包装
+	异步方法可能会执行耗时操作，但是代码执行时并不会等待这个方法执行完毕。相反，异步方法只会执行`await`关键字后的第一个表达式，然后就会返回一个`Future`,程序会在表达式执行结束后恢复执行
+	
+- 可以使用`try-catch-finally`来处理`await`可能抛出的异常
 
-- 如果异步方法没有返回一个有用的值，那么可以指定其返回值为`void`
+`await`可以在异步方法中多次被使用
+
+	var entrypoint = await findEntrypoint();
+	var exitCode = await runExecutable(entrypoint, args);
+	await flushThenExit(exitCode);
+
+
+`await`表达式的值通常是一个`Future`,如果不是的话，Dart也会自动将其包装成一个`Future`(这个`Future`对象会返回表达式的值)。这时如果通过`Future`获取这个被包装的对象，会阻塞执行直到对象可用
+
+
+## 20.2 定义异步方法
+**异步方法就是方法体被`async`修饰符修饰的方法**
+
+- 使用`async`修饰方法，会使得方法返回`Future`. 并且如果方法有返回值，那么会被`Future`自动包装
+
+- **如果异步方法没有返回一个有用的值，那么可以指定其返回值为`void`**
 
 示例:
 
@@ -2017,7 +2045,7 @@ Dart提供了`async`和`await`关键字支持异步编程,它们可以像同步�
 	Future<String> lookUpVersion() async => '1.0.0';
 	
 	
-## 27.2 处理`Stream`
+## 20.2 处理`Stream`
 
 如果需要从`Stream`中获取返回值，有俩种方式:
 
@@ -2028,16 +2056,16 @@ Dart提供了`async`和`await`关键字支持异步编程,它们可以像同步�
 2. 使用`Stream`的APi
 
 
-### 27.2.1 `await for`
+### 20.2.1 `await for`
 **异步的`for`循环形式如下：**
 
 	await for (varOrType identifier in expression) {
 	  // Executes each time the stream emits a value.
 	}
 
-- `expression`的值必须是`Stream`类型
+- **`expression`的值必须是`Stream`类型**
 
-- 其执行流程如下：
+其执行流程如下：
 
 	1. 等待流发出一个值
 
@@ -2050,7 +2078,7 @@ Dart提供了`async`和`await`关键字支持异步编程,它们可以像同步�
 `await for`必须在一个异步方法中使用(即被`async`修饰的方法)
 
 
-# 28 生成器(`Generator`)
+# 21 生成器(`Generator`)
 
 **Dart提供了生成器方法，用来延迟生成一系列值. Dart内置了俩种生成器方法**
 
@@ -2083,7 +2111,7 @@ Dart提供了`async`和`await`关键字支持异步编程,它们可以像同步�
 	  }
 	}
 
-# 29 可被调用的类实例(`Callable class`)
+# 22 可被调用的类实例(`Callable class`)
 
 **通过给类添加一个`call()`方法，可以将类实例当做方法一样去调用**
 	
@@ -2098,7 +2126,7 @@ Dart提供了`async`和`await`关键字支持异步编程,它们可以像同步�
 	}
 
 
-# 30 Isolates
+# 23 Isolates
 
 现在的电脑，手机上基本上都是多核CPU，为了充分利用这些，开发者通常使用并发运行的共享内存线程，但是这种方案很容易导致问题发生
 
@@ -2107,9 +2135,8 @@ Dart的代码有时运行在`isolate`中而不是线程，每个`isolate`都有�
 
 更多内容查看[dart-isolate-library](https://api.dartlang.org/stable/2.3.1/dart-isolate/dart-isolate-library.html)
 
-# 31 Typedef
-
-在Dart中，所有的东西都是对象，包括方法，字符串，数字等等。`typedef`或者方法类型别名为方法类型提供了一个名称，这样就可以在声明字段和返回值类型时使用 。当将一个函数类型对象分配给变量时，typedef可以用来保留类型信息
+# 24 Typedef
+`typedef`(方法类型别名)为方法类型提供了一个名称，这样就可以在声明字段和返回值类型时使用 。当将一个函数类型对象分配给变量时，`typedef`用来保留类型信息
 
 
 示例(不使用`typedef`)
@@ -2170,7 +2197,7 @@ Dart的代码有时运行在`isolate`中而不是线程，每个`isolate`都有�
 	}
 
 
-# 32 元数据(`metadata`)
+# 25 元数据(`metadata`)
 
 使用元数据可以给代码提供额外的信息。元数据注解以`@`开头，然后是对编译时常量的引用(例如`deprecated`)或对常量构造函数的调用
 
@@ -2211,7 +2238,7 @@ Dart的代码有时运行在`isolate`中而不是线程，每个`isolate`都有�
 - 可以在运行时使用反射检索元数据
 
 
-# 33 注释
+# 26 注释
 
 Dart支持单行注释，多行注释，文档注释
 
