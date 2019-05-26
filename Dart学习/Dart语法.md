@@ -60,7 +60,14 @@ Dart拥有表达式(` expression `)和语句(`statement`)，前者拥有运行�
 
 - 变量name的类型会被Dart推断为`String`
 
-如果一个变量意味着可以使用任意类型，可以使用`Object`或`dynamic`,[但是俩者的意义不相同](https://dart.dev/guides/language/effective-dart/design#do-annotate-with-object-instead-of-dynamic-to-indicate-any-object-is-allowed)
+**如果一个变量意味着可以使用任意类型，可以使用`Object`或`dynamic`,[但是俩者的意义不相同](https://dart.dev/guides/language/effective-dart/design#do-annotate-with-object-instead-of-dynamic-to-indicate-any-object-is-allowed)**
+
+- 使用 Object 时，意味着变量可以接受任意类型,类型系统会保证其类型安全
+
+
+- 使用 dynamic 则是告诉编译器，不用做类型检测。并且当调用一个不存在的方法时，会执行 `noSuchMethod()`方法，默认情况下（在 Object 里实现）它会抛出 NoSuchMethodError。
+
+**Dart提供了`is`操作符在运行时检测类型**
 
 ## 3.1 默认值
 
@@ -80,7 +87,7 @@ Dart拥有表达式(` expression `)和语句(`statement`)，前者拥有运行�
 
 ## 3.3 `final` 和 `const`
 
-`final`和`const`都能表示变量无法被修改
+`final`和`const`都能表示变量无法被修改,前者表示运行时常量(在程序运行时确定值)，后者表示编译时常量(即在编译时就确定了值)
 
 - **`final`无法和`var`一起使用，但是可以和具体的类型一起使用**
 
@@ -251,7 +258,10 @@ Dart提供了`bool`类型来表示布尔值，只有`true`和`false`所创建的
 
 Dart中提供`List`类型表示列表，列表就代表了数组，列表的表示方式如下:
 
-	var list = [1,2,3];
+	var list = [1,2,3];// 推荐使用字面量形式创建
+	// var list = <String>[123];
+	var list2 = List();
+	var list3 = new List();
 	
 - 列表的下标从0开始
 
@@ -303,6 +313,7 @@ Dart2.3开始加入了`collection if`和`collection for`，这使得可以在列
 **Set无序且不重复的集合，Dart通过`Set`类型或字面量来表示`Set`**
 
 	var halogens = {'fluorine', 'chlorine', 'bromine', 'iodine', 'astatine'};
+	var h2 = Set();
 
 - Dart2.2开始才支持用字面量表示Set
 
@@ -356,7 +367,7 @@ Map可以通过构造函数创建
 		gifts['first'] = 'partridge';
 		gifts[1]= 123;
 
-- Map读取值
+- Map读取值,在读取到不存在的key时，会返回null
 
 		assert(gifts[1]==123);
 		
@@ -433,7 +444,7 @@ Dart是一门面向对象语法，即使是方法也是对象，**Dart使用`Fun
 
 **方法参数分为 必选和可选， 必选参数需要位于参数列表的前面，后面的就是可选参数**
 
-- 可选命名参数也可以使用`@required`注解
+- 可选具名参数也可以使用`@required`注解
 
 ### 6.1.1 Optional parameters（可选参数）
 
@@ -449,6 +460,10 @@ Dart是一门面向对象语法，即使是方法也是对象，**Dart使用`Fun
 	enableFlags(bold: true, hidden: false);
 
 - **注意这里有一个花括号!!!**
+
+- **所有的命名参数都是可选的!!!!**这意味着下面的调用是合法的
+
+		enableFlags()
 
 Dart中任何命名参数都可以使用`@required`注解，它表示这个参数时一个必须的参数
 
@@ -478,7 +493,7 @@ Dart中任何命名参数都可以使用`@required`注解，它表示这个参�
 
 - 可选参数如果没有提供默认值，则默认值为`null`
 
-- 只有可选参数能够添加默认值，包括可选位置参数和可选命名参数
+- **只有可选参数能够添加默认值，包括可选位置参数和可选命名参数**
 
 示例(可选命名参数):
 	
@@ -1339,7 +1354,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 ## 10.8 重定向构造函数
 
-**同一个类中的构造函数可以通过冒号`:`重定向到另外一个构造函数**
+**同一个类中的构造函数可以通过冒号`:`重定向到另外一个构造函数（包括父类）**
 
 - **被重定向的构造函数主体为空**
 
