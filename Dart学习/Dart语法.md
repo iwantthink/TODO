@@ -1142,7 +1142,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	var p2 = const ImmutablePoint(2,2);
 	assert(identical(p,p2));// They are the same instance!
 
-**在一个具有常量的上下文中，可以省略掉构造函数或字面量前面的`const`。但是对于没有常量上下文的地方，不可以省略! **.示例：
+**在一个具有常量的上下文中，可以省略掉构造函数或字面量前面的`const`。但是对于没有常量上下文的地方，不可以省略!**.示例：
 
 	// Lots of const keywords here.
 	const pointAndLine = const {
