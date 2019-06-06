@@ -1269,7 +1269,7 @@ Form的子孙元素必须是`FormField`类型，FormField是一个抽象类，�
 
 ## 13.3 FormState
 
-`FormState`为Form的State类，可以通过`Form.of()`或`GlobalKey`获得。通过它可以对Form的子孙`FormField`进行统一操作
+**`FormState`为Form的State类，可以通过`Form.of()`或`GlobalKey`获得。通过它可以对Form的子孙`FormField`进行统一操作**
 
 - `FormState.validate()`：调用此方法后，会调用Form子孙FormField的validate回调，如果有一个校验失败，则返回false，所有校验失败项都会返回用户返回的错误提示。
 
