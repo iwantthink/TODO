@@ -193,7 +193,7 @@ Widget	|对应的Element |	用途
 
 ## 2.6 聚集widget
 
-默认情况下，`Row`或`Column`沿着其主轴会尽可能占用尽可能多的空间，但如果要将子widget紧密聚集在一起，可以通过设置`mainAxisSize`为`MainAxisSize.min`
+默认情况下，`Row`或`Column`沿着其主轴会尽可能占用尽可能多的空间(即`mainAxisSize = MainAxisSize.max`)，但如果要将子widget紧密聚集在一起，可以通过设置`mainAxisSize`为`MainAxisSize.min`
 
 - **`mainAxisAlignment`属性的效果会覆盖`mainAxisSize`属性的效果**
 
@@ -203,227 +203,288 @@ Widget	|对应的Element |	用途
 
 - **为了最大限度的减少过度嵌套而导致的视觉混淆，可以借助变量或函数去实现UI的各个部分**
 
-# 3 常见的布局widget
+# 3. 弹性布局
 
-widget分为两类：`widgets library`中的标准widget和`Material Components library`中的专用widget
+**弹性布局允许子widget按照一定比例来分配父容器空间，Flutter中的弹性布局主要通过`Flex`和`Expanded`来配合实现**
 
-- 任何应用程序都可以使用`widgets library`中的widget，但只有Material应用程序可以使用`Material Components`库
 
-## 3.1 标准widget
+## 3.1 Flex 
 
-### 3.1.1 Container
+`Flex`可以沿着水平或垂直方向排列子widget
 
-`Container`支持添加 padding, margins, borders, background color, 或将其他装饰属性添加到widget. 此外`Container`仅支持接收单个子项,但是该子项可以是`Row`,`Column`甚至是widget树的根
+- 如果知道主轴方向，使用Row或Column会方便一些，因为Row和Column都继承自Flex，参数基本相同，**所以能使用Flex的地方一定可以使用Row或Column**
 
-![](http://ww1.sinaimg.cn/large/6ab93b35gy1g3fut7j65zj208e05wa9x.jpg)
+- Flex本身功能是很强大的，它也可以和Expanded配合实现弹性布局
 
-### 3.1.2 GridView
 
-当GridView检测到其内容过长而不适合渲染框时，会自动提供滚动!
+### 3.1.1 构造函数
 
-- `GridView`提供了四种构造函数
+	Flex({
+	  ...
+	  @required this.direction, //弹性布局的方向, Row默认为水平方向，Column默认为垂直方向
+	  List<Widget> children = const <Widget>[],
+	})
 
-	1. `GridView.builder`
-	
-	2. `GridView.custom`
-	
-	3. `GridView.count` : 允许指定列数
-	
-	4. `GridView.extent`：允许指定子项的最大像素宽度,默认俩列
+- 大多数参数在`Row`和`Column`中介绍过了
 
-**注意：**
+- `direction`:
 
-- **如果直接在`StatelessWidget`的`build()`方法中返回`GridView`,会出现渲染失败的异常,这时需要借助一个`Directionality`!!!**
+	弹性布局的方向, Row默认为水平方向，Column默认为垂直方向
 
-- 在显示二维列表时，如果希望灵活控制指定行或列的子widget，应该使用`Table`或`DataTable`
 
+`Flex`继承自`MultiChildRenderObjectWidget`，对应的`RenderObject`为`RenderFlex`，`RenderFlex`中实现了其布局算法
 
-示例:
 
-	class TestWidget extends StatelessWidget {
-	  @override
-	  Widget build(BuildContext context) {
-	    return Directionality(
-	        textDirection: TextDirection.ltr,
-	        child: GridView.count(
-	          crossAxisCount: 3,
-	          children: List.generate(100, (index) {
-	            return Text("hello world $index");
-	          }),
-	        ));
-	  }
-	}
 
+## 3.2 Expanded
 
-### 3.1.3 ListView
+`Expanded`可以按比例"拉长"`Row`、`Column`和`Flex`的子widget所占用的空间
 
-`List`是类似列的widget,当检测到其内容过长而不适合渲染框时，会自动提供滚动！
+	const Expanded({
+	  int flex = 1, 
+	  @required Widget child,
+	})
 
-主要特点:
+- `flex`为弹性系数，如果为0或null，则child是没有弹性的，即不会被"拉长"占用的空间，只会占用固定的大小
 
-- 用于组织盒子中列表的特殊Column
+	所有的`flex>0`的Expanded都会按照其flex的比例来分割主轴的全部空闲空间
 
-- 可以水平或垂直放置
 
-- 检测它的内容超过显示框时提供滚动
 
-- 比Column配置少，但更易于使用并支持滚动
+示例：
 
-
-示例:
-
-	class TestWidget extends StatelessWidget {
-	  @override
-	  Widget build(BuildContext context) {
-	    return Directionality(
-	        textDirection: TextDirection.ltr,
-	        child: ListView(
-	          children: List.generate(100, (index){
-	            return Text("hello world $index");
-	          }),
-	        ));
-	  }
-	}
-
-
-### 3.1.4 Stack
-
-`Stack`用来将一个widget重叠在另一个widget之上，可以完全或者部分重叠底部的widget
-
-主要特点:
-
-- 用于与另一个widget重叠的widget
-
-- 子列表中的第一个widget是基础widget,随后的子widget被覆盖在基础widget的顶部
-
-- Stack的内容不能滚动
-
-- 可以选择剪切超过渲染框的子项
-
-
-示例:
-
-	class TestWidget extends StatelessWidget {
-	  @override
-	  Widget build(BuildContext context) {
-	    return Stack(
-	      alignment: Alignment(0.6, 0.6),
-	      children: <Widget>[
-	        Image.asset("images/lake.jpg"),
-	        Image.asset(
-	          "images/lake.jpg",
-	          width: 200,
-	          height: 200,
-	        )
-	      ],
-	    );
-	  }
-	}
-
-## 3.2 Material Components
-
-### 3.2.1 Card
-
-`Card`用于将相关内容放到带圆角和投影的盒子中,通常与`ListTile`一起使用
-
-- Card有一个子项， 但它可以是列(`Column`)，行(`Row`)，列表(`ListView`)，网格(`GridView`)或其他小部件
-
-- 默认情况下，Card将其大小缩小为0像素。可以使用`SizedBox`来限制Card的大小
-
-- 在Flutter中，Card具有圆角和阴影，这使它有一个3D效果
-
-	Card的`elevation`属性用来控制投影效果。 例如，将`elevation`设置为24.0，将会使Card从视觉上抬离表面并使阴影变得更加分散。 
-	
-	**如果指定不支持的值将会完全禁用投影**
-
-主要特点:
-
-- 实现了一个 Material Design card
-
-- 接受单个子项，但该子项可以是Row，Column或其他包含子级列表的widget
-
-- 显示圆角和阴影
-
-- Card内容不能滚动
-
-- Material Components 库的一个widget
-
-
-示例:
-
-	class TestWidget extends StatelessWidget {
-	  @override
-	  Widget build(BuildContext context) {
-	  
-	    return Directionality(
-	        textDirection: TextDirection.ltr,
-	        child: Card(
-	          child: Text("testCard"),
-	        ));
-	  }
-	}
-
-### 3.2.2 ListTile
-
-`ListTile`是一个专门的行级widget,用于创建最多包含3行文字，以及可选的行前和和行尾的图标的行
-
-- 常用在`ListView`或`Card`中,但不仅局限于这俩个
-
-主要特点:
-
-- 包含最多3行文本和可选图标的专用行
-
-- 比起Row不易配置，但更易于使用
-
-- Material Components 库里的widget
-
-
-示例:
-
-	class TestWidget extends StatelessWidget {
-	  @override
-	  Widget build(BuildContext context) {
-	    var card = new SizedBox(
-	      height: 100.0,
-	      child: new Card(
-	        child: new Column(
-	          children: [
-	            new ListTile(
-	              title: new Text('(408) 555-1212',
-	                  style: new TextStyle(fontWeight: FontWeight.w500)),
-	              leading: new Icon(
-	                Icons.contact_phone,
-	                color: Colors.blue[500],
-	              ),
-	            ),
-	            new Divider(),
-	            new ListTile(
-	              title: new Text('costa@example.com'),
-	              leading: new Icon(
-	                Icons.contact_mail,
-	                color: Colors.blue[500],
-	              ),
-	              trailing: Icon(
-	                Icons.star,
-	                color: Colors.blue[500],
-	              ),
-	            ),
-	          ],
+	Flex(
+	    direction: Axis.vertical,
+	    children: <Widget>[
+	      Expanded(
+	        flex: 1,
+	        child: Container(
+	          color: Colors.red,
 	        ),
 	      ),
-	    );
+	      Expanded(
+	        flex: 1,
+	        child: Container(
+	          color: Colors.yellow,
+	        ),
+	      ),
+	      Spacer(
+	        flex: 3,
+	      )
+	    ],
+  	)
+
+- `Spacer`只是一个`Expanded`的包装类，主要作用就是占用指定比例的空间
+
+
+# 4. 流式布局
+**Flutter把超出屏幕显示范围会自动折行的布局称为流式布局**
+
+- Flutter提供了`Wrap`和`Flow`用来支持流式布局
+
+
+## 4.1 Wrap
+
+	Wrap({
+	  ...
+	  this.direction = Axis.horizontal,
+	  this.alignment = WrapAlignment.start,
+	  this.spacing = 0.0,
+	  this.runAlignment = WrapAlignment.start,
+	  this.runSpacing = 0.0,
+	  this.crossAxisAlignment = WrapCrossAlignment.start,
+	  this.textDirection,
+	  this.verticalDirection = VerticalDirection.down,
+	  List<Widget> children = const <Widget>[],
+	})
+
+- `Wrap`除了超出显示范围后会折行外，其大部分行为和`Row`,`Flex`,`Column`相同
+
+`Wrap`存在几个特有的属性:
+
+- `spacing`：主轴方向子widget的间距
+
+- `runSpacing`：纵轴方向的间距
+
+- `runAlignment`：纵轴方向的对齐方式
+
+
+示例：
+
+	Wrap(
+      direction: Axis.horizontal,
+      spacing: 8.0, // 主轴(水平)方向间距
+      runSpacing: 4.0, // 纵轴（垂直）方向间距
+      alignment: WrapAlignment.center, //沿主轴方向居中
+      children: <Widget>[
+        Container(
+          width: 200,
+          height: 50,
+          color: Colors.yellow,
+        ),
+        Container(
+          width: 200,
+          height: 50,
+          color: Colors.red,
+        ),
+        Container(
+          width: 200,
+          height: 50,
+          color: Colors.blue,
+        ),
+      ],
+    )
+
+- `Wrap`子Widget的长宽如果超出屏幕范围，不会报错
+
+- `Wrap`需要在`MaterialApp`中
+
+## 4.2 Flow
+
+**Flow主要用于一些需要自定义布局策略或性能要求较高(如动画中)的场景**
+
+其具有如下优点：
+
+1. 性能好；Flow是一个对child尺寸以及位置调整非常高效的布局类widget，Flow用转换矩阵（`transformation matrices`）在对child进行位置调整的时候进行了优化：在Flow定位过后，如果child的尺寸或者位置发生了变化，在`FlowDelegate`中的`paintChildren()`方法中调用`context.paintChild` 进行重绘，而`context.paintChild`在重绘时使用了转换矩阵（`transformation matrices`），并没有实际调整Widget位置
+
+2. 灵活: 由于需要自己实现`FlowDelegate`的`paintChildren()`方法，所以需要自己计算每一个widget的位置，因此，可以自定义布局策略
+
+- 但是一般不建议使用Flow，因为其过于复杂，许多场景优先考虑使用`Wrap`
+
+缺点：
+
+1. 使用复杂
+
+2. **不能自适应子widget大小，必须通过指定父容器大小或实现`TestFlowDelegate`的`getSize()`返回固定大小**
+
 	
-	    return Directionality(
-	        textDirection: TextDirection.ltr,
-	        child: MediaQuery(data: MediaQueryData(), child: card));
+示例
+
+
+	Flow(
+	  delegate: TestFlowDelegate(margin: EdgeInsets.all(10.0)),
+	  children: <Widget>[
+	    new Container(width: 80.0, height:80.0, color: Colors.red,),
+	    new Container(width: 80.0, height:80.0, color: Colors.green,),
+	    new Container(width: 80.0, height:80.0, color: Colors.blue,),
+	    new Container(width: 80.0, height:80.0,  color: Colors.yellow,),
+	    new Container(width: 80.0, height:80.0, color: Colors.brown,),
+	    new Container(width: 80.0, height:80.0,  color: Colors.purple,),
+	  ],
+	)
+	
+	
+	class TestFlowDelegate extends FlowDelegate {
+	  EdgeInsets margin = EdgeInsets.zero;
+	  TestFlowDelegate({this.margin});
+	  @override
+	  void paintChildren(FlowPaintingContext context) {
+	    var x = margin.left;
+	    var y = margin.top;
+	    //计算每一个子widget的位置  
+	    for (int i = 0; i < context.childCount; i++) {
+	      var w = context.getChildSize(i).width + x + margin.right;
+	      if (w < context.size.width) {
+	        context.paintChild(i,
+	            transform: new Matrix4.translationValues(
+	                x, y, 0.0));
+	        x = w + margin.left;
+	      } else {
+	        x = margin.left;
+	        y += context.getChildSize(i).height + margin.top + margin.bottom;
+	        //绘制子widget(有优化)  
+	        context.paintChild(i,
+	            transform: new Matrix4.translationValues(
+	                x, y, 0.0));
+	         x += context.getChildSize(i).width + margin.left + margin.right;
+	      }
+	    }
+	  }
+	
+	  @override
+	  getSize(BoxConstraints constraints){
+	    //指定Flow的大小  
+	    return Size(double.infinity,200.0);
+	  }
+	
+	  @override
+	  bool shouldRepaint(FlowDelegate oldDelegate) {
+	    return oldDelegate != this;
 	  }
 	}
+
+
+- 主要就是去实现`paintChildren()`方法的逻辑，它是确定每个widget的位置
+
+- 由于`Flow`不能自适应子widget，因此需要在`getSize()`方法中返回一个固定大小来指定`Flow`大小
+
+
+# 5. 层叠布局
+Flutter中使用`Stack`和`Positioned`来实现绝对定位，`Stack`允许子widget堆叠，而`Positioned`可以给子widget定位（根据Stack的四个角）
+
+- 层叠布局和Android中的Frame布局是相似的，子widget可以根据到父容器四个角的位置来确定本身的位置
+
+- `Positioned`允许子widget堆叠（按照代码中声明的顺序）
+
+## 5.1 Stack
+
+	Stack({
+	  this.alignment = AlignmentDirectional.topStart,
+	  this.textDirection,
+	  this.fit = StackFit.loose,
+	  this.overflow = Overflow.clip,
+	  List<Widget> children = const <Widget>[],
+	})
+
+- `alignment`：
+
+	**此参数决定如何去对齐没有定位（没有使用Positioned）或部分定位的子widget**
 	
+	所谓部分定位，在这里**特指没有在某一个轴上定位：**left、right为横轴，top、bottom为纵轴，只要包含某个轴上的一个定位属性就算在该轴上有定位
+
+- `textDirection`：
+
+	**和Row、Wrap的`textDirection`功能一样，都用于决定`alignment`对齐的参考系**
+	
+	即`textDirection`的值为`TextDirection.ltr`时，则alignment的start代表左，end代表右，即从左往右的顺序
+	
+	`textDirection`的值为`TextDirection.rtl`，则alignment的start代表右，end代表左，即从右往左的顺序
+
+- `fit`：
+
+	**此参数用于决定没有定位的子widget如何去适应Stack的大小**
+	
+	`StackFit.loose`表示使用子widget的大小，`StackFit.expand`表示扩伸到Stack的大小
+
+- `overflow`：
+
+	**此属性决定如何显示超出Stack显示空间的子widget**，值为`Overflow.clip`时，超出部分会被剪裁（隐藏），值为`Overflow.visible `时则不会
 
 
 
+## 5.2 Positioned
 
+	const Positioned({
+	  Key key,
+	  this.left, 
+	  this.top,
+	  this.right,
+	  this.bottom,
+	  this.width,
+	  this.height,
+	  @required Widget child,
+	})
 
+- `left`、`top` 、`right`、 `bottom`分别代表离Stack左、上、右、底四边的距离
 
+- `width`和`height`用于指定定位元素的宽度和高度，注意，此处的`width`、`height`和其它地方的意义稍微有点区别，此处用于配合left、top 、right、 bottom来定位widget(如果已经指定了子控件的width,可以只使用left,right,top,bottom之一)
+
+	举个例子，在水平方向时，你只能指定left、right、width三个属性中的两个，如指定left和width后，right会自动算出(left+width)，**如果同时指定三个属性则会报错**，垂直方向同理
+
+	此外`Positioned`的`width`和`height`优先级高于子widget的`width`和`height`
+
+- **`Positioned`必须和`Stack`搭配使用**
+
+- 在`Stack`中只有没有使用`Positioned`进行包裹的widget 才会使用`Stack`的`alignment`属性
 
 
