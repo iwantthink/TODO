@@ -418,13 +418,13 @@ Flutter提供了一个命名构造函数`Transform.scale`,其可以对子widget�
 	    this.drawerScrimColor,
 	  })
 
-- `appBar`: 导航栏
+- `appBar`: 导航栏,通常为一个`AppBar`
 
-- `drawer`:抽屉,通常为`Drawer`
+- `drawer`/`endDrawer`:页面左侧抽屉或页面右侧抽屉,通常为`Drawer`
 
-- `bottomNavigationBar`:底部导航栏
+- `bottomNavigationBar`:底部导航栏，通常为`BottomNavigationBar`配合`BottomNavigationBarItem`
 
-- `floatingActionButton `:悬浮按钮
+- `floatingActionButton `:悬浮按钮,通常是一个`FloatingActionButton`
 
 ## 9.1 AppBar
 
@@ -481,9 +481,101 @@ Flutter提供了一个命名构造函数`Transform.scale`,其可以对子widget�
 				_globalKey.currentState.openDrawer()
 
 	
+### 9.1.1 TabBar
+
+**`AppBar`有一个`bottom`属性，用来添加一个导航栏底部的tab按钮组**
+
+Material组件库中提供了一个`TabBar`组件，它可以快速生成Tab菜单
+
+- Material库为`TabBar`提供了`Tab`作为子widget,此外还可以使用自定义的widget
+
+		Tab({
+		  Key key,
+		  this.text, // 菜单文本
+		  this.icon, // 菜单图标
+		  this.child, // 自定义Widget
+		})
+
+- `TabBar`需要一个`TabController`,用于控制/监听Tab菜单切换
+
+### 9.1.2 TabBarView
+
+Material库提供了一个`TabBarView`组件，它被用来配合`TabBar`来实现同步切换和滑动状态同步(仅靠`TabBar`只能生成一个静态的菜单)
+
+示例:
+
+	Scaffold(
+	  appBar: AppBar(
+	    ... //省略无关代码
+	    bottom: TabBar(
+	      controller: _tabController,
+	      tabs: tabs.map((e) => Tab(text: e)).toList()),
+	  ),
+	  drawer: new MyDrawer(),
+	  body: TabBarView(
+	    controller: _tabController,
+	    children: tabs.map((e) { //创建3个Tab页
+	      return Container(
+	        alignment: Alignment.center,
+	        child: Text(e, textScaleFactor: 5),
+	      );
+	    }).toList(),
+	  ),
+	  ... // 省略无关代码  
+	)    
+
+- Flutter会通过同一个`TabController`来连接`appBar`和`body`
+
+**除了`TabBarView`之外，Flutter还提供了一个`PageView `组件,其功能和`TabBarView`相似**
+
+
+## 9.2 Drawer
+
+Flutter提供了`Drawer`组件作为抽屉菜单，当用户手指从屏幕左/右向里滑动时便可打开抽屉菜单
+
+
+抽屉菜单通常将Drawer作为根节点，它实现了Material风格的菜单面板，`MediaQuery.removePadding`组件可以用来移除抽Drawer内的一些指定空白
+
+- 抽屉菜单页通常顶部由用户头像和昵称组成，底部是一个菜单列表，用ListView实现
+
+## 9.3 FloatingActionButton
+
+`FloatingActionButton`是Material设计规范中的一种特殊Button，通常悬浮在页面的某一个位置作为某种常用动作的快捷入口
+
+- 可以通过`Scaffold`的`floatingActionButton`属性来设置一个`FloatingActionButton`，同时通过`floatingActionButtonLocation`属性来指定其在页面中悬浮的位置
+
+
+## 9.4 底部导航
+
+通过`Scaffold`的`bottomNavigationBar`属性可以来设置底部导航
+
+- 通过Material组件库提供的`BottomNavigationBar`和`BottomNavigationBarItem`两个组件来实现Material风格的底部导航栏
+
+
+除此之外，Flutter还提供了一个`BottomAppBar `组件，可以配合`FloatingActionButton `一起实现一种"打洞"效果的底部导航
+
+	bottomNavigationBar: BottomAppBar(
+	  color: Colors.white,
+	  shape: CircularNotchedRectangle(), // 底部导航栏打一个圆形的洞
+	  child: Row(
+	    children: [
+	      IconButton(icon: Icon(Icons.home)),
+	      SizedBox(), //中间位置空出
+	      IconButton(icon: Icon(Icons.business)),
+	    ],
+	    mainAxisAlignment: MainAxisAlignment.spaceAround, //均分底部导航栏横向空间
+	  ),
+	)
+
+- 光上面的设置是不够的，还需要配合设置`FloatingActionButton `的位置,才能够实现嵌入的效果
+
+		floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+- `BottomAppBar`的`shape`属性决定洞的外形，`CircularNotchedRectangle`实现了一个圆形的外形，Flutter同样支持自定义外形
 
 
 
-# 10. TabBar
+![](http://ww1.sinaimg.cn/large/6ab93b35ly1g3sp2ktpwyj20k008ajrj.jpg)
 
-# 11. 底部导航
+
+
