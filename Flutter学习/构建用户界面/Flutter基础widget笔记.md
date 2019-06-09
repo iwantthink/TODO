@@ -6,7 +6,9 @@
 # 1. Widget简介
 
 ## 1.1 概念
-Flutter中几乎所有的对象都是一个Widget，与原生开发中“控件”不同的是，Flutter中的widget的概念更广泛，它不仅可以表示UI元素，也可以表示一些功能性的组件如：用于手势检测的 GestureDetector widget、用于应用主题数据传递的Theme等等。而原生开发中的控件通常只是指UI元素。
+Flutter中几乎所有的对象都是一个Widget，与原生开发中“控件”不同的是，Flutter中的widget的概念更广泛，它不仅可以表示UI元素，也可以表示一些功能性的组件如：用于手势检测的 GestureDetector 组件、用于应用主题数据传递的Theme等等
+
+- 原生开发中的控件通常只是指UI元素
 
 由于Flutter主要就是用于构建用户界面的，所以，在大多数时候，可以认为widget就是一个控件，不必纠结于概念
 
@@ -133,7 +135,7 @@ Widget定义:
 
 - `StatefulElement`间接继承自`Element`类，`StatefulWidget`作为其配置数据
 
-	`StatefulElement` 中可能会多次调用`createState()`来创建状态(State)对象
+	`StatefulElement`中可能会多次调用`createState()`来创建状态(State)对象
 
 - `createState()` 用于创建和`StatefulWidget`相关的状态，它在`StatefulWidget`的生命周期中可能会被多次调用
 
@@ -262,8 +264,6 @@ State中有两个常用属性：
 
 ### 3.2.1 生命周期回调函数
 **注意：在继承`StatefulWidget`重写其方法时，对于包含`@mustCallSuper`标注的父类方法，都要在子类方法中先调用父类方法。**
-
-
 
 - `initState`：
 
