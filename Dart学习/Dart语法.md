@@ -16,17 +16,17 @@
 
 Dart支持泛型(`generic type`),例如`List<int>`,`List<dynamic>`
 
-Dart 在运行之前会先解析代码。
+Dart 在运行之前会先解析代码
 
 - 可以通过使用 类型或者编译时常量来帮助 Dart 去捕获异常以及 让代码运行的更高效
 
-Dart 支持顶级方法 (例如 `main()`)，同时还支持在类中定义函数（静态函数和实例函数）
+Dart 支持顶级方法 (例如 `main()`,不支持`static`)，同时还支持在类中定义函数（静态函数和实例函数）
 
 - **还可以在方法中定义方法 （嵌套方法或者局部方法）**
 
 Dart 支持顶级变量，以及在类中定义变量（静态变量和实例变量）
 
-- 实例变量有时候被称之为字段（`Field`）或者属性（`Propertie`)
+- 实例变量有时候被称之为字段（`Field`）或者属性（`Property`)
 
 **Dart与Java不同，没有 `public`,`protected`和`private`关键字**
 
@@ -34,9 +34,9 @@ Dart 支持顶级变量，以及在类中定义变量（静态变量和实例变
 
 **标识符可以以字母或者 `_` 下划线开头，后面可以是 其他字符和数字的任意组合**
 
-Dart拥有表达式(` expression `)和语句(`statement`)，前者拥有运行时值，后者没有
+Dart拥有表达式(`expression `)和语句(`statement`)，前者拥有运行时值，后者没有
 
-- 例如表达式`condition ? expr1 : expr2`拥有`expr1`和`expr2`俩个值，语句`if-else`就没有。
+- 例如表达式`condition ? expr1 : expr2`拥有`expr1`和`expr2`俩个值，语句`if-else`就没有
 
 - 语句可以包含一个或多个表达式，但是表达式通常不能直接包含语句
 
@@ -64,8 +64,7 @@ Dart拥有表达式(` expression `)和语句(`statement`)，前者拥有运行�
 
 - 使用 Object 时，意味着变量可以接受任意类型,类型系统会保证其类型安全
 
-
-- 使用 dynamic 则是告诉编译器，不用做类型检测。并且当调用一个不存在的方法时，会执行 `noSuchMethod()`方法，默认情况下（在 Object 里实现）它会抛出 NoSuchMethodError。
+- 使用 dynamic 则是告诉编译器，不用做类型检测。并且当调用一个不存在的方法时，会执行 `noSuchMethod()`方法，默认情况下（在 Object 里实现）它会抛出 `NoSuchMethodError`
 
 **Dart提供了`is`操作符在运行时检测类型**
 
@@ -93,7 +92,7 @@ Dart拥有表达式(` expression `)和语句(`statement`)，前者拥有运行�
 
 - **实例变量可以被`final`修饰，但是无法被`const`修饰。如果`const`变量在类中，请定义为 `static const`**
 
-- **`final`变量必须在构造函数主体开始执行前被初始化(即变量声明阶段). 通过构造函数参数或构造函数的初始化列表**
+- **`final`变量必须在构造函数主体开始执行前被初始化(即变量声明阶段).通过构造函数参数或构造函数的初始化列表**
 
 - 被`final`声明的变量只能赋值一次 , 顶级的`final`变量 或者类中的`final`变量在第一次被使用时初始化
 
@@ -114,7 +113,7 @@ Dart拥有表达式(` expression `)和语句(`statement`)，前者拥有运行�
 		const baz = []; // Equivalent to `const []`
 
 
-	- 定义构造函数为 `const` 类型时，该构造函数创建的对象是不可改变的
+	- **定义构造函数为 `const` 类型时，该构造函数创建的对象是不可改变的**
 
 	- 非`final`和非`const`的变量可以被改变，但是其常量值是无法被改变的
 
@@ -185,7 +184,7 @@ Dart 支持两种类型的数字：
 	String piAsString = 3.14159.toStringAsFixed(2);
 	assert(piAsString == '3.14');
 
-**整数类型支持传统的位移操作符，`<<`, `>>`, `&`和 `|` **
+**整数类型支持传统的位移操作符，`<<`, `>>`, `&`和 `|`**
 
 	assert((3 << 1) == 6);  // 0011 << 1 == 0110
 	assert((3 >> 1) == 1);  // 0011 >> 1 == 0001
@@ -259,13 +258,13 @@ Dart提供了`bool`类型来表示布尔值，只有`true`和`false`所创建的
 Dart中提供`List`类型表示列表，列表就代表了数组，列表的表示方式如下:
 
 	var list = [1,2,3];// 推荐使用字面量形式创建
-	// var list = <String>[123];
+	// var list = <String>["123"];
 	var list2 = List();
 	var list3 = new List();
 	
 - 列表的下标从0开始
 
-- 列表长度通过其`length()`方法获取
+- 列表长度通过其`length`属性获取
 
 - **列表字面量之前添加 `const` 关键字，可以定义一个不变的列表对象（编译时常量)**
 
@@ -444,7 +443,7 @@ Dart是一门面向对象语法，即使是方法也是对象，**Dart使用`Fun
 
 **方法参数分为 必选和可选， 必选参数需要位于参数列表的前面，后面的就是可选参数**
 
-- 可选具名参数也可以使用`@required`注解
+- 可选命名参数也可以使用`@required`注解
 
 ### 6.1.1 Optional parameters（可选参数）
 
@@ -647,8 +646,7 @@ Dart中任何命名参数都可以使用`@required`注解，它表示这个参�
 	  // 它们指向了同样的实例，因此俩个方法相同
 	  assert(y.baz == x);
 	
-	  // These closures refer to different instances,
-	  // so they're unequal.
+	  // 指向了不同的实例，因此方法不相同
 	  assert(v.baz != w.baz);
 	}
 
@@ -732,7 +730,7 @@ Operator	|Meaning
 
 **`==`操作符的工作原理:**
 
-- 如果俩个操作数俩个都是null， 则返回 true，如果 只有一个是 null 返回 false。
+- 如果俩个操作数俩个都是null， 则返回 true，如果 只有一个是 null 返回 false,否则就对内容进行判断
 
 - 操作符实际上是定义在表达式左侧对象上的函数，可以通过重写这些函数实现不同的功能
 
@@ -1124,7 +1122,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 ## 10.2 使用构造函数
 
-**Dart使用构造函数以及可选的`new`关键字来创建对象，构造函数的名称可以是`ClassName`或者`ClassName.identifier`**
+**Dart使用构造函数以及可选的`new`关键字来创建对象，构造函数的名称可以是`ClassName`或者`ClassName.identifier`的形式**
 
 	var jsonData = JSON.decode('{"x":1, "y":2}');
 	
@@ -1157,9 +1155,6 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 	var a = 123;
 	print('The type of a is ${a.runtimeType}');
-
-
-
 
 ## 10.4 实例变量
 
@@ -1229,7 +1224,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 ### 10.5.3 命名构造函数(` Named constructor`)
 **命名构造函数可以为一个类实现多个构造函数，此外还可以更清晰的表明意图**
 
-- **一个类中不能拥有多个普通的构造函数**
+- **一个类中不能拥有多个普通的构造函数,但是可以拥有多个命名构造函数**
 
 示例:
 
@@ -1255,7 +1250,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 - 调用父类的构造函数的语法是 在构造函数参数之后，构造函数主体之前添加一个`:superConstructor(param)`
 
-	具体形式如`:super(param)`/`:super.namedConstructor(param)`
+	具体形式如`:superConstructor(param)`/`:superClassName.namedConstructor(param)`
 
 **父类的构造函数在子类构造函数的主体的开头被执行，如果提供了一个初始化参数列表(`initializer list`),则初始化参数列表在父类构造函数执行之前被执行**. 具体的执行顺序如下:
 
@@ -1307,7 +1302,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 ## 10.7 初始化列表(`Initializer List`)
 
-**构造函数主体执行前除了可以调用父类构造函数之外，还可以初始化实例参数**，初始化示例参数的表达式之间需要使用逗号`,`进行隔开
+**构造函数主体执行前除了可以调用父类构造函数之外，还可以初始化实例参数**，初始化列表参数的表达式之间需要使用逗号`,`进行隔开
 
 	class Point {
 	  num x;
@@ -1315,8 +1310,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	
 	  Point(this.x, this.y);
 	
-	  // Initializer list sets instance variables before
-	  // the constructor body runs.
+	  // 在构造函数的主体运行之前 对实例变量进行初始化
 	  Point.fromJson(Map jsonMap)
 	      : x = jsonMap['x'],
 	        y = jsonMap['y'] {
@@ -1354,9 +1348,9 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 ## 10.8 重定向构造函数
 
-**同一个类中的构造函数可以通过冒号`:`重定向到另外一个构造函数（包括父类）**
+**同一个类中的构造函数可以通过冒号`:this(param)`重定向到另外一个构造函数（包括父类）**
 
-- **被重定向的构造函数主体为空**
+- **被重定向的构造函数主体必须为空**
 
 示例:
 
@@ -1375,7 +1369,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 **通过使用常量构造函数创建实例，可以提供一个状态不变的对象(即返回编译时常量)**
 
-- **在构造函数前添加`const`关键字,同时声明所有类的变量为`final`**
+- **在构造函数前添加`const`关键字,同时类的变量需要被声明为`final`,并且不常量构造函数不能够拥有实体(即`{}`)**
 
 示例：
 
@@ -1462,10 +1456,23 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 **`getter()`和`setter()` 是用来设置和访问对象属性的特殊函数**
 
-- 每个实例变量都隐含的具有一个`getter()`方法， 如果变量没有被`final`修饰，那么还有一个 `setter()`方法
+- 每个实例变量都隐式的拥有一个`getter()`方法， 如果变量没有被`final`修饰，那么还有一个 `setter()`方法
 
 - **使用`get`和`set`关键字定义变量的`getter()`和`setter()`方法
 ，可以额外的创建属性**.俩者可以单独使用！
+
+
+`get`关键字使用时，不允许接收参数(即没有`()`)，但是必须拥有一个方法体,返回值类型可选
+	
+	int get age {
+	return 123;
+	}
+
+`set`关键字使用时，必须提供接收参数的`()`，并且必须拥有一个方法体
+
+	set age(age){
+		this.age = age;
+	}
 
 示例:
 
@@ -1499,7 +1506,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 - **抽象函数就是只定义了函数接口，但是没有提供具体的实现，其实现需要由子类提供**
 
-- 抽象函数只能存在于抽象类中
+- 抽象函数只能存在于抽象类中,并且抽象函数不需要使用`abstract`关键字进行修饰
 
 - **抽象函数的特征就是用分号代替函数体`{...}`**
 
@@ -1572,13 +1579,10 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 - 构造函数不会存在隐式接口中
 
-- 所以在隐式接口中的内容都需要被重写
-
-
-
+- **所有在隐式接口中的内容都需要被重写**
 
 # 14 扩展类
-**Dart通过`extends`关键字实现继承，通过`super`关键字实现对父类的引用**
+**Dart通过`extends`关键字实现继承，通过`super.`关键字实现对父类的引用**
 
 	class Television {
 	  void turnOn() {
@@ -1599,8 +1603,6 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	}
 
 ## 14.1 重载成员
-
-
 子类可以重写实例函数,`getter()`函数和`setter()`函数,通过`@override`注解可以标明函数是对父类函数的重写
 
 	class A {
@@ -1681,7 +1683,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	  }
 	}
 
-无法调用一个未实现的函数，除非以下几种情况:
+正常情况下无法调用一个未实现的函数，但是拥有以下几种特殊情况:
 
 1. 接收器拥有一个静态类型`dynamic`
 
@@ -1735,28 +1737,28 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 2. 此外还需要使用`mixin`关键字替代`class`关键字对类进行定义!
 
-- 定义混入类示例:
+定义混入类示例:
 
-		mixin Musical {
-		  bool canPlayPiano = false;
-		  bool canCompose = false;
-		  bool canConduct = false;
-		
-		  void entertainMe() {
-		    if (canPlayPiano) {
-		      print('Playing piano');
-		    } else if (canConduct) {
-		      print('Waving hands');
-		    } else {
-		      print('Humming to self');
-		    }
-		  }
-		}
+	mixin Musical {
+	  bool canPlayPiano = false;
+	  bool canCompose = false;
+	  bool canConduct = false;
+	
+	  void entertainMe() {
+	    if (canPlayPiano) {
+	      print('Playing piano');
+	    } else if (canConduct) {
+	      print('Waving hands');
+	    } else {
+	      print('Humming to self');
+	    }
+	  }
+	}
 
 
 **混入类可以通过`on`关键字来指定 实现混入类的类必须继承的类型**
 
-	mixin A {
+	mixin A on C {
 	  getName(){
 	    return "aaaaaaa";
 	  }
@@ -1823,6 +1825,7 @@ Dart使用`static`关键字实现类范围的变量和方法
 
 示例（确保列表只能接受`String`类型）:
 
+	//var names = <String>[];
 	var names = List<String>();
 	names.addAll(['Seth', 'Kathy', 'Lars']);
 	names.add(42); // Error
@@ -1841,12 +1844,12 @@ Dart使用`static`关键字实现类范围的变量和方法
 
 - **在这段代码中，T是一个占位符**	
 
-- `ObjectCache`形式的类，如果想要修改value的类型，必须重新定义，但是使用泛型就不需要
+- `ObjectCache`形式的类，如果想要修改属性value的类型，必须重新定义，但是使用泛型就不需要
 
 
 ## 18.1 泛型集合字面量
 
-**`List`,`Set`和`Map`都可以使用泛型，它可以指定集合的key类型或者value类型，只需要在集合定义的花括号之前添加`<T>`即可实现对集合添加泛型**
+**`List`,`Set`和`Map`都可以使用泛型，它可以指定集合的key类型或者value类型，只需要在集合定义的字面量之前添加`<T>`即可实现对集合添加泛型**
 
 	// 定义了泛型的列表
 	var names = <String>['Seth', 'Kathy', 'Lars'];
@@ -2014,7 +2017,7 @@ Dart库中包含许多返回`Future`或`Stream`对象的函数
  
  - **这些函数是异步，并且这些异步函数在设置完耗时操作后（例如`I/O`）直接返回，而不会等待操作完成后返回**
 
-Dart提供了`async`和`await`关键字支持异步编程,它们可以创建同步代码一样的异步代码
+Dart提供了`async`和`await`关键字支持异步编程,它们可以创建像同步代码风格的异步代码
 
 ## 20.1 处理`Future`
 **`Future`表示一个异步任务，如果需要其结果，可以有俩种方式**
