@@ -15,6 +15,11 @@ ABI 是 Application Binary Interface 的缩写。
 
 # 2. 如何判断当前是32/64位进程
 
+1. 使用`$adb shell ps | grep zygote` 能看到两个zygote和zygote64两个进程
+
+2. 再使用`$adb shell ps | grep <package_name>`就能找到应用进程ID和父进程ID
+
+
 [判断当前进程运行时环境(32/64位)的方法](https://www.jianshu.com/p/eb51edb1ab81)
 
 
