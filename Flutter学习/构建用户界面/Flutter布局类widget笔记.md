@@ -12,7 +12,7 @@
 
 	或者通过`Directionality`来进行包装,以提供`textDirction`
 
-**FLutter的架构:**
+**Flutter的架构:**
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35gy1g3g17wizpkj20zk0ijjrn.jpg)
 
@@ -23,7 +23,7 @@
 
 布局类Widget都会包含一个或多个子widget，不同的布局类Widget对子widget排版(layout)方式不同
 
-- **Element树才是最终的绘制树，Element树是通过widget树来创建的（通过Widget.createElement()），widget其实就是Element的配置数据**
+- **Element树才是最终的绘制树，Element树是通过widget树来创建的（通过`Widget.createElement()`），widget其实就是Element的配置数据**
 
 Flutter中，根据Widget是否需要包含子节点以及子节点的数量 将Widget分为了三类，分别对应三种Element，如下表：
 
@@ -39,13 +39,13 @@ Widget	|对应的Element |	用途
 
 	**Flutter中的很多Widget是直接继承自`StatelessWidget`或`StatefulWidget`，然后在`build()`方法中构建真正的`RenderObjectWidget`**
 	
-	例如`Text`，它其实是继承自`StatelessWidget`，然后在`build()`方法中通过`RichText`来构建其子树，而RichText才是继承自LeafRenderObjectWidget
+	例如`Text`，它其实是继承自`StatelessWidget`，然后在`build()`方法中通过`RichText`来构建其子树，而`RichText`继承自`LeafRenderObjectWidget`
 	
-	因此也可以直接说`Text`属于`LeafRenderObjectWidget`（其它widget也可以这么描述），这才是本质。**那么也就是说其实StatelessWidget和StatefulWidget就是两个用于组合Widget的基类，它们本身并不关联最终的渲染对象（RenderObjectWidget）**
+	因此也可以直接说`Text`属于`LeafRenderObjectWidget`（其它widget也可以这么描述），这才是本质。**那么也就是说其实`StatelessWidget`和`StatefulWidget`就是两个用于组合Widget的基类，它们本身并不关联最终的渲染对象（RenderObjectWidget）**
 
 ## 1.1 布局类Widget
 
-**布局类Widget就是指直接或间接继承(包含)MultiChildRenderObjectWidget的Widget，它们一般都会有一个children属性用于接收子Widget**
+**布局类Widget就是指直接或间接继承(包含)`MultiChildRenderObjectWidget`的Widget，它们一般都会有一个children属性用于接收子Widget**
 
 其继承关系 
 
@@ -55,16 +55,16 @@ Widget	|对应的Element |	用途
 
 - `RenderObject`是最终布局、渲染UI界面的对象，也就是说，对于布局类Widget来说，其布局算法都是通过对应的`RenderObject`对象来实现的
 
-	所以如果对某个布局类Widget原理感兴趣，可以查看其RenderObject的实现
+	所以如果对某个布局类Widget原理感兴趣，可以查看其`RenderObject`的实现
 	
 
 # 2 线性布局Row和Column
 **所谓线性布局，即指沿水平或垂直方向排布子Widget。Flutter中通过`Row`和`Column`来实现线性布局，Row和Column都继承自`Flex`**
 
 
-2. 行和列都需要一个子widget列表
+1. 行和列都需要一个子widget列表
 
-2. 子widget本身可以是行、列或其他复杂widget
+2. `Row/Column`的子widget可以是行、列或其他复杂widget
 
 3. 可以指定行或列如何在垂直或水平方向上对齐其子项
 
@@ -87,7 +87,7 @@ Widget	|对应的Element |	用途
 
 - `textDirection`：
 
-	表示水平方向子widget的布局顺序(是从左往右还是从右往左)，默认为系统当前Locale环境的文本方向(如中文、英语都是从左往右，而阿拉伯语是从右往左)
+	表示水平方向子widget的布局顺序(是从左往右还是从右往左)，默认为系统当前`Locale`环境的文本方向(如中文、英语都是从左往右，而阿拉伯语是从右往左)
 
 - `mainAxisSize`：
 
@@ -97,7 +97,7 @@ Widget	|对应的Element |	用途
 
 - `mainAxisAlignment`：
 
-	**表示子Widgets在所占用的水平空间内对齐方式，但如果父类`Row`的`mainAxisSize`值为`MainAxisSize.min`，那么对于子类的`Column`或`Row`,分别对应的`crossAxisAlignment`或`mainAxisAlignment`无意义，因为此时子widgets的宽度等于Row的宽度**
+	**表示子Widgets在所占用的水平空间内对齐方式，但如果父类`Row`的`mainAxisSize`值为`MainAxisSize.min`，那么对于子类的`Column`或`Row`,分别对应的`crossAxisAlignment`或`mainAxisAlignment`无意义，因为此时子widget的宽度等于Row的宽度**
 	
 	`MainAxisAlignment.start`表示子widget沿`textDirection`的初始方向对齐，假如`textDirection`取值为`TextDirection.ltr`时，则`MainAxisAlignment.start`表示子widget沿主轴左对齐，`textDirection`取值为`TextDirection.rtl`时表示沿主轴右对齐
 	
@@ -111,7 +111,7 @@ Widget	|对应的Element |	用途
 
 - `crossAxisAlignment`：
 
-	表示子Widgets在纵轴方向的对齐方式，Row的高度等于子Widgets中最高的子元素高度，它的取值和MainAxisAlignment一样(包含start、end、 center三个值)，**不同的是crossAxisAlignment的参考系是verticalDirection**
+	表示子Widgets在纵轴方向的对齐方式，**Row的高度等于子Widgets中最高的子元素高度**，它的取值和MainAxisAlignment一样(包含start、end、 center三个值)，**不同的是crossAxisAlignment的参考系是verticalDirection**
 	
 	即`verticalDirection`值为`VerticalDirection.down`时`crossAxisAlignment.start`指顶部对齐，`verticalDirection`值为`VerticalDirection.up`时，`crossAxisAlignment.start`指底部对齐；而`crossAxisAlignment.end`和`crossAxisAlignment.start`正好相反
 
@@ -167,6 +167,8 @@ Widget	|对应的Element |	用途
 	  ),
 	)	
 
+- `Expanded`必须作为`Flex`类型widget的直接子类	
+
 ## 2.4 对齐widget
 
 **对于线性布局，有主轴和纵轴之分，如果布局是沿水平方向，那么主轴就是指水平方向，而纵轴即垂直方向；如果布局沿垂直方向，那么主轴就是指垂直方向，而纵轴就是水平方向**
@@ -220,12 +222,12 @@ Widget	|对应的Element |	用途
 ### 3.1.1 构造函数
 
 	Flex({
-	  ...
+	  ...省略部分参数...
 	  @required this.direction, //弹性布局的方向, Row默认为水平方向，Column默认为垂直方向
 	  List<Widget> children = const <Widget>[],
 	})
 
-- 大多数参数在`Row`和`Column`中介绍过了
+- 大多数参数在`Row`和`Column`中介绍过了,因此省略了
 
 - `direction`:
 
@@ -245,10 +247,9 @@ Widget	|对应的Element |	用途
 	  @required Widget child,
 	})
 
-- `flex`为弹性系数，如果为0或null，则child是没有弹性的，即不会被"拉长"占用的空间，只会占用固定的大小
+- `flex`为弹性系数，**如果为0或null，则child是没有弹性的，即不会被"拉长"占用的空间，只会占用固定的大小**
 
 	所有的`flex>0`的Expanded都会按照其flex的比例来分割主轴的全部空闲空间
-
 
 
 示例：
@@ -298,7 +299,7 @@ Widget	|对应的Element |	用途
 	  List<Widget> children = const <Widget>[],
 	})
 
-- `Wrap`除了超出显示范围后会折行外，其大部分行为和`Row`,`Flex`,`Column`相同
+- **`Wrap`除了超出显示范围后会折行外，其大部分行为和`Row`,`Flex`,`Column`相同**
 
 `Wrap`存在几个特有的属性:
 
