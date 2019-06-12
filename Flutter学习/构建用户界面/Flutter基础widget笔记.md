@@ -167,72 +167,72 @@ State中有两个常用属性：
 理解State的生命周期对flutter开发非常重要，在接下来的示例中通过实现一个计数器widget来了解State的生命周期，点击它可以使计数器加1，由于要保存计数器的数值状态，所以应继承StatefulWidget，代码如下：
 
 	class CounterWidget extends StatefulWidget {
-	  const CounterWidget({
-	    Key key,
-	    this.initValue: 0
-	  });
-	  // 表示计数器的初始值
-	  final int initValue;
-	
-	  @override
-	  _CounterWidgetState createState() => new _CounterWidgetState();
+		  const CounterWidget({
+		    Key key,
+		    this.initValue: 0
+		  });
+		  // 表示计数器的初始值
+		  final int initValue;
+		
+		  @override
+		  _CounterWidgetState createState() => new _CounterWidgetState();
 	}
 
 	class _CounterWidgetState extends State<CounterWidget> {  
-	  int _counter;
-	
-	  @override
-	  void initState() {
-	    super.initState();
-	    //初始化状态  
-	    _counter=widget.initValue;
-	    print("initState");
-	  }
-	
-	  @override
-	  Widget build(BuildContext context) {
-	    print("build");
-	    return Scaffold(
-	      body: Center(
-	        child: FlatButton(
-	          child: Text('$_counter'),
-	          //点击后计数器自增
-	          onPressed:()=>setState(()=> ++_counter,
-	          ),
-	        ),
-	      ),
-	    );
-	  }
-	
-	  @override
-	  void didUpdateWidget(CounterWidget oldWidget) {
-	    super.didUpdateWidget(oldWidget);
-	    print("didUpdateWidget");
-	  }
-	
-	  @override
-	  void deactivate() {
-	    super.deactivate();
-	    print("deactive");
-	  }
-	
-	  @override
-	  void dispose() {
-	    super.dispose();
-	    print("dispose");
-	  }
-	
-	  @override
-	  void reassemble() {
-	    super.reassemble();
-	    print("reassemble");
-	  }
-	
-	  @override
-	  void didChangeDependencies() {
-	    super.didChangeDependencies();
-	    print("didChangeDependencies");
-	  }
+		  int _counter;
+		
+		  @override
+		  void initState() {
+		    super.initState();
+		    //初始化状态  
+		    _counter=widget.initValue;
+		    print("initState");
+		  }
+		
+		  @override
+		  Widget build(BuildContext context) {
+		    print("build");
+		    return Scaffold(
+		      body: Center(
+		        child: FlatButton(
+		          child: Text('$_counter'),
+		          //点击后计数器自增
+		          onPressed:()=>setState(()=> ++_counter,
+		          ),
+		        ),
+		      ),
+		    );
+		  }
+		
+		  @override
+		  void didUpdateWidget(CounterWidget oldWidget) {
+		    super.didUpdateWidget(oldWidget);
+		    print("didUpdateWidget");
+		  }
+		
+		  @override
+		  void deactivate() {
+		    super.deactivate();
+		    print("deactive");
+		  }
+		
+		  @override
+		  void dispose() {
+		    super.dispose();
+		    print("dispose");
+		  }
+		
+		  @override
+		  void reassemble() {
+		    super.reassemble();
+		    print("reassemble");
+		  }
+		
+		  @override
+		  void didChangeDependencies() {
+		    super.didChangeDependencies();
+		    print("didChangeDependencies");
+		  }
 	}
 
 - `CounterWidget`作为新路由被打开时：
@@ -265,7 +265,7 @@ State中有两个常用属性：
 ### 3.2.1 生命周期回调函数
 **注意：在继承`StatefulWidget`重写其方法时，对于包含`@mustCallSuper`标注的父类方法，都要在子类方法中先调用父类方法。**
 
-- `initState`：
+- `initState()`：
 
 	**当Widget第一次插入到Widget树时会被调用，对于每一个State对象，Flutter framework只会调用一次该回调**
 	
@@ -291,7 +291,7 @@ State中有两个常用属性：
 
 	4. 在调用`didChangeDependencies()`之后
 
-	5. 在State对象从树中一个位置移除后（会调用deactivate）又重新插入到树的其它位置之后
+	5. 在State对象从树中一个位置移除后（会调用`deactivate()`）又重新插入到树的其它位置之后
 
 
 - `reassemble()`：
@@ -300,7 +300,7 @@ State中有两个常用属性：
 
 - `didUpdateWidget()`：
 
-	**在widget重新构建时，Flutter framework会调用`Widget.canUpdate()`方法来检测Widget树中同一位置的新旧节点，然后决定是否需要更新，如果`Widget.canUpdate()`返回true则会调用此回调**。`Widget.canUpdate()`会在新旧widget的key和runtimeType同时相等时会返回true，也就是说在在新旧widget的key和runtimeType同时相等时didUpdateWidget()就会被调用。
+	**在widget重新构建时，Flutter framework会调用`Widget.canUpdate()`方法来检测Widget树中同一位置的新旧节点，然后决定是否需要更新，如果`Widget.canUpdate()`返回true则会调用此回调**。`Widget.canUpdate()`会在新旧widget的key和runtimeType同时相等时会返回true，也就是说在在新旧widget的key和runtimeType同时相等时`didUpdateWidget()`就会被调用。
 
 - `deactivate()`：
 
@@ -554,7 +554,7 @@ State中有两个常用属性：
 
 目前主要有两种办法：
 
-1. 实现一个全局的事件总线，将语言状态改变对应为一个事件，然后在APP Widget所在的父widgetinitState 方法中订阅语言改变的事件，当用户在设置页切换语言后，触发语言改变事件，然后APP Widget那边就会收到通知，然后重新build一下即可。
+1. 实现一个全局的事件总线，将语言状态改变对应为一个事件，然后在APP Widget所在的父widget的`initState()` 方法中订阅语言改变的事件，当用户在设置页切换语言后，触发语言改变事件，然后APP Widget那边就会收到通知，然后重新build一下即可
 
 2. 使用redux这样的全局状态包，可以在pub上查看其详细信息
 
@@ -587,14 +587,14 @@ Flutter提供了一套丰富、强大的基础widget，在基础widget库之上F
 
 Material应用程序以MaterialApp widget开始， 该widget在应用程序的根部创建了一些有用的widget，比如一个Theme，它配置了应用的主题。 
 
-其widget包括如：Scaffold、AppBar、FlatButton等
+其widget包括如：`Scaffold`、`AppBar`、`FlatButton`等
 
 要使用Material widget，需要先引入它：
 
 	import 'package:flutter/material.dart';
 
 
-**在Material widget库中，有一些widget可以根据实际运行平台来切换表现风格**，比如MaterialPageRoute，在路由切换时，如果是Android系统，它将会使用Android系统默认的页面切换动画(从底向上)，如果是iOS系统时，它会使用iOS系统默认的页面切换动画（从右向左）
+**在Material widget库中，有一些widget可以根据实际运行平台来切换表现风格**，比如`MaterialPageRoute`，在路由切换时，如果是Android系统，它将会使用Android系统默认的页面切换动画(从底向上)，如果是iOS系统时，它会使用iOS系统默认的页面切换动画（从右向左）
 
 ## 5.3 Cupertino widget
 
@@ -654,14 +654,14 @@ TextSpan，它代表文本的一个“片段”,对一个Text内容的不同部�
 	  GestureRecognizer recognizer,
 	});
 
-- **通过`Text.rich()`方法来使用`TextSpan`**
+- **通过`Text.rich()`方法来使用`TextSpan`**,其是一个Text的命名构造函数
 
 
 ## 7.4 DefaultTextStyle
 
 **在widget树中，文本的样式默认是可以被继承的**
 
-- 例如如果在widget树的某一个节点处设置一个默认的文本样式，那么该节点的子树中所有文本都会默认使用这个样式，而`DefaultTextStyle`正是用于设置默认文本样式的
+- 例如如果在widget树的某一个节点是`DefaultTextStyle`，那么该节点的子树中所有文本都会默认使用这个样式，`DefaultTextStyle`正是用来设置默认文本样式
 
 ## 7.5 使用字体
 在Flutter中使用字体分两步完成
@@ -679,6 +679,17 @@ TextSpan，它代表文本的一个“片段”,对一个Text内容的不同部�
 		          weight: 600
 		          
 2. **通过`TextStyle`属性使用字体**
+
+		// 声明文本样式
+		const textStyle = const TextStyle(
+		  fontFamily: 'Raleway',
+		);
+		
+		// 使用文本样式
+		var buttonText = const Text(
+		  "Use the font for this text",
+		  style: textStyle,
+		);
 
 ### 7.5.1 Package中的字体
 
@@ -717,7 +728,7 @@ TextSpan，它代表文本的一个“片段”,对一个Text内容的不同部�
 
 # 8. 按钮
 
-Material widget库中提供了多种按钮Widget如RaisedButton、FlatButton、OutlineButton等，它们都是直接或间接对`RawMaterialButton`的包装定制
+Material widget库中提供了多种按钮Widget如`RaisedButton`、`FlatButton`、`OutlineButton`等，它们都是直接或间接对`RawMaterialButton`的包装定制
 
 所有Material 库中的按钮都有如下相同点：
 
@@ -770,7 +781,7 @@ Flutter中可以通过`Image`类来加载并显示图片，Image的数据源可�
 
 **`ImageProvider` 是一个抽象类，主要定义了图片数据获取的接口`load()`，从不同的数据源获取图片需要实现不同的`ImageProvider`**
 
-- 如AssetImage是实现了从Asset中加载图片的ImageProvider，而NetworkImage实现了从网络加载图片的ImageProvider
+- 如`AssetImage`是实现了从Asset中加载图片的`ImageProvider`，而`NetworkImage`实现了从网络加载图片的`ImageProvider`
 
 ## 9.2 Image
 
@@ -786,10 +797,11 @@ Flutter中可以通过`Image`类来加载并显示图片，Image的数据源可�
 
 2. 在pubspec.yaml中的flutter部分添加如下内容：
 
+		flutter
 		  assets:
 		    - images/avatar.png
 
-	- 注意: 由于 yaml 文件对缩进严格，所以必须严格按照每一层两个空格的方式进行缩进，此处assets前面应有两个空格
+	- 注意: **由于 yaml 文件对缩进严格，所以必须严格按照每一层两个空格的方式进行缩进，此处assets前面应有两个空格**
 
 3. 加载该图片
 
@@ -884,7 +896,7 @@ IconFont与图片相比有以下优点：
 
 ## 10.1 Material Design 字体图标
 
-Flutter默认包含了一套Material Design的字体图标，在pubspec.yaml文件中的配置如下
+Flutter默认包含了一套Material Design的字体图标，在`pubspec.yaml`文件中的配置如下
 
 	flutter:
 	  uses-material-design: true
@@ -929,11 +941,10 @@ Flutter默认包含了一套Material Design的字体图标，在pubspec.yaml文�
 
 	1. 流程与导入字体文件相同。假设将字体图标文件保存在项目根目录下，路径为`fonts/iconfont.ttf`. 在`pubspec.yaml`文件中对其进行声明
 			
-			#fonts: 属于flutter 下面的
 			flutter:
-				fonts:
-				  - family: myIcon  #指定一个字体名
-				    fonts:
+			  fonts:
+			    - family: myIcon  #指定一个字体名
+				   fonts:
 				      - asset: fonts/iconfont.ttf
 
 	2. **除了直接使用码点进行使用之外，还可以通过`IconData`对码点进行封装**
@@ -956,7 +967,7 @@ Flutter默认包含了一套Material Design的字体图标，在pubspec.yaml文�
 
 Material widgets库中提供了Material风格的单选开关`Switch`和复选框`Checkbox`，它们都是继承自`StatelessWidget`，所以它们本身不会保存当前选择状态，并且一般都是在父widget中管理选中状态
 
-- 当用户点击Switch或Checkbox时，它们会触发onChanged回调，可以在此回调中处理选中状态改变逻辑
+- 当用户点击Switch或Checkbox时，它们会触发`onChanged()`回调，可以在此回调中处理选中状态改变逻辑
 
 示例:
 
@@ -1003,7 +1014,7 @@ Material widgets库中提供了Material风格的单选开关`Switch`和复选框
 
 **`Switch`只能定义宽度，高度固定**
 
-`CheckBox`有一个属性`tristate`,表示是否为三态，默认值为false,如果设置为true，那么`CheckBox`的value会增加一个状态`null`
+`CheckBox`有一个属性`tristate`,表示是否为三态，默认值为false,如果设置为true，那么`CheckBox`的value会增加一个状态`null`(当展示为一个破折号`-`时，对应状态`null`)
 
 # 12 输入框
 **Material widget库中提供了`TextField`用于文本输入**
@@ -1232,10 +1243,10 @@ Material widgets库中提供了Material风格的单选开关`Switch`和复选框
 
 # 13 表单
 
-Flutter提供了一个`Form `widget，它可以对输入框进行分组，然后进行一些统一操作，如输入内容校验、输入框重置以及输入内容保存
+Flutter提供了一个`Form `组件，它可以对输入框进行分组，然后进行一些统一操作，如输入内容校验、输入框重置以及输入内容保存
 
 ## 13.1 Form
-Form继承自StatefulWidget对象，它对应的状态类为`FormState`
+Form继承自`StatefulWidget`对象，它对应的状态类为`FormState`
 
 	Form({
 	  @required Widget child,
@@ -1254,7 +1265,7 @@ Form继承自StatefulWidget对象，它对应的状态类为`FormState`
 
 ## 13.2 FormField
 
-Form的子孙元素必须是`FormField`类型，FormField是一个抽象类，定义几个属性，FormState内部通过它们来完成操作
+**Form的子孙元素必须是`FormField`类型**，FormField是一个抽象类，定义几个属性，FormState内部通过它们来完成操作
 
 	const FormField({
 	  ...
@@ -1264,18 +1275,18 @@ Form的子孙元素必须是`FormField`类型，FormField是一个抽象类，�
 	  bool autovalidate = false, //是否自动校验。
 	})
 
-- Flutter提供了一个`TextFormField` widget，它继承自FormField类，也是TextField的一个包装类，所以除了FormField定义的属性之外，它还包括TextField的属性
+- Flutter提供了一个`TextFormField` widget，它继承自FormField类，也是TextField的一个包装类，所以除了FormField定义的属性之外，它还包括`TextField`的属性
 
 
 ## 13.3 FormState
 
 **`FormState`为Form的State类，可以通过`Form.of()`或`GlobalKey`获得。通过它可以对Form的子孙`FormField`进行统一操作**
 
-- `FormState.validate()`：调用此方法后，会调用Form子孙FormField的validate回调，如果有一个校验失败，则返回false，所有校验失败项都会返回用户返回的错误提示。
+- `FormState.validate()`：调用此方法后，会调用Form子孙FormField的validate回调，如果有一个校验失败，则返回false，所有校验失败项都会返回用户返回的错误提示
 
 - `FormState.save()`：调用此方法后，会调用Form子孙FormField的save回调，用于保存表单内容
 
-- `FormState.reset()`：调用此方法后，会将子孙FormField的内容清空。
+- `FormState.reset()`：调用此方法后，会将子孙FormField的内容清空
 
 
 ## 13.4 示例
