@@ -4,9 +4,11 @@
 
 # 1. 简介
 
-当内容超过显示视口(`ViewPort`)时，如果没有特殊处理，Flutter则会提示`Overflow`错误。为此，Flutter提供了多种可滚动widget（`Scrollable`Widget）用于显示列表和长布局。
+当内容超过显示视口(`ViewPort`)时，如果没有特殊处理，Flutter则会提示`Overflow`错误。为此，Flutter提供了多种可滚动widget（`Scrollable`组件）用于显示列表和长布局
 
-**可滚动Widget都直接或间接包含一个`Scrollable` widget，因此可滚动的widget包括一些共同的属性**
+- `The viewport is the user's visible area of a web page`
+
+**可滚动Widget都直接或间接包含一个`Scrollable` 组件，因此可滚动的widget包括一些共同的属性**
 
 	Scrollable({
 	  ...
@@ -76,7 +78,7 @@
 
 - `primary`：**指是否使用widget树中默认的`PrimaryScrollController`**
 
-	当滑动方向为垂直方向（scrollDirection值为Axis.vertical）并且controller没有指定时，primary默认为true
+	当滑动方向为垂直方向（scrollDirection值为`Axis.vertical`）并且controller没有指定时，primary默认为true
 
 示例:
 
@@ -129,7 +131,7 @@ ListView是最常用的可滚动widget，它可以沿一个方向线性排布所
 
 	该参数如果不为null，则会强制children的"长度"为itemExtent的值；**这里的"长度"是指滚动方向上子widget的长度，即如果滚动方向是垂直方向，则itemExtent代表子widget的高度，如果滚动方向为水平方向，则itemExtent代表子widget的长度**
 	
-	在ListView中，**指定itemExtent比让子widget自己决定自身长度会更高效**，这是因为指定itemExtent后，滚动系统可以提前知道列表的长度，而不是总是动态去计算，尤其是在滚动位置频繁变化时（滚动系统需要频繁去计算列表高度
+	在ListView中，**指定itemExtent比让子widget自己决定自身长度会更高效**，这是因为指定itemExtent后，滚动系统可以提前知道列表的长度，而不是总是动态去计算，尤其是在滚动位置频繁变化时（滚动系统需要频繁去计算列表高度)
 
 	- 注意里面的内容并不会自适应！
 	
@@ -139,7 +141,7 @@ ListView是最常用的可滚动widget，它可以沿一个方向线性排布所
 	
 	**默认情况下，ListView的会在滚动方向尽可能多的占用空间**
 	
-	当ListView在一个无边界(滚动方向上)的容器中时，shrinkWrap必须为true
+	- 当ListView在一个无边界(滚动方向上)的容器中时，shrinkWrap必须为true
 
 - `addAutomaticKeepAlives`：
 
@@ -299,7 +301,7 @@ ListView是最常用的可滚动widget，它可以沿一个方向线性排布所
 
 4. 但是这种方法并不优雅，如果页面布局发生变化，如表头布局调整导致表头高度改变，那么剩余空间的高度就得重新计算.
 
-	为了实现自动拉升ListView以填充屏幕剩余空间.可以使用Flex+Expanded布局，因为Column是继承自Flex的，所以可以使用Expanded自动拉伸组件大小的Widget
+	为了实现自动拉升ListView以填充屏幕剩余空间.可以使用`Flex+Expanded`布局，因为Column是继承自Flex的，所以可以使用Expanded自动拉伸组件大小的Widget
 	
 		Column(children: <Widget>[
 		    ListTile(title:Text("商品列表")),
@@ -453,10 +455,10 @@ Flutter的GridView默认子元素显示空间是相等的，但在实际开发�
 
 - 可滚动widget，如ListView、GridView等都有对应的Sliver实现如`SliverList`、`SliverGrid`等
 
-	**对于大多数Sliver来说，它们和可滚动Widget最主要的区别是`Sliver`不会包含`Scrollable` Widget，也就是说Sliver本身不包含滚动交互模型** ，正因如此，CustomScrollView才可以将多个Sliver"粘"在一起，这些Sliver共用CustomScrollView的Scrollable，最终实现统一的滑动效果
+	**对于大多数Sliver来说，它们和可滚动Widget最主要的区别是`Sliver`不会包含`Scrollable` 组件，也就是说Sliver本身不包含滚动交互模型** ，正因如此，CustomScrollView才可以将多个Sliver"粘"在一起，这些Sliver共用`CustomScrollView`的Scrollable，最终实现统一的滑动效果
 	
 
-- Sliver系列Widget比较多，只需记住它的特点，需要时再去查看文档即可
+- `Sliver`系列Widget比较多，只需记住它的特点，需要时再去查看文档即可
 
 	“大多数“Sliver都和可滚动Widget对应，但是还是有一些如`SliverPadding`、`SliverAppBar`等是和可滚动Widget无关的，它们主要是为了结合CustomScrollView一起使用，这是因为CustomScrollView的子widget必须都是Sliver
 
@@ -482,7 +484,7 @@ Flutter的GridView默认子元素显示空间是相等的，但在实际开发�
 
 ### 9.1.1 滚动监听
 
-`ScrollController`间接继承自`Listenable`，可以根据ScrollController来监听滚动事件
+`ScrollController`间接继承自`Listenable`，可以根据`ScrollController`来监听滚动事件
 
 	controller.addListener(()=>print(controller.offset))
 
@@ -499,7 +501,7 @@ Flutter的GridView默认子元素显示空间是相等的，但在实际开发�
 
 - **有一个BUG,`ScrollController`在创建时，必须手动指定`keepScrollOffset`和`initialScrollOffset`的值，否则无法生效...**
 
-- 如果`ScrollController.keepScrollOffset`为false，则滚动位置将不会被存储，`Scrollable Widget`重新创建时会使用`ScrollController.initialScrollOffset`
+- 如果`ScrollController.keepScrollOffset`为false，则滚动位置将不会被存储，`Scrollable`组件重新创建时会使用`ScrollController.initialScrollOffset`
 
 	`ScrollController.keepScrollOffset`为true时，`Scrollable` 组件在第一次创建时，会滚动到`initialScrollOffset`处，因为这时还没有存储过滚动位置。在接下来的滚动中就会存储、恢复滚动位置，而initialScrollOffset会被忽略
 
@@ -543,7 +545,7 @@ Flutter的GridView默认子元素显示空间是相等的，但在实际开发�
 ### 9.3.1 方法
 `ScrollPosition`有两个常用方法：`animateTo()` 和 `jumpTo()`，它们是真正来控制跳转滚动位置的方法
 
-- **`ScrollController`的这两个同名方法，内部最终都会调用ScrollPosition的同名方法**
+- **`ScrollController`的这两个同名方法，内部最终都会调用`ScrollPosition`的同名方法**
 
 ## 9.4 ScrollController控制原理
 
@@ -558,9 +560,9 @@ Flutter的GridView默认子元素显示空间是相等的，但在实际开发�
 
 2. 接着,`Scrollable` 组件会调用`attach()`方法，将创建的`ScrollPosition`添加到`ScrollController`的`positions`属性中，这一步称为“注册位置”，只有注册后`animateTo()` 和 `jumpTo()`才可以被调用。
 
-3. 当Scrollable Widget销毁时，会调用`ScrollController`的`detach()`方法，将其`ScrollPosition`对象从`ScrollController`的`positions`属性中移除，这一步称为“注销位置”，注销后`animateTo()` 和 `jumpTo() `将不能再被调用。
+3. 当`Scrollable` 组件被销毁时，会调用`ScrollController`的`detach()`方法，将其`ScrollPosition`对象从`ScrollController`的`positions`属性中移除，这一步称为“注销位置”，注销后`animateTo()` 和 `jumpTo() `将不能再被调用。
 
-- 需要注意的是，**`ScrollController`的`animateTo() `和 `jumpTo()`内部会调用所有`ScrollPosition`的`animateTo()` 和 `jumpTo()`，以实现所有和该ScrollController关联的`Scrollable`组件都滚动到指定的位置**
+- 需要注意的是，**`ScrollController`的`animateTo() `和 `jumpTo()`内部会调用所有`ScrollPosition`的`animateTo()` 和 `jumpTo()`，以实现所有和该`ScrollController`关联的`Scrollable`组件都滚动到指定的位置**
 
 # 10. 滚动监听
 
@@ -595,35 +597,3 @@ Flutter的GridView默认子元素显示空间是相等的，但在实际开发�
 	- `extentAfter`：列表中未滑入ViewPort部分的长度；相当于列表底部未显示到屏幕范围部分的长度
 
 	- `atEdge`：是否滑到了`Scrollable` 组件的边界（相当于列表顶或底部）
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
