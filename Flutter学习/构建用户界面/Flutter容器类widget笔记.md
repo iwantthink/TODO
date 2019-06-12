@@ -8,7 +8,7 @@ Flutter官方没有对widget进行区分，这里以功能来对widge进行区�
 
 容器类Widget和布局类Widget都作用于其子Widget，不同的是：
 
-- 布局类Widget一般都需要接收一个widget数组（children），他们直接或间接继承自（或包含）`MultiChildRenderObjectWidget`.而容器类Widget一般只需要接收一个子Widget（child），他们直接或间接继承自（或包含）`SingleChildRenderObjectWidget`
+- 布局类Widget一般都需要接收一个widget数组（children），它们直接或间接继承自（或包含）`MultiChildRenderObjectWidget`.而容器类Widget一般只需要接收一个子Widget（child），他们直接或间接继承自（或包含）`SingleChildRenderObjectWidget`
 
 - **布局类Widget是按照一定的排列方式来对其子Widget进行排列；而容器类Widget一般只是包装其子Widget，对其添加一些修饰（补白或背景色等）、变换(旋转或剪裁等)、或限制(大小等)**
 
@@ -50,7 +50,7 @@ Flutter官方没有对widget进行区分，这里以功能来对widge进行区�
 
 # 3. ConstrainedBox
 
-`ConstrainedBox `是通过`RenderConstrainedBox `来渲染的，用于对子widget添加额外的约束
+**`ConstrainedBox `是通过`RenderConstrainedBox `来渲染的，用于对子widget添加额外的大小约束**
 
 	ConstrainedBox({
 	    Key key,
@@ -179,7 +179,7 @@ SizedBox用于给子widget指定固定的宽高
 
 **`DecoratedBox`可以在其子widget绘制前(或后)绘制一个装饰Decoration（如背景、边框、渐变等）**
 
-DecoratedBox定义如下：
+`DecoratedBox`定义如下：
 
 	const DecoratedBox({
 	  Decoration decoration,
@@ -189,7 +189,7 @@ DecoratedBox定义如下：
 
 - `decoration`：
 
-	**代表将要绘制的装饰**，它类型为Decoration，Decoration是一个抽象类，它定义了一个接口 `createBoxPainter()`，子类的主要职责是需要通过实现它来创建一个画笔，该画笔用于绘制装饰
+	**代表将要绘制的装饰**，它类型为`Decoration`，`Decoration`是一个抽象类，它定义了一个接口 `createBoxPainter()`，子类的主要职责是需要通过实现它来创建一个画笔，该画笔用于绘制装饰
 	
 	通常使用`BoxDecoration`
 
@@ -316,19 +316,26 @@ Flutter提供了一个命名构造函数`Transform.scale`,其可以对子widget�
 `RotatedBox`和`Transform.rotate`功能相似，都可以对子widget进行旋转变换，但是有一点不同：**RotatedBox的变换是在layout阶段，会影响容器类widget的位置和大小**
 
 	Row(
-	  mainAxisAlignment: MainAxisAlignment.center,
-	  children: <Widget>[
-	    DecoratedBox(
-	      decoration: BoxDecoration(color: Colors.red),
-	      //将Transform.rotate换成RotatedBox  
-	      child: RotatedBox(
-	        quarterTurns: 1, //旋转90度(1/4圈)
-	        child: Text("Hello world"),
-	      ),
-	    ),
-	    Text("你好", style: TextStyle(color: Colors.green, fontSize: 18.0),)
-	  ],
-	)
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        DecoratedBox(
+          decoration: BoxDecoration(color: Colors.red),
+          //将Transform.rotate换成RotatedBox
+          child: RotatedBox(
+            quarterTurns: 3, //旋转90度(1/4圈)
+            child: Text("测试代码"),
+          ),
+        ),
+        Text("测试代码"),
+        DecoratedBox(
+          decoration: BoxDecoration(color: Colors.blueAccent),
+          child: Transform.rotate(
+            angle: pi / 2,
+            child: Text("测试代码"),
+          ),
+        )
+      ],
+    )
 
 - **由于`RotatedBox`是作用于layout阶段，所以widget会旋转90度（而不只是绘制的内容），`decoration`会作用到widget所占用的实际空间上**
 
@@ -336,7 +343,7 @@ Flutter提供了一个命名构造函数`Transform.scale`,其可以对子widget�
 
 # 8. Container
 
-`Container`本身不对应具体的`RenderObject`，它是`DecoratedBox`、`ConstrainedBox`、`Transform`、`Padding`、`Align`等widget的一个组合widget。所以只需通过一个`Container`可以实现同时需要装饰、变换、限制的场景
+`Container`本身不对应具体的`RenderObject`，它是`DecoratedBox`、`ConstrainedBox`、`Transform`、`Padding`、`Align`等widget的一个组合widget。所以**只需通过一个`Container`可以实现同时需要装饰、变换、限制的场景**
 
 	Container({
 	  this.alignment,
