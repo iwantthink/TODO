@@ -12,12 +12,13 @@
 
 ## 1.1 MaterialPageRoute
 
-`MaterialPageRoute`继承自PageRoute类，PageRoute类是一个抽象类，表示占有整个屏幕空间的一个模态路由页面，它还定义了路由构建及切换时过渡动画的相关接口及属性
+`MaterialPageRoute`继承自`PageRoute`类，`PageRoute`类是一个抽象类，**表示占有整个屏幕空间的一个模态路由页面**，此外它还定义了路由构建及切换时过渡动画的相关接口及属性
 
-MaterialPageRoute 是Material组件库的一个Widget，它可以针对不同平台，实现与平台页面切换动画风格一致的路由切换动画
+`MaterialPageRoute`是Material组件库的一个Widget，它可以针对不同平台，实现与平台页面切换动画风格一致的路由切换动画
 
-- **如果需要自定义路由切换的动画，那么可以继承PageRoute来实现**
+- **如果需要自定义路由切换的动画，那么可以继承`PageRoute`来实现**
 
+- 可以作为`Navigator`跳转时的新页面
 
 构造函数
 
