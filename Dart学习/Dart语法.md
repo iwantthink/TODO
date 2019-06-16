@@ -1248,9 +1248,9 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 
 - 如果父类中没有无参数的构造函数，那么必须手动调用父类的一个构造函数
 
-- 调用父类的构造函数的语法是 在构造函数参数之后，构造函数主体之前添加一个`:superConstructor(param)`
+- 调用父类的构造函数的语法是 在构造函数参数之后，构造函数主体之前添加一个`:super(param)`
 
-	具体形式如`:superConstructor(param)`/`:superClassName.namedConstructor(param)`
+	具体形式如`:super(param)`/`:super.namedConstructor(param)`
 
 **父类的构造函数在子类构造函数的主体的开头被执行，如果提供了一个初始化参数列表(`initializer list`),则初始化参数列表在父类构造函数执行之前被执行**. 具体的执行顺序如下:
 
