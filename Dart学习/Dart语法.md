@@ -2011,48 +2011,20 @@ Dart提供了`import`和`library`指令来创建模块化和可共享的代码�
 [Create Library Packages](https://dart.dev/guides/libraries/create-library-packages)介绍了如果实现一个库包并发布
 
 
-# 20 异步(`asynchrony support`)
+# 20 异步支持(`asynchrony support`)
+**Dart拥有一些支持异步编程的语言特性,例如`async`方法和`await`表达式支持异步编程**
 
-Dart库中包含许多返回`Future`或`Stream`对象的函数
+Dart库中包含许多返回`Future`或`Stream`对象的方法
  
- - **这些函数是异步，并且这些异步函数在设置完耗时操作后（例如`I/O`）直接返回，而不会等待操作完成后返回**
+ - **这些方法是异步，并且这些异步方法在设置完耗时操作后（例如`I/O`）直接返回，而不会等待操作完成后返回**
 
-Dart提供了`async`和`await`关键字支持异步编程,它们可以创建像同步代码风格的异步代码
+- 其代码风格就像是同步代码
 
-## 20.1 处理`Future`
-**`Future`表示一个异步任务，如果需要其结果，可以有俩种方式**
+## 20.1 声明异步方法
 
-1. 使用`async`和`await`
+**一个异步方法就是函数体被标记为`async`的方法**
 
-2. 使用`Future`的API
-
-使用了`async`和`await`的代码就是异步的，但是这种代码看起来很像同步代码，例如下面使用`await`来等待一个异步函数执行结束
-	
-	Future checkVersion() async {
-	  var version = await lookUpVersion();
-	  // Do something with version
-	}
-	
-- **`await`必须在一个异步方法中被使用(即被`async`标记的方法)**，`main()`方法也适用这条规则！
-
-	异步方法可能会执行耗时操作，但是代码执行时并不会等待这个方法执行完毕。相反，异步方法只会执行`await`关键字后的第一个表达式，然后就会返回一个`Future`,程序会在表达式执行结束后恢复执行
-	
-- 可以使用`try-catch-finally`来处理`await`可能抛出的异常
-
-`await`可以在异步方法中多次被使用
-
-	var entrypoint = await findEntrypoint();
-	var exitCode = await runExecutable(entrypoint, args);
-	await flushThenExit(exitCode);
-
-
-`await`表达式的值通常是一个`Future`,如果不是的话，Dart也会自动将其包装成一个`Future`(这个`Future`对象会返回表达式的值)。这时如果通过`Future`获取这个被包装的对象，会阻塞执行直到对象可用
-
-
-## 20.2 定义异步方法
-**异步方法就是方法体被`async`修饰符修饰的方法**
-
-- 使用`async`修饰方法，会使得方法返回`Future`. 并且如果方法有返回值，那么会被`Future`自动包装
+- 使用异步方法(`async`修饰函数体的方法)，会使得方法立刻返回`Future`. 并且如果方法有返回值，那么会被`Future`自动包装
 
 - **如果异步方法没有返回一个有用的值，那么可以指定其返回值为`void`**
 
@@ -2061,20 +2033,37 @@ Dart提供了`async`和`await`关键字支持异步编程,它们可以创建像�
 	String lookUpVersion() => '1.0.0';
 	//对上述代码进行改造，将其变成一个异步方法
 	Future<String> lookUpVersion() async => '1.0.0';
+
+## 20.2 使用await表达式
+
+`await`表达式的形式如下:
+
+	await expression
+
+**在`await`表达式中,表达式的返回值通常是一个`Future`,如果返回的值不是 `Future`，则 Dart 会自动把该值放到`Future`中返回**
+
+- `Future`对象代表返回一个对象的承诺（promise）,`await`表达式执行的结果为这个返回的对象
+
+- **`await` 表达式会阻塞，直到需要的对象返回为止**
+
+- **在一个异步方法内可以使用多次 await 表达式**
+
+		var entrypoint = await findEntrypoint();
+		var exitCode = await runExecutable(entrypoint, args);
+		await flushThenExit(exitCode);
+
+- **`await`表达式必须在一个异步方法中被使用(即被`async`标记的方法)，`main()`方法也适用这条规则**
+
+	**`await`表达式会执行耗时操作，但是代码执行时并不会等待表达式执行完毕。相反，dart只会执行`await`关键字后的第一个表达式，然后就会返回一个`Future`,程序会在表达式执行结束后恢复执行**
 	
-	
-## 20.2 处理`Stream`
+- **可以使用`try-catch-finally`来处理`await`可能抛出的异常**
 
-如果需要从`Stream`中获取返回值，有俩种方式:
-
-1. 使用`async`和一个异步`for`循环(`await for`)
-
-	- 使用`await for`时需要确定确实需要等待所有流可能产生的结果，例如不要对`UI`事件回调使用，因为它会发送无穷无尽的事件流
-
-2. 使用`Stream`的APi
+`await`表达式的值通常是一个`Future`,如果不是的话，Dart也会自动将其包装成一个`Future`(这个`Future`对象会返回表达式的值)。这时如果通过`Future`获取这个被包装的对象，会阻塞执行直到对象可用
 
 
-### 20.2.1 `await for`
+
+
+## 20.3 在循环中使用异步
 **异步的`for`循环形式如下：**
 
 	await for (varOrType identifier in expression) {
@@ -2085,16 +2074,40 @@ Dart提供了`async`和`await`关键字支持异步编程,它们可以创建像�
 
 其执行流程如下：
 
-	1. 等待流发出一个值
+	1. 等待`Stream`返回一个值
 
-	2. 将流的值设置给变量，然后执行循环的主体
+	2. 使用`Stream`返回的参数执行for循环代码主体
 
-	3. 重复上述过程直到流被关闭
+	3. 重复上述过程直到`Stream`数据返回完毕
 
-**为了停止监听流，可以使用`break`或`continue`语句，它们将跳出循环并取消对流的订阅**
+**为了停止监听流，可以使用`break`或`continue`语句，它们将跳出循环并取消对`Stream`的订阅**
 
-`await for`必须在一个异步方法中使用(即被`async`修饰的方法)
+**`await for`必须在一个异步方法中使用(即被`async`修饰的方法)**
 
+## 20.4 处理`Future`
+**`Future`表示一个异步任务，Flutter提供了俩种方式对其进行使用:**
+
+1. 使用`async`方法和`await`表达式
+
+2. 使用`Future`的API
+
+使用了`async`方法和`await`表达式的代码就是异步的，只是这种代码风格看起来很像同步代码，例如下面使用`await`来等待一个异步函数执行结束
+	
+	Future checkVersion() async {
+	  var version = await lookUpVersion();
+	  // Do something with version
+	}
+
+	
+## 20.5 处理`Stream`
+
+**`Stream`表示一个异步流，Flutter提供了俩种方式对其进行使用:**
+
+1. 使用`async`方法和一个异步`for`循环(`await for`)
+
+	- 使用`await for`时需要确定确实需要等待所有流可能产生的结果，例如不要对`UI`事件回调使用，因为它会发送无穷无尽的事件流
+
+2. 使用`Stream`的APi
 
 # 21 生成器(`Generator`)
 
