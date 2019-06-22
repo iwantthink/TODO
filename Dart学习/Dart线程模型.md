@@ -23,15 +23,13 @@
 
 - 并行：同时做不同事的能力
 
-
-
 ## 1.2 isolate定义
 
 `isolate`是Dart对`actor`并发模式的实现
 
 - 运行中的Dart程序由一个或多个`actor`组成，这些`actor`也就是Dart概念里面的`isolate`
 
-`isolate`是有自己的内存和单线程控制的运行实体,本身的意思是"隔离"，因为`isolate`之间的内存在逻辑上是隔离的
+**`isolate`是拥有独立内存和运行事件循环的单线程 的实体**,本身的意思是"隔离"，因为`isolate`之间的内存在逻辑上是隔离的
 
 `isolate`中的代码是按顺序执行的，任何Dart程序的并发都是运行多个`isolate`的结果。因为Dart没有共享内存的并发，没有竞争的可能性所以不需要锁，也就不用担心死锁的问题
 
@@ -47,6 +45,17 @@
 
 - 操作系统内内的线程之间是可以有共享内存的而isolate没有，这是最为关键的区别
 
+## 1.5 Dart执行模型
+当启动任何一个Dart应用(包括Flutter)时，将创建并启动一个新的`isolate`,然后Dart会自动的做如下三件事:
+
+1. 初始化2个FIFO（先进先出）队列（`MicroTask`和`Event`)
+
+2. 并且当该方法执行完成后，执行`main()`方法
+
+3. 启动事件循环
+
+## 1.6 isolate的使用
+**使用`Isolate.spawn()`和Flutter的`compute()`函数都可以创建一个`isolate`**
 
 
 # 2. 基础概念
@@ -66,10 +75,8 @@
 
 在Java和OC中，如果程序发生异常且没有被捕获，那么程序将会终止，但在Dart或JavaScript中则不会，这和它们的运行机制有关系，Java和OC都是多线程模型的编程语言，任意一个线程触发异常且没被捕获时，整个进程就退出了。但Dart和JavaScript都是单线程模型，运行机制很相似(但有区别)
 
-- 一旦Dart函数执行，它将持续执行直到退出。也就是说Dart函数在执行期间，无法被其他Dart代码打断
+- **一旦Dart函数执行，它将持续执行直到退出**。也就是说Dart函数在执行期间，无法被其他Dart代码打断
 
-
-一个Dart应用开始执行，意味着其`main isolate`开始`main()`方法。当`main()`方法结束后，`main isolate`的线程会开始一个个的处理在Dart应用的事件队列中的条目
 
 ![](https://raw.githubusercontent.com/yuegs/yuegs.github.io/master/images/flutter/dart-event-loop/event-loop-and-main.png)
 
