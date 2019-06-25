@@ -32,7 +32,7 @@ Widget	|对应的Element |	用途
 :---|:---|---
 `LeafRenderObjectWidget`|`	LeafRenderObjectElement`|Widget树的叶子节点，**用于没有子节点的widget**，通常基础widget都属于这一类，如Text、Image
 `SingleChildRenderObjectWidget`|`SingleChildRenderObjectElement`|**包含一个子Widget**，如：ConstrainedBox、DecoratedBox等
-`MultiChildRenderObjectWidget`|`MultiChildRenderObjectElement|**包含多个子Widget**，一般都有一个children参数，接受一个Widget数组。如Row、Column、Stack等
+`MultiChildRenderObjectWidget`|`MultiChildRenderObjectElement`|**包含多个子Widget**，一般都有一个children参数，接受一个Widget数组。如Row、Column、Stack等
 
 
 - 注意:
