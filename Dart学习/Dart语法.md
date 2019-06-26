@@ -1756,7 +1756,7 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	}
 
 
-**混入类可以通过`on`关键字来指定 实现混入类的类必须继承的类型**
+**混入类可以通过`on`关键字来指定 实现混入类的类必须继承的类型，此外使用`on`也表示`mixin`类继承自该类型**
 
 	mixin A on C {
 	  getName(){
@@ -1768,6 +1768,44 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	}
 	
 	class B extends C with A{
+	}
+
+**当一个类`with`多个`mixin`类，并且每个`mixin`类都实现抽象类的方法，那么这个类在调用抽象类方法时，会按照`with`的顺序从后往前开始调用**
+
+	mixin A on T {
+	  @override
+	  init() {
+	    print("execute a");
+	    return super.init();
+	  }
+	}
+	
+	mixin B on T {
+	  @override
+	  init() {
+	    print("execute b");
+	    return super.init();
+	  }
+	}
+	
+	mixin C on T {
+	  @override
+	  init() {
+	    print("execute c");
+	    return super.init();
+	  }
+	}
+	
+	abstract class T {
+	  init() {}
+	}
+	
+	class W extends T with C, B, A {
+	  @override
+	  init() {
+	    print("execute w");
+	    return super.init();
+	  }
 	}
 
 # 17 类变量和类方法
