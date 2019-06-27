@@ -270,21 +270,46 @@ Flutter会在`main()`函数中调用`runApp()`函数用来启动整个Flutter应
 
 - **这个`Binding`负责管理渲染流程。主要内容是实例化一个`PipelineOwner`类，这个类负责管理驱动渲染流水线。给`window`设置了一系列回调函数，处理屏幕尺寸变化，亮度变化等。调用`initRenderView()`方法。调用`addPersistentFrameCallback()`函数添加回调函数**
 
-	`addPersistentFrameCallback()`添加的这个回调非常重要，渲染流水线的主要阶段都会在这个回调里启动
+	**`addPersistentFrameCallback()`添加的这个回调非常重要，渲染流水线的主要阶段都会在这个回调里启动**
 	
-	`initRenderView()`函数会创建一个`RenderView`
+	**`initRenderView()`函数会创建一个`RenderView`**,Flutter框架中存在一个渲染树（`render tree`),这个`RenderView`就是渲染树（`render tree`)的根节点，这一点可以通过打开"Flutter Inspector"看到，在"Render Tree"这个Tab下，最根部的红框里就是这个`RenderView`
 
 
-
-
+	![](http://ww1.sinaimg.cn/large/6ab93b35ly1g4ew4drbaxj20yu0isaaq.jpg)
 
 
 `WidgetsBinding`：提供了`window.onLocaleChanged`、`onBuildScheduled `等回调。它是Flutter Widget层与engine的桥梁
 
-### 9.1.3 attachRootWidget()
+	  void initInstances() {
+	    super.initInstances();
+	    _instance = this;
+	    buildOwner.onBuildScheduled = _handleBuildScheduled;
+	    window.onLocaleChanged = handleLocaleChanged;
+	    window.onAccessibilityFeaturesChanged = handleAccessibilityFeaturesChanged;
+	    SystemChannels.navigation.setMethodCallHandler(_handleNavigationInvocation);
+	    SystemChannels.system.setMessageHandler(_handleSystemMessage);
+	  }
 
-`WidgetsFlutterBinding.attachRootWidget()`负责将根Widget添加到`RenderView`上
+- 这个绑定的初始化先给`buildOwner`设置了个`onBuildScheduled`回调. 接着给window设置了两个回调，因为和渲染关系不大，就不细说了。最后设置`SystemChannels.navigation`和`SystemChannels.system`的消息处理函数。这两个回调一个是专门处理路由的，另一个是处理一些系统事件，比如剪贴板，震动反馈，系统音效等等
 
+
+- **注意俩个"Owner",它们将会Flutter框架里的核心类**
+
+	1. `RendererBinding`里初始化的时候实例化了一个`PipelineOwner`
+
+	2. `BuildOwner`在`WidgetsBinding`里实例化的,它主要负责管理Widget的重建
+
+
+
+总体上来讲是把window提供的API分别封装到不同的Binding里。需要重点关注的是`SchedulerBinding`，`RendererBinding`和`WidgetsBinding`。这3个是渲染流水线的重要存在
+
+
+
+### 2.1.3 attachRootWidget()
+
+**`WidgetsFlutterBinding.attachRootWidget()`负责将根Widget添加到`RenderView`上**
+
+	// rootWidget是自定义的widget内容
 	void attachRootWidget(Widget rootWidget) {
 		_renderViewElement = RenderObjectToWidgetAdapter<RenderBox>(
 		  container: renderView,
@@ -293,21 +318,60 @@ Flutter会在`main()`函数中调用`runApp()`函数用来启动整个Flutter应
 		).attachToRenderTree(buildOwner, renderViewElement);
 	}
 
-- 代码中的有`renderView`和`renderViewElement `两个变量，`renderView`是一个`RenderObject`，它是渲染树的根，而`renderViewElement`是`renderView`对应的`Element`对象，可见该方法主要完成了根Widget到根`RenderObject`再到根`Element`的关联过程
+- **`renderView`是一个`RenderObject`，它是渲染树的根，而`_renderViewElement `是`renderView`对应的`Element`对象**
 
-`RenderObjectToWidgetAdapter`是`RenderObject`关联到`Element`树的桥梁
+	1. 渲染绑定(`RendererBinding`)通过`pipelineOwner`间接持有`render tree`的根节点`RenderView`
+	
+	2. 组件绑定(`WidgetsBinding`)持有`element tree`的根节点`RenderObjectToWidgetElement`
 
-	class RenderObjectToWidgetAdapter<T extends RenderObject> extends RenderObjectWidget {
-	  /// Creates a bridge from a [RenderObject] to an [Element] tree.
+	- 这里的`renderView`在`RendererBinding `中被创建,`RenderObject`需要有对应的`Widget`(`RenderObjectToWidgetAdapter `)和`Element`(`RenderObjectToWidgetElement`)
 
-	  /// Used by [WidgetsBinding] to attach the root widget to the [RenderView].
-	  RenderObjectToWidgetAdapter({
-	    this.child,
-	    this.container,
-	    this.debugShortDescription,
-	  }) : super(key: GlobalObjectKey(container));
-	  
-	  ....
-	}  
+- `RenderObjectToWidgetAdapter`是`RenderObject`关联到`Element`树的桥梁
 
-- `container`: 是`Element`树需要插入的`RenderObject`
+	`RenderObjectToWidgetAdapter`代码:
+
+		class RenderObjectToWidgetAdapter<T extends RenderObject> extends RenderObjectWidget {
+		  /// Creates a bridge from a [RenderObject] to an [Element] tree.
+		  ///
+		  /// Used by [WidgetsBinding] to attach the root widget to the [RenderView].
+		  RenderObjectToWidgetAdapter({
+		    this.child,
+		    this.container,
+		    this.debugShortDescription
+		  }) : super(key: GlobalObjectKey(container));
+		
+		  @override
+		  RenderObjectToWidgetElement<T> createElement() => RenderObjectToWidgetElement<T>(this);
+		
+		  @override
+		  RenderObjectWithChildMixin<T> createRenderObject(BuildContext context) => container;
+		  ...
+		}
+	
+	- `createElement()`返回的就是`RenderObjectToWidgetElement`
+	
+	- `createRenderObject()`返回的`container`就是构造函数传入的`RenderView`
+
+- **作为自定义的内容`MyApp`将会作为一个子widget存在于`RenderObjectToWidgetAdapter`之中**
+
+- `attachToRenderTree()`方法中的逻辑就属于渲染流水线的构建（Build）阶段，这时会根据自己的widget生成`element tree`和`render tree`
+
+
+### 2.1.4 scheduleWarmUpFrame（）
+
+构建（Build）阶段完成以后，就要进入布局（Layout）阶段和绘制（Paint）阶段了
+
+	  void scheduleWarmUpFrame() {
+	    ...
+	    Timer.run(() {
+	      ...
+	      handleBeginFrame(null);
+	      ...
+	    });
+	    Timer.run(() {
+	      ...
+	      handleDrawFrame();
+	      ...
+	    });
+	  }
+
