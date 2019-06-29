@@ -375,3 +375,17 @@ Flutter会在`main()`函数中调用`runApp()`函数用来启动整个Flutter应
 	    });
 	  }
 
+这个函数中就调用了两个函数，就是window的中的两个回调函数`onBeginFrame()`和`onDrawFrame()`,这里其实就是在具体执行这两个回调。最后渲染出来首帧场景送入engine显示到屏幕
+
+- 这里使用`Timer.run()`来异步运行两个回调(`Timer`会添加一个`Event`)，是为了在它们被调用之前有机会处理完微任务队列（`microtask queue`）
+
+## 2.2 总结
+为了节省等待Vsync信号的时间，在Flutter初始化的时候会直接执行渲染流程以获得第一帧图像(即执行`runApp()`),但是接下来 渲染流水线是由Vsync信号驱动的
+
+Flutter框架初始化过程其实主要的点都在几个绑定（binding）的初始化.Flutter框架其实就是围绕渲染流水线和window在做文章:
+
+1. 3个重要绑定：`SchedulerBinding`，`RendererBinding`和`WidgetsBinding`
+
+2. 2个"owner"：`PipelineOwner`和`BuildOwner`
+
+3. 2颗树的根节点：`render tree`根节点`RenderView`；`element tree`根节点`RenderObjectToWidgetElement`
