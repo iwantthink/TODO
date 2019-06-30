@@ -1,12 +1,13 @@
 # Flutter核心原理
 [Flutter 核心原理](https://github.com/flutterchina/flutter-in-action/blob/master/docs/chapter14/index.md)
 
+[Flutter框架分析（三）-- Widget，Element和RenderObject](https://juejin.im/post/5c80efde5188251b8a53b306#heading-1)
 
 # 1. Flutter UI系统
 
 这里的UI系统特指：基于一个平台，在此平台上实现GUI的一个系统，这里的平台特指操作系统，如Android、iOS或者Windows、macOS
 
-- 各个平台UI系统的原理是相通的，也就是说无论是Android还是iOS，它们将一个用户界面展示到屏幕的流程是相似的，所以，在介绍Flutter UI系统之前，先了解UI系统的基本原理，增加对操作系统和系统底层UI逻辑的了解，可以更好的了解Flutter 的UI系统
+- 各个平台UI系统的原理是相通的，也就是说无论是Android还是iOS，它们将一个用户界面展示到屏幕的流程是相似的，所以了解UI系统的基本原理，增加对操作系统和系统底层UI逻辑的了解，可以更好的了解Flutter 的UI系统
 
 ## 1.1 UI系统原理
 
@@ -48,14 +49,280 @@ CPU和GPU的任务是各有偏重的，CPU主要用于基本数学和逻辑计�
 Flutter UI系统和Flutter Framework的概念是差不多的，之所以用"UI系统"，是因为其他平台中可能不这么叫，为了概念统一，便于描述
 
 
-# 2. Element
+## 1.3 Flutter UI系统的结构
+为了更加清晰的查看Widget树，使用层级最少的Widget
 
-**Flutter中真正代表屏幕上显示元素的类是`Element`，也就是说`Widget`只是描述`Element`的一个配置**
+	void main() {
+	  runApp(MyWidget());
+	}
+	
+	class MyWidget extends StatelessWidget {
+	  final String _message = "Flutter框架分析";
+	  @override
+	  Widget build(BuildContext context) => ErrorWidget(_message);
+	}
 
-因此,Flutter中最底层的UI树实际上是由一个个独立的`Element`节点构成,`Widget`最终的`Layout`、渲染都是通过`RenderObject`来完成的
+使用`Dart DevTools`中的`Flutter Inspector`(注意要Android studio 中的`Flutter Inspector`并不会展示root)查看Widget树结构:
+
+![](http://ww1.sinaimg.cn/large/6ab93b35ly1g4j9eureekj20j208wq3u.jpg)
+
+- 这里的`root`指的是`RenderObjectToWidgetAdapter`
+
+- 图中的Widget树结构为:
+
+		RenderObjectToWidgetAdapter->MyWidget->ErrorWidget
+
+- 图中的Element树结构为:
+
+		RenderObjectToWidgetElement->StatelessElement->LeafRenderObjectElement
+
+- 图中的Render树结构为:
+
+		RenderView->RenderErrorBox
+		
+	- `RenderView`是Render树的根节点，在`MyWidget`对应的`StatelessElement`中并没有包含`RenderObject`(主要是因为`StatelessWidget`无法生成`RenderObject`)，只有最下面的`ErrorWidget`对应的`LeafRenderObjectElement`才持有第二个`RenderObject`
+
+	![](http://ww1.sinaimg.cn/large/6ab93b35ly1g4j9r10vagj20it0d20ss.jpg)
+
+## 1.4 Widget,Element和RenderObject
+
+**`Widget`是对`Element`的配置或描述**
+
+- Flutter app开发者主要的工作都是在和Widget打交道
+
+- 开发者不需要关心树的维护更新，只需要专注于对`Widget状态`的维护
+
+**`Element`负责维护`element tree`**
+
+- `Element`不会去管具体的颜色，字体大小，显示内容等等这些UI的配置或描述，也不会去管布局，绘制这些事，它只管自己的那棵树
+
+- `Element`的主要工作都处于渲染流水线的构建（build）阶段
+
+**`RenderObject`负责具体布局，绘制这些事情**
+
+- 也就是渲染流水线的布局（layout）和 绘制（paint）阶段
+
+
+# 2. Widget
+
+基类`Widget`是一个抽象类，其定义如下:
+
+	/// Describes the configuration for an [Element]
+	@immutable
+	abstract class Widget extends DiagnosticableTree {
+	  /// Initializes [key] for subclasses.
+	  const Widget({ this.key });
+	
+	  /// Controls how one widget replaces another widget in the tree
+	  final Key key;
+	
+	  /// Inflates this configuration to a concrete instance.
+	  @protected
+	  Element createElement();
+	
+	  /// A short, textual description of this widget.
+	  @override
+	  String toStringShort() {
+	    return key == null ? '$runtimeType' : '$runtimeType-$key';
+	  }
+	
+	  @override
+	  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+	    super.debugFillProperties(properties);
+	    properties.defaultDiagnosticsTreeStyle = DiagnosticsTreeStyle.dense;
+	  }
+	
+	
+	  /// Whether the `newWidget` can be used to update an [Element] that currently
+	  /// has the `oldWidget` as its configuration.
+	  static bool canUpdate(Widget oldWidget, Widget newWidget) {
+	    return oldWidget.runtimeType == newWidget.runtimeType
+	        && oldWidget.key == newWidget.key;
+	  }
+	}
+
+- **其`createElement()`方法负责根据配置去实例化对应的`Element`,其中`StatelessWidget`,`StatefulWidget`,`InheritedWidget`和`RenderObjectWidget`是比较重要的子类**
+
+## 2.1 StatelessWidget
+
+	/// A widget that does not require mutable state
+	abstract class StatelessWidget extends Widget {
+	  /// Initializes [key] for subclasses.
+	  const StatelessWidget({ Key key }) : super(key: key);
+	  
+	  ///Creates a [StatelessElement] to manage this widget's location in the tree
+	  /// It is uncommon for subclasses to override this method
+	  @override
+	  StatelessElement createElement() => StatelessElement(this);
+	
+	  /// Describes the part of the user interface represented by this widget.
+	  @protected
+	  Widget build(BuildContext context);
+	}
+
+- **`StatelessWidget`没有生成`RenderObject`的方法,所以`StatelessWidget`只是个中间层，它需要实现`build()`方法来返回子Widget**
+
+## 2.2 StatefulWidget
+
+	/// A widget that has mutable state.
+	abstract class StatefulWidget extends Widget {
+
+	  /// Initializes [key] for subclasses.
+	  const StatefulWidget({ Key key }) : super(key: key);
+
+	  /// Creates a [StatefulElement] to manage this widget's location in the tree.
+  	  /// It is uncommon for subclasses to override this method.
+	  @override
+	  StatefulElement createElement() => StatefulElement(this);
+	
+	  /// Creates the mutable state for this widget at a given location in the tree
+	  @protected
+	  State createState();
+	}
+
+- `createElement()`方法返回的是一个`StatefulElement`实例,而方法`createState()`构建对应于这个`StatefulWidget`的`State`
+
+- `StatefulWidget`没有生成`RenderObject`的方法,所以`StatefulWidget`也只是个中间层，它需要对应的`State`实现`build`方法来返回子Widget
+
+### 2.2.1 State
+
+	/// The logic and internal state for a [StatefulWidget]
+	abstract class State<T extends StatefulWidget> extends Diagnosticable {
+	  /// The current configuration
+	  T get widget => _widget;
+	  T _widget;
+	  
+	  /// The current stage in the lifecycle for this state object
+	  _StateLifecycle _debugLifecycleState = _StateLifecycle.created;
+	  
+	  /// Verifies that the [State] that was created is one that expects to be
+  	  /// created for that particular [Widget].
+	  bool _debugTypesAreRight(Widget widget) => widget is T;
+	  
+	  /// The location in the tree where this widget builds
+	  BuildContext get context => _element;
+	  StatefulElement _element;
+	
+	  /// Whether this [State] object is currently in a tree
+	  bool get mounted => _element != null;
+	
+	  /// Called when this object is inserted into the tree
+	  void initState() { }
+	
+	  /// Called whenever the widget configuration changes
+	  void didUpdateWidget(covariant T oldWidget) { }
+	
+	  /// Notify the framework that the internal state of this object has changed
+	  void setState(VoidCallback fn) {
+	    final dynamic result = fn() as dynamic;
+	    _element.markNeedsBuild();
+	  }
+	
+	  /// Called when this object is removed from the tree
+	  void deactivate() { }
+	  
+	  /// Called when this object is removed from the tree permanently
+	  void dispose() { }
+	
+	  /// Describes the part of the user interface represented by this widget
+	  Widget build(BuildContext context);
+	  
+	  /// Called when a dependency of this [State] object changes
+	  void didChangeDependencies() { }
+	}
+
+- **`State`持有对应的`Widget`和`Element`**
+
+- 函数`build()`的参数`BuildContex`其实就是Element
+
+- 属性`mounted`是用来判断这个`State`是不是关联到`element tree`中的某个`Element`
+
+	**如果当前State不是在mounted == true的状态，调用`setState()`是会crash的**
+
+- 函数`initState()`会在当前`State`被插入到树时被调用,通常在该方法中进行`State`的初始化工作
+
+- 函数`didUpdateWidget(covariant T oldWidget)`会在配置发生变化时被调用，即`State`换了个新的`Widget`以后会被调用到(`State`对应的`Widget`实例只要是相同类型的是可以被替换的)
+
+- 函数`setState()`方法只是简单执行传入的回调然后调用`_element.markNeedsBuild()`
+
+	**建议在调用`setState()`之前用mounted判断一下,因为这类的`_element`可能为空**
+	
+	另外要注意的一点是，**这个函数也是触发渲染流水线的一个点**
+
+- 函数`deactivate()`在`State`对应的`Element`被从树中移除后调用，这个移除可能是暂时移除
+
+- 函数`dispose()`在`State`对应的`Element`被从树中永久移除后调用
+
+- 函数`build(BuildContext context)`，描述Widget所代表的用户界面部分
+
+- 函数`didChangeDependencies()`，State的依赖发生变化的时候被调用
+
+
+## 2.3 InheritedWidget
+
+**`InheritedWidget`的作用是向下传递数据**。在`InheritedWidget`之下的子节点都可以通过调用`BuildContext.inheritFromWidgetOfExactType()`来获取这个`InheritedWidget`
+
+	abstract class InheritedWidget extends ProxyWidget {
+	  const InheritedWidget({ Key key, Widget child })
+	    : super(key: key, child: child);
+	
+	  @override
+	  InheritedElement createElement() => InheritedElement(this);
+	
+	  /// Whether the framework should notify widgets that inherit from this widget
+	  @protected
+	  bool updateShouldNotify(covariant InheritedWidget oldWidget);
+	}
+
+- `createElement()`函数返回的是一个`InheritedElement`
+
+
+## 2.4 RenderObjectWidget
+`RenderObjectWidget`用来配置`RenderObject`,当配置发生变化需要应用到现有的`RenderObject`上的时候，Flutter框架会调用方法`updateRenderObject()`来把新的配置设置给相应的`RenderObject`
+
+	abstract class RenderObjectWidget extends Widget {
+	
+	  const RenderObjectWidget({ Key key }) : super(key: key);
+	
+	  @override
+	  RenderObjectElement createElement();
+	
+	  /// Creates an instance of the [RenderObject] class that this
+	  /// [RenderObjectWidget] represents, using the configuration described by this
+	  /// [RenderObjectWidget]
+	  @protected
+	  RenderObject createRenderObject(BuildContext context);
+
+	  /// Copies the configuration described by this [RenderObjectWidget] to the
+	  /// given [RenderObject], which will be of the same type as returned by this
+	  /// object's [createRenderObject]
+	  @protected
+	  void updateRenderObject(BuildContext context, covariant RenderObject renderObject) { }
+	
+	  @protected
+	  void didUnmountRenderObject(covariant RenderObject renderObject) { }
+	}
+
+
+- 函数`createElement()`返回值是`RenderObjectElement`,具体逻辑由其子类实现
+
+- 函数`createRenderObject()`是用来实例化`RenderObject`
+
+- **`RenderObjectWidget`有三个比较重要的子类**：
+
+	1. `LeafRenderObjectWidget`:处于Widget树的最底层，没有子节点,对应`LeafRenderObjectElement`
+
+	2. `SingleChildRenderObjectWidget`:只含有一个子节点,对应`SingleChildRenderObjectElement`
+
+	3. `MultiChildRenderObjectWidget`:含有多个子节点,对应`MultiChildRenderObjectElement`
+
+# 3. Element
+
+**`Widget`只是描述`Element`的一个配置,`Element`类主要来维护`element`树**
+
+- Flutter中最底层的UI树实际上是由一个个独立的`Element`节点构成,`Widget`最终的`Layout`、渲染都是通过`RenderObject`来完成的
 
 - Flutter中，根据Widget是否需要包含子节点以及子节点的数量 将Widget分为了三类，分别对应三种Element，如下表：
-
 
 	Widget	|对应的Element |	用途
 	:---|:---|---
@@ -72,7 +339,84 @@ Flutter UI系统和Flutter Framework的概念是差不多的，之所以用"UI�
 	
 	最终所有`Element的RenderObject`构成一棵树，称之为渲染树，即render tree
 
-## 2.1 Element的生命周期
+## 3.1 Element类
+	
+	abstract class Element extends DiagnosticableTree implements BuildContext {
+	    Element _parent;
+	    Widget _widget;
+	    BuildOwner _owner;
+	    dynamic _slot;
+	    
+	    void visitChildren(ElementVisitor visitor) { }
+	    
+	    Element updateChild(Element child, Widget newWidget, dynamic newSlot) {
+	        
+	    }
+	    
+	    void mount(Element parent, dynamic newSlot) {
+	        
+	    }
+	    
+	    void unmount() {
+	         
+	    }
+	    
+	    void update(covariant Widget newWidget) {
+	        
+	    }
+	    
+	    @protected
+	    Element inflateWidget(Widget newWidget, dynamic newSlot) {
+	    ...
+	      final Element newChild = newWidget.createElement();
+	      newChild.mount(this, newSlot);
+	      return newChild;
+	    }
+	  
+	    void markNeedsBuild() {
+	      if (dirty)
+	        return;
+	      _dirty = true;
+	      owner.scheduleBuildFor(this);
+	    }
+	    
+	    void rebuild() {
+	      if (!_active || !_dirty)
+	        return;
+	      performRebuild();
+	    }
+	  
+	    @protected
+	    void performRebuild();
+	}
+
+- `Element`拥有一个当前的`Widget _widget`和一个`BuildOwner _owner`(`BuildOwner`是在`WidgetsBinding`里实例化的)
+
+	`Element`是树状结构，它会持有父节点`_parent`
+	
+- `_slot`由父`Element`设置，目的是告诉当前`Element`在父节点中的位置
+	
+- **函数`visitChildren()`定义了`Element`可以遍历子节点，但是具体的遍历行为是由子类实现**
+
+- **函数`updateChild()`用来更新一个孩子节点,有四种情况**：
+
+	1. 新Widget为空，老Widget也为空。则啥也不做
+
+	2. 新Widget为空，老Widget不为空。这个Element被移除
+
+	3. 新Widget不为空，老Widget为空。则调用`inflateWidget()`以这个Wiget为配置实例化一个Element
+
+	4. 新Widget不为空，老Widget不为空。调用`update()`函数更新子`Element`(`update()`函数由子类实现)
+
+- 函数`mount()`会在新`Element`被实例化以后调用，用来把自己加入`element tree`
+
+	`Element`被移除的时候会调用`unmount()`,用来退出`element tree`
+
+- 函数`markNeedsBuild()`用来标记`Element`为"脏"(dirty)状态,**表明渲染下一帧的时候这个Element需要被重建**
+
+- 函数`rebuild()`在渲染流水线的构建（build）阶段被调用。具体的重建在函数`performRebuild()`中，由Element子类实现
+
+## 3.2 Element的生命周期
 
 1. Framework 调用`Widget.createElement()`创建一个Element实例，记为`element`
 
@@ -106,7 +450,7 @@ Flutter UI系统和Flutter Framework的概念是差不多的，之所以用"UI�
 
 在一些特定情况下（例如获取主题`Theme`数据），必须得直接使用Element对象来完成一些操作
 
-# 3. BuildContext
+## 3.3 BuildContext
 
 无论是`StatelessWidget`和`StatefulWidget`的`build()`方法都会传一个`BuildContext`对象：
 
@@ -128,7 +472,7 @@ Flutter中的许多操作都会需要这个`BuildContext`,例如:
 	    ...
 	}
 
-## 3.1 BuildContext的实现类
+### 3.3.1 BuildContext的实现类
 
 `StatelessWidget`和`StatefulWidget`的`build()`方法传入的context对象是哪个实现了`BuildContext`的类?这可以通过查看`build()`方法的调用地方来进行查看
 
@@ -160,7 +504,173 @@ Flutter中的许多操作都会需要这个`BuildContext`,例如:
 
 - 之所以不直接定义成`Element`而是定义成`BuildContext`是因为[可以得到面向接口编程的好处](https://juejin.im/post/5baaecd8e51d451a3f4c16d1)
 
-# 4. 进阶
+## 3.4 ComponentElement
+`ComponentElement`表示当前这个`Element`是用来组合其他`Element`的,其实一个抽象类，继承自`Element`
+
+	abstract class ComponentElement extends Element {
+	  ComponentElement(Widget widget) : super(widget);
+	
+	  Element _child;
+	
+	  @override
+	  void performRebuild() {
+	    Widget built;
+	    built = build();
+	    _child = updateChild(_child, built, slot);
+	  }
+	
+	  Widget build();
+	}
+
+- 属性`_child`是其子节点
+
+- 函数`performRebuild()`中会调用`build()`来实例化一个Widget(`build()`函数由其子类实现)
+
+
+## 3.5 StatelessElement
+
+`StatelessElement`对应的Widget是`StatelessWidget`
+
+	class StatelessElement extends ComponentElement {
+	
+	  @override
+	  Widget build() => widget.build(this);
+	
+	  @override
+	  void update(StatelessWidget newWidget) {
+	    super.update(newWidget);
+	    _dirty = true;
+	    rebuild();
+	  }
+	}
+
+- **函数`build()`直接调用的就是`StatelessWidget.build()`**
+
+	**`build()`函数的入参是`this`,所以`StatelessWidget.build()`的参数`BuildContext`其实就是这个`StatelessElement`**
+
+## 3.6 StatefullElement
+
+`StatefulElement`对应的Widget是`StatefulWidget`
+
+	class StatefulElement extends ComponentElement {
+	  /// Creates an element that uses the given widget as its configuration.
+	  StatefulElement(StatefulWidget widget)
+	      : _state = widget.createState(),
+	        super(widget) {
+	    _state._element = this;
+	    _state._widget = widget;
+	  }
+	
+	  @override
+	  Widget build() => state.build(this);
+	  
+	   @override
+	  void _firstBuild() {
+	    final dynamic debugCheckForReturnedFuture = _state.initState() 
+	    _state.didChangeDependencies();
+	    super._firstBuild();
+	  }
+	
+	  @override
+	  void deactivate() {
+	    _state.deactivate();
+	    super.deactivate();
+	  }
+	
+	  @override
+	  void unmount() {
+	    super.unmount();
+	    _state.dispose();
+	    _state._element = null;
+	    _state = null;
+	  }
+	
+	  @override
+	  void didChangeDependencies() {
+	    super.didChangeDependencies();
+	    _state.didChangeDependencies();
+	  }
+	}
+
+- 在`StatefulElement`的构造函数中会调用对应`StatefulWidget`的`createState()`函数
+
+	也就是说`State`是在实例化`StatefulElement`的时候被实例化的,并且`State`实例会被这个`StatefulElement`实例持有。从这里也可以看出为什么`StatefulWidget`的状态要由单独的`State`管理，每次刷新的时候可能会有一个新的StatefulWidget被创建，但是State实例是不变的
+
+- 函数`build()`函数中调用了`State.build(this)`
+
+	函数`build()`的入参是this,所以`StatefullWidget.build()`的参数`BuildContext`其实就是这个`StatefullElement`
+
+- **`State`持有状态，当状态改变时对应的回调函数会被调用。实际上这些回调函数其实都是在`StatefulElement`里被调用的**
+
+- 函数`_firstBuild()`中会调用`State.initState()`和`State.didChangeDependencies()`
+
+- 函数`deactivate()`中会调用`State.deactivate()`
+
+- 函数`unmount()`中会调用`State.dispose()`
+
+- 函数`didChangeDependencies()`中会调用`State.didChangeDependencies()`
+
+## 3.7 InheritedElement
+`InheritedElement`对应的Widget是`InheritedWidget`
+
+- **其内部实现主要是在维护对其有依赖的子Element的Map，以及在需要的时候调用子`Element`对应的`didChangeDependencies()`回调**
+
+## 3.8 RenderObjectElement
+
+`RenderObjectElement`对应的Widget是`RenderObjectWidget`
+
+	
+	abstract class RenderObjectElement extends Element {
+	  RenderObject _renderObject;
+	  
+	  @override
+	  void mount(Element parent, dynamic newSlot) {
+	    super.mount(parent, newSlot);
+	    _renderObject = widget.createRenderObject(this);
+	    attachRenderObject(newSlot);
+	    _dirty = false;
+	  }
+	  
+	  @override
+	  void unmount() {
+	    super.unmount();
+	    widget.didUnmountRenderObject(renderObject);
+	  }
+	  
+	  @override
+	  void update(covariant RenderObjectWidget newWidget) {
+	    super.update(newWidget);
+	    widget.updateRenderObject(this, renderObject);
+	    _dirty = false;
+	  }
+	  
+	  @override
+	  void performRebuild() {
+	    widget.updateRenderObject(this, renderObject);
+	    _dirty = false;
+	  }
+	  
+	  @protected
+	  void insertChildRenderObject(covariant RenderObject child, covariant dynamic slot);
+	
+	  @protected
+	  void moveChildRenderObject(covariant RenderObject child, covariant dynamic slot);
+	
+	  @protected
+	  void removeChildRenderObject(covariant RenderObject child);
+	
+	}
+
+
+- 函数`mount()`被调用的时候会调用`RenderObjectWidget.createRenderObject()`来实例化`RenderObject`
+
+- 函数`update()`和`performRebuild()`被调用的时候会调用`RenderObjectWidget.updateRenderObject()`
+
+- 函数`unmount()`被调用的时候会调用`RenderObjectWidget.didUnmountRenderObject()`
+
+
+
+# 4. Element进阶
 
 **`Element`是Flutter UI框架内部连接`Widget`和`RenderObject`的纽带**，大多数时候开发者只需要关注`Widget`层即可，但是`Widget`层有时候并不能完全屏蔽`Element`细节，所以Framework在`StatelessWidget`和`StatefulWidget`中通过`build()`方法参数将`Element`对象也传递给了开发者，这样便可以在需要时直接操作`Element`对象
 
@@ -228,7 +738,7 @@ Flutter中的许多操作都会需要这个`BuildContext`,例如:
 
 # 5. RenderObject和RenderBox
 
-**`RenderObject`的主要职责是Layout和绘制，并且所有的`RenderObject`会组成一棵渲染树`Render Tree`**
+**`RenderObject`的主要职责是渲染流水线的Layout和绘制，同时还会维护由`RenderObject`组成一棵渲染树`Render Tree`**
 
 - 每个`Element`都对应一个`RenderObject`，可以通过`Element.renderObject` 来获取
 
