@@ -9,8 +9,7 @@
 
 ![](http://ww1.sinaimg.cn/large/6ab93b35ly1g4enlmetx2j20zk0k3dg6.jpg)
 
-这是Flutter框架中的一个渲染流水线（`Rendering pipline`）。这个渲染流水线由垂直同步信号（`Vsync`）驱动，而`Vsync`信号是由系统提供的，如果Flutter app是运行在Android上的话，那Vsync信号就是熟悉的Android的那个Vsync信号。**当Vsync信号到来以后，Flutter 框架会按照图里的顺序执行一系列动作,即动画（Animate）、构建（Build）、布局（Layout）和绘制（Paint），最终生成一个场景（Scene）之后送往底层，由GPU绘制到屏幕上**
-
+**这是Flutter框架中的一个渲染流水线（`Rendering pipline`）**,渲染流水线由垂直同步信号（`Vsync`）驱动，而`Vsync`信号是由系统提供的，如果Flutter app是运行在Android上的话，那Vsync信号就是熟悉的Android的那个Vsync信号。**当Vsync信号到来以后，Flutter 框架会按照图里的顺序执行一系列动作,即动画（Animate）、构建（Build）、布局（Layout）和绘制（Paint），最终生成一个场景（Scene）之后送往底层，由GPU绘制到屏幕上**
 
 - **动画（Animate）阶段:** 因为动画会随每个Vsync信号的到来而改变状态（State），所以动画阶段是流水线的第一个阶段。
 
