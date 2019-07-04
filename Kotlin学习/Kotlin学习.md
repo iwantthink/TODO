@@ -1,0 +1,262 @@
+# Kotlin学习
+
+
+
+# 1. 同一性??
+**当需要可空引用时，像数字、字符会被装箱。装箱操作不会保留同一性**
+
+        val b: Int = 123
+        lll(b === b) // 输出true
+        val b2: Int? = b
+        val b22: Int? = b
+        lll(b2 === b22) // 输出true
+
+        val a: Int = 10000
+        lll(a === a) // 输出“true”
+        val boxedA: Int? = a
+        val anotherBoxedA: Int? = a
+        lll(boxedA === anotherBoxedA) // 输出false
+        
+# 2. 浮点数比较
+
+当其中的操作数a与b都是静态已知的Float或Double或者它们对应的可空类型（声明为该类型，或者推断为该类型，或者智能类型转换的结果是该类型），两数字所形成的操作或者区间遵循 IEEE754 浮点运算标准。
+
+然而，为了支持泛型场景并提供全序支持，当这些操作数并非并非静态类型为浮点数（例如是Any、Comparable<......>、类型参数）时，这些操作使用为Float与Double实现的不符合标准的equals与compareTo，这会出现：
+
+- 认为NaN与其自身相等
+
+- 认为NaN比包括正无穷大（POSITIVE_INFINITY）在内的任何其他元素都大
+
+- 认为-0.0小于0.0
+
+
+# 3. Unicode转义语法
+
+`\uFF00`
+
+# 4. 继承
+
+如果派生类有一个主构造函数，其基类型可以（并且必须）用基类的主构造函数参数就地初始化
+
+
+## 4.1 覆盖规则
+在 Kotlin 中，实现继承由下述规则规定：**如果一个类从它的直接超类继承相同成员的多个实现，它必须覆盖这个成员并提供其自己的实现（也许用继承来的其中之一）**。为了表示采用从哪个超类型继承的实现，我们使用由尖括号中超类型名限定的super，如super<Base>
+
+
+# 5. 对象表达式和对象声明的差异
+
+1. 对象表达式在被使用的地方立即执行(初始化)
+
+2. 对象声明是在第一此被访问到时延迟初始化
+
+3. **伴生对象的初始化是在相应的类被加载时(解析),与Java静态初始化块的语义相匹配**
+
+# 6. 声明属性的完整语法
+
+	var <propertyName>[: <PropertyType>] [= <property_initializer>]    
+		[<getter>]    
+		[<setter>]
+		
+## 6.1 幕后字段
+[Kotlin 什么是幕后字段?](https://juejin.im/post/5b95321ae51d450e6475b7c6)
+
+**在Kotlin中, 如果属性至少一个访问器使用默认实现，那么Kotlin会自动提供幕后字段，用关键字field表示，幕后字段主要用于自定义getter和setter中，并且只能在getter 和setter中访问**
+
+有幕后字段的属性转换成Java代码一定有一个对应的Java变量
+
+
+## 6.2 幕后属性
+
+一个属性如果对外表现为只读，对内表现为可读可写，我们将这个属性成为幕后属性
+
+	private var _table: Map<String, Int>? = null
+	public val table: Map<String, Int>
+	    get() {
+	        if (_table == null) {
+	            _table = HashMap() // 类型参数已推断出
+	        }
+	        return _table ?: throw AssertionError("Set to null by another thread")
+	    }
+
+- `_table`就是幕后属性
+
+
+# 7. 修饰符
+public internal protected private
+
+## 7.1 internal
+
+可见性修饰符`internal`意味着该成员只在相同模块中可见
+
+- 一个模块就是编译在一起的一套Kotlin文件
+
+	1. 一个Intellij IDEA模块
+
+	2. 一个Maven项目
+
+	3. 一个Gradle源集(例外是`test`源集可以访问`main`源集)
+
+	4. 一次`<kotlinc>` Ant任务执行所编译的一套文件
+
+# 8. 扩展
+
+扩展函数是静态分发的，即它们不是根据接收者类型的虚方法。 这意味着调用的扩展函数是由函数调用所在的表达式的类型来决定的， 而不是由表达式运行时求值结果决定的。例如：
+
+	open class C
+	
+	class D: C()
+	
+	fun C.foo() = "c"
+	
+	fun D.foo() = "d"
+	
+	fun printFoo(c: C) {
+	    println(c.foo())
+	}
+	
+	printFoo(D())
+	// 输出 c
+
+
+## 8.1 扩展接收者的类型
+
+声明为成员的扩展可以声明为 open 并在子类中覆盖。这意味着这些函数的分发对于分发接收者类型是虚拟的，但对于扩展接收者类型是静态的。
+
+
+# 9. 密封类
+
+[Kotlin——中级篇（六）：数据类（data）、密封类(sealed)详解- 掘金](https://juejin.im/post/5a37e4b45188253aea1f7219)
+
+所谓受限的类继承结构，即当类中的一个值只能是有限的几种类型，而不能是其他的任何类型
+
+
+# 10. 泛型
+[Kotlin中的泛型](https://juejin.im/post/5be40974f265da615a414f54)
+
+## 10.1 Java 通配符`?`
+
+	Number num = new Integer(1);  
+	ArrayList<Number> list = new ArrayList<Integer>(); //type mismatch
+
+**`Interger`是`Number`的子类，这是Java多态的特性，但是`ArrayList`并不是`ArrayList`的子类，这时就需要一个引入通配符，来表示一个引用 既可以是当前类 又可以是其父类**
+
+- 通配符`?`可以认为是任意类型的父类,它是一个具体的类型，是泛型实参，与泛型形参(`T`,`E`等)不同
+
+- 引入通配符，不仅解决了泛型实参之间的逻辑关系，还对泛型引入了边界的概念
+
+## 10.2 Java 通配符`?`的上界
+	List<? extends Number> list = new ArrayList<Number>();
+
+- **表示类或者方法接收T或者T的子类型**
+
+- **定义通配符`?`的上界又可以称为协变**
+
+## 10.3 Java 通配符`?`的下界
+
+	 List<? super Integer> list = new ArrayList<Number>();
+
+- 表示类或者方法接收T或者T的父类型
+
+- **定义通配符`?`的下界，又称为逆变**
+
+## 10.4 Java 什么时候使用协变和逆变
+
+在《Effective Java》中给出了一个PECS原则：
+
+	PECS：Producer extends,Customer super
+
+- 当使用泛型类作为生产者，需要从泛型类中取数据时，使用extends，此时泛型类是协变的； 当使用泛型类作为消费者，需要往泛型类中写数据时，使用suepr，此时泛型类是逆变的
+
+一个经典的案例就是Collections中的copy方法
+
+    public static <T> void copy(List<? super T> dest, List<? extends T> src) {
+        int srcSize = src.size();
+        if (srcSize > dest.size())
+            throw new IndexOutOfBoundsException("Source does not fit in dest");
+
+        if (srcSize < COPY_THRESHOLD ||
+            (src instanceof RandomAccess && dest instanceof RandomAccess)) {
+            for (int i=0; i<srcSize; i++)
+                dest.set(i, src.get(i));
+        } else {
+            ListIterator<? super T> di=dest.listIterator();
+            ListIterator<? extends T> si=src.listIterator();
+            for (int i=0; i<srcSize; i++) {
+                di.next();
+                di.set(si.next());
+            }
+        }
+    }
+
+
+## 10.5 Kotlin中的协变和逆变(声明处型变)
+
+Kotlin 中使用`out`表示协变(? extends T),即该类型仅从类中返回(生产)，并不被消费。 使用`int`表示逆变(? super T).即该类型仅从外部传入类中,并不生产
+
+**当泛型作为函数的返回值时，称为协变点，当泛型作为函数参数时，称为逆变点**
+
+以List的泛型E为例，这里使用了协变，即List作为生产者
+
+	public interface List<out E> : Collection<E> {
+	  
+	    // E 作为协变点
+	    public operator fun get(index: Int): E
+	
+	    // E 作为逆变点
+	    public fun indexOf(element: @UnsafeVariance E): Int
+
+- 这里的List是只读的List，使用out关键字修饰泛型，这里将泛型E作为协变来使用，也就是当做函数的返回值。但是源码中也将E作为函数的参数使用，即当做逆变来使用，由于函数（比如indexOf）并不会修改List，所以加注解@UnsafeVariance来修饰
+
+以`Comparable`的泛型T为例，这里使用了逆变，即`Comparable`作为消费者
+
+	public interface Comparable<in T> {
+		// T 作为逆变点
+	    public operator fun compareTo(other: T): Int
+	}
+
+最后总结一下，**泛型既可以作为函数的返回值，也可以作为函数的参数。当作为函数的返回值时，泛型是协变的，使用out修饰；当作为函数的参数时，泛型是逆变的，使用in修饰**
+
+1. 在泛型形参前面加上out关键字，表示泛型的协变，作为返回值，为只读类型，泛型参数的继承关系与类的继承关系保持一致，比如List和List
+
+2. 在泛型参数前面加上in表示逆变，表示泛型的逆变，作为函数的参数，为只写类型，泛型参数的继承关系与类的继承关系相反，比如Comparable和Comparable
+
+
+**协变和逆变 主要是用于有泛型的类型进行赋值**，普通情况下不会发生型变，而协变和逆变确保了赋值能够正常进行
+
+## 10.6 类型投影(使用处型变)
+**暂时理解过来就是在 参数的类型上使用in 或者out,用来指定参数时协变的或者是逆变的**
+
+## 10.7 星投影 ??????
+
+当类型参数未知，但是又需要以安全的方式来进行使用
+
+- 这里的安全的方式指的是 定义泛型类型的这种投影???
+
+	该泛型类型的每个具体实例化是该投影的子类型
+
+Kotlin 为此提供了所谓的星投影语法：
+
+- 对于 `Foo <out T : TUpper>`
+
+	其中 T 是一个具有上界 TUpper 的协变类型参数，`Foo <*> `等价于 `Foo <out TUpper>`。 这意味着当 T 未知时，你可以安全地从 `Foo <*> `读取 `TUpper` 的值
+
+- 对于` Foo <in T>`，其中 T 是一个逆变类型参数，`Foo <*>` 等价于 `Foo <in Nothing>`。 这意味着当 T 未知时，没有什么可以以安全的方式写入 `Foo <*>`
+
+- 对于 Foo` <T : TUpper>`，其中 T 是一个具有上界 TUpper 的不型变类型参数，`Foo<*> `对于读取值时等价于 `Foo<out TUpper> `而对于写值时等价于 `Foo<in Nothing>`
+
+
+
+## 10.7 泛型问题???
+
+    // a4 类型为 Array<String>
+    val a4 = arrayOf("2", "3", "4")
+    // 不型变 导致错误!
+    copy(a4, a2) // 编译器报错
+    // 但是这里 类型为什么是Array<Any>????
+    copy(arrayOf("2", "#", "4"), a2)
+
+	fun copy(from: Array<Any>, to: Array<Any>) {
+	    assert(from.size == to.size)
+	    for (i in from.indices)
+	        to[i] = from[i]
+	}
