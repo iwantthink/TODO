@@ -260,3 +260,98 @@ Kotlin 为此提供了所谓的星投影语法：
 	    for (i in from.indices)
 	        to[i] = from[i]
 	}
+
+
+# 11. 内联类
+
+
+内联类必须有一个主构造函数，并且在主构造函数里必须有且只有一个 val 属性，除此之外，不能再拥有其他的字段。（var 属性目前还没做好所以不能用）
+
+	// 内联类
+	fun test() {
+	   val duck = Duck("ywwuyi")
+	   println(duck.name)
+	   println(duck.i)
+	   duck.i = 6655
+	   duck.talk()
+	}
+	
+	// 经过编译器处理后的代码
+	// 内联类看起来就像是一个“零开销”的 wrapper
+	fun test() {
+	   val duck = "ywwuyi"
+	   println(duck) // 输出 1551
+	   println(Duck$Erased.getI(duck))
+	   Duck$Erased.setI(duck, 6655)
+	   Duck$Erased.talk(duck);
+	}
+
+
+内敛类既可以表示为基础类型，也可以表示为包装器，引用相等对于内联类来说没有意义，因此禁止对内联类进行比较
+
+
+## 11.1 名称修饰
+由于内联类被编译为基础类型，因此会导致各种模糊的错误
+
+	inline class UInt(val x: Int)
+	
+	// 在 JVM 平台上被表示为'public final void compute(int x)'
+	fun compute(x: Int) { }
+	
+	// 同理，在 JVM 平台上也被表示为'public final void compute(int x)'！
+	fun compute(x: UInt) { }
+
+**为了解决这种问题，通常会在函数名后拼接一些稳定的哈希值来重命名函数**
+	
+	 // 下面提供了该方法的解决办法
+	 fun compute(x: UInt) { }
+	 public final void compute-<hashcode>(int x)
+
+
+
+# 12 委托
+
+## 12.1 委托属性
+
+语法是： val/var <属性名>: <类型> by <表达式>
+
+- 属性对应的 `get()`与 `set()`会被委托给它的 `getValue()` 与 `setValue()` 方法
+
+
+## 12.2 属性委托要求
+
+
+
+**对于一个只读属性（即 val 声明的），委托必须提供一个名为 `getValue()`的函数，该函数接受以下参数**：
+
+- `thisRef` —— 必须与 属性所有者 类型（对于扩展属性——指被扩展的类型）相同或者是它的超类型；
+
+- `property` —— 必须是类型 `KProperty<*>` 或其超类型
+
+- 这个函数必须返回与属性相同的类型（或其子类型）
+
+- **参考`ReadOnlyProperty `接口**
+
+
+**对于一个可变属性（即 var 声明的），委托必须额外提供一个名为 `setValue()`的函数，该函数接受以下参数**：
+
+- `thisRef` —— 同 `getValue()`
+
+- `property` —— 同 `getValue()`
+
+- `new value` —— 必须与属性同类型或者是它的超类型
+
+- **参考`ReadWriteProperty `接口**
+
+
+**`getValue()` 或 `setValue()` 函数可以通过委托类的成员函数提供或者由扩展函数提供**
+
+- 当需要委托属性到原本未提供的这些函数的对象时后者会更便利
+
+- 两个函数都需要用`operator `关键字来进行标记
+
+
+## 12.3 翻译规则
+
+
+
