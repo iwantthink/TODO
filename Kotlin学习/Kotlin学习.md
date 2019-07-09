@@ -153,7 +153,7 @@ public internal protected private
 	Number num = new Integer(1);  
 	ArrayList<Number> list = new ArrayList<Integer>(); //type mismatch
 
-**`Interger`是`Number`的子类，这是Java多态的特性，但是`ArrayList`并不是`ArrayList`的子类，这时就需要一个引入通配符，来表示一个引用 既可以是当前类 又可以是其父类**
+**`Interger`是`Number`的子类，这是Java多态的特性，但是`ArrayList<Integer>`并不是`ArrayList<Number>`的子类，这时就需要一个引入通配符，来表示一个引用 既可以是当前类 又可以是其父类**
 
 - 通配符`?`可以认为是任意类型的父类,它是一个具体的类型，是泛型实参，与泛型形参(`T`,`E`等)不同
 
@@ -206,7 +206,7 @@ public internal protected private
 
 ## 10.5 Kotlin中的协变和逆变(声明处型变)
 
-Kotlin 中使用`out`表示协变(? extends T),即该类型仅从类中返回(生产)，并不被消费。 使用`int`表示逆变(? super T).即该类型仅从外部传入类中,并不生产
+Kotlin 中使用`out`表示协变(`? extends T`),即该类型仅从类中返回(生产)，并不被消费。 使用`int`表示逆变(`? super T`).即该类型仅从外部传入类中,并不生产
 
 **当泛型作为函数的返回值时，称为协变点，当泛型作为函数参数时，称为逆变点**
 
@@ -276,6 +276,12 @@ Kotlin 为此提供了所谓的星投影语法：
 	        to[i] = from[i]
 	}
 
+## 10.8 泛型上界?????
+
+	fun <T> copyWhenGreater(list: List<T>, threshold: T): List<String> where T : CharSequence,
+	T : Comparable<T> {
+	return list.filter { it > threshold }.map { it.toString() }
+	}
 
 # 11. 内联类
 
@@ -368,6 +374,13 @@ Kotlin 为此提供了所谓的星投影语法：
 
 ## 12.3 翻译规则
 
+	class C {
+		var prop: Type by MyDelegate()
+	}
+	// 这段是由编译器生成的相应代码: 
+	class C {
+		private val prop$delegate = MyDelegate() var prop: Type
+	}
 
 
 # 13. 函数
