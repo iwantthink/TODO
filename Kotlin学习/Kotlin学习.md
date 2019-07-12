@@ -479,3 +479,19 @@ Kotlin 为此提供了所谓的星投影语法：
 - 如果推断出的该 lambda 的返回类型不是 Unit，那么该 lambda 主体中的最后一个（或可能是单个）表达式会视为返回值
 
 
+# 作用域函数
+
+## 函数选择
+
+Function	|Object reference	|Return value|Is extension function
+:---:|:---:|:---:|:---:
+let|	it|	Lambda result|	Yes
+run	|this|	Lambda result	|Yes
+run	|-|	Lambda result	|No: called without the context object
+with|this|	Lambda result|	No: takes the context object as an argument.
+apply|	this|	Context object|	Yes
+also|	it|	Context object|	Yes
+
+
+
+
