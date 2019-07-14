@@ -493,5 +493,13 @@ apply|	this|	Context object|	Yes
 also|	it|	Context object|	Yes
 
 
+# Kotlin与Java交互
+
+# 在Kotlin中使用JNI
+
+要声明一个在本地（C 或 C++）代码中实现的函数，需要使用 `external` 修饰符来标记它：
+
+	external fun foo(x: Int): Double
+
 
 
