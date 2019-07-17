@@ -9,6 +9,8 @@
 
 [Binder 设计与实现-精华-必看!!!!!!!!!!!!!!!!!!](https://blog.csdn.net/universus/article/details/6211589)
 
+[Android跨进程通信：图文详解 Binder机制 原理](https://blog.csdn.net/carson_ho/article/details/73560642)
+
 **学习Binder路线：**
 
 1. 先学会熟练使用AIDL进行跨进程通信（简单来说就是远程Service）
