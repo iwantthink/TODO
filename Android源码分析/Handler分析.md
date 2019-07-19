@@ -12,9 +12,9 @@
 
 `Handler,Looper,Message` 组成了Android的**异步消息处理机制**，异步消息处理线程启动后会进入一个无限的循环体，每循环一次，就会从其内部的消息队列中取出一个消息，然后回调相应的消息处理函数，执行完一个消息后继续循环，**若消息队列为空，线程则会阻塞并等待**。
 
-对应到`Handler,Looper`,`Message.Looper`负责创建一个`MessageQueue`，然后会开始一个永真循环，不断的从`MessageQueue`中读取消息，如果队列为空则阻塞并等待，Handler负责添加Message到Looper的`MessageQueue`中
+对应到`Handler,Looper,Message`中`Looper`负责创建一个`MessageQueue`，然后会开始一个永真循环，不断的从`MessageQueue`中读取消息，如果队列为空则阻塞并等待，Handler负责添加Message到Looper的`MessageQueue`中
 
-`Handler,Looper,Message` 都是在android.jar包下的。
+`Handler,Looper,Message` 都是在android.jar包下的
 
 # 2. Looper
 
@@ -114,7 +114,7 @@
 
         for (;;) {
 			// 通过 C++ 去获取MessageQueue中的数据
-            Message msg = queue.next(); // might block
+            Message msg = queue.next(); // 可能阻塞
             if (msg == null) {
                 // No message indicates that the message queue is quitting.
                 return;
@@ -136,7 +136,7 @@
             final long start = (slowDispatchThresholdMs == 0) ? 0 : SystemClock.uptimeMillis();
             final long end;
             try {
-				// 具体执行msg的地方
+				// 具体执行msg的地方 !!!!!!!!!!!!!!!!!!!
                 msg.target.dispatchMessage(msg);
                 end = (slowDispatchThresholdMs == 0) ? 0 : SystemClock.uptimeMillis();
             } finally {
@@ -172,7 +172,7 @@
         }
     }
 
-1. 首先会获取Looper，即从ThreadLocal中获取当前线程的Looper。然后从Looper 中拿到对应的MessageQueue
+1. 首先获取Looper，即从ThreadLocal中获取当前线程的Looper。然后从Looper 中拿到对应的MessageQueue
 
 2. 进入`for(;;)`形式的永真循环，通过MessageQueue的next()方法去获取 `Message`,如果取不到值 会阻塞
 
@@ -186,7 +186,7 @@
 
 Handler通常作为`Message`的发送体出现，会连接`MessageQueue `和 `Message`
 
-**Handler通常有三种形式：**
+**Handler通常有三种形式,这主要影响执行逻辑的选择：**
 
 1. 重写Handler的handleMessage()方法
 
@@ -196,6 +196,8 @@ Handler通常作为`Message`的发送体出现，会连接`MessageQueue `和 `Me
                 super.handleMessage(msg);
             }
         };
+        
+        handler1.sendMessage(Message.obatin());
 
 2. 初始化Handler时，传入一个Callback
 
@@ -362,13 +364,13 @@ post形式 会将传入的Runnable 组装成一个msg 继续调用
 **post形式和sendMessage形式的方法在于最终会调用 sendMessageAtTime(),各个方法只是参数的形式不同**
 
 	
-	    private boolean enqueueMessage(MessageQueue queue, Message msg, long uptimeMillis) {
-	        msg.target = this;
-	        if (mAsynchronous) {
-	            msg.setAsynchronous(true);
-	        }
-	        return queue.enqueueMessage(msg, uptimeMillis);
-	    }
+    private boolean enqueueMessage(MessageQueue queue, Message msg, long uptimeMillis) {
+        msg.target = this;
+        if (mAsynchronous) {
+            msg.setAsynchronous(true);
+        }
+        return queue.enqueueMessage(msg, uptimeMillis);
+    }
 
 - **注意：这里的`msg.target = this`，表示将当前Handler 赋值给了msg.target。**
 
@@ -393,7 +395,7 @@ post形式 会将传入的Runnable 组装成一个msg 继续调用
         }
     }
 
-该方法是`Looper.loop()`中，取出message时会传递给`Handler`的这个函数去执行。
+该方法在`Looper.loop()`方法中被调用，从`MessageQueue`中取出message后会传递给`Handler`的这个函数去执行,会按照以下的优先级去执行函数:
 
 1. 首先判断是否是以`post()`形式传递的消息，如果是成立 则取出其中的`Runnable` 去执行
 
