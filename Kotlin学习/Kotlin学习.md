@@ -481,6 +481,9 @@ Kotlin 为此提供了所谓的星投影语法：
 
 # 作用域函数
 
+作用域函数的主要作用就是基于一个对象执行一段代码,主要不同是 这个对象是作为`this`或者`it`传入，以及代码块执行的结果是对象自身还是执行结果
+
+
 ## 函数选择
 
 Function	|Object reference	|Return value|Is extension function
@@ -507,4 +510,4 @@ also|	it|	Context object|	Yes
 
 [Kotlin协程使用手册](https://juejin.im/post/5a90e3836fb9a063592bebe2)
 
-
+[Kotlin 协程入门这一篇就够了](https://juejin.im/post/5d0afe0bf265da1b7152fb00)
