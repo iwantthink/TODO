@@ -380,33 +380,244 @@ step4:
 
 # Observable线程问题
 
+# 1. 创建过程
+
 1. `Observable.create()`方法接收一个`ObservableOnSubscribe`类型的对象`source`(其包含数据发射逻辑)
 
 	创建并返回了一个**`ObservableCreate`对象**(继承自`Observable`),包含了`source`对象
 
-2. `Observable.subscribeOn()`方法接收一个`Scheduler`类型的对象`scheduler`(包含执行线程信息)
+2. `Observable.subscribeOn()`方法接收一个`Scheduler`类型的对象`scheduler`(包含被订阅者所执行的线程信息)
 
-	创建并返回了一个**`ObservableSubscribeOn`对象**(继承自`Observable`),包含了`ObservableCreate`对象以及`Scheduler`信息
+	创建并返回了一个**`ObservableSubscribeOn`对象**(继承自`Observable`),包含了`ObservableCreate`对象(`source`)以及`Scheduler`信息
 
-3. `Observable.map()`方法创建并返回了一个**`ObservableMap`对象**(继承自`Observable`),包含了`ObservableSubscribeOn`对象和对源数据的变换逻辑
+3. `Observable.map()`方法接收一个`Function`类型的对象`mapper`(包含对源数据的变换逻辑)
 
-4. `Observable.subscribe()`方法创建并返回了一个**`LambdaObserver`对象**(继承自`Observer`),包含了`onNext,onError,onComplete,onSubscribe`等消息处理逻辑
-
-	此外，这个方法中还会调用`subscribeActual()`这个抽象方法，方便`Observable`的子类去扩展
+	创建并返回了一个**`ObservableMap`对象**(继承自`Observable`),包含了`ObservableSubscribeOn`对象(`source`)和`mapper`
 
 至此，`Observable`的链式已经结束看一下现有的链式结构
 
 	ObservableMap -> ObservableSubscribeOn -> ObservableCreate
+					----source---
+	ObservableSubscribeOn-> ObservableCreate -> ObservableOnSubscribe
+
+# 2. 订阅过程
 
 
-1. `ObservableMap.subscribeActual()`方法接收一个`LambdaObserver`参数(包含消息处理逻辑，是一个`Observer`), 该参数会和一个`Function`参数(包含了对源数据的变换逻辑) 一起被封装到一个**`MapObserver`对象**中
+1. `Observable.subscribe()`方法有几个参数重载(`Observer`或者是几个`Consumer`,`Action`的组合)，注意`Consumer`和`Action`的组合 会封装成一个`LambdaObserver`并返回，但是传入参数如果是`Observer`则不会返回
 
-	source
+	此外，`subscribe()`方法中还会调用`subscribeActual()`这个抽象方法，方便`Observable`的子类去扩展逻辑
+
+	**根据上述的流程，这里的`Observable`实际类型就是`ObservableMap`**
+
+2. `ObservableMap.subscribeActual()`方法接收一个`Observer`参数(包含消息处理逻辑，可能是一个`Observer`/`LambdaObserver`),**下面以`LambdaObserver`为例分析**
+
+	1. 参数t的类型是`Observer`，即`LambdaObserver`类型,`source`为`ObservableSubscribeOn`对象
+
+			// ObservableMap类
+		    public void subscribeActual(Observer<? super U> t) {
+		    	 // ObservableSubscribeOn.subscribe()
+		        source.subscribe(new MapObserver<T, U>(t, function));
+		    }
+
+		- **创建了一个`MapObserver`对象，封装了`LambdaObserver`和`Function`(包含对源数据的转换逻辑)**
+		
+		**`LambdaObserver`类型的参数对象`t`会保存到`MapObserver`的父类中的`downstream`成员变量中**
+		
+		然后将这个对象**传入`ObservableSubscribeOn`的`subscribe()`方法**
+
+3. `ObservableSubscribeOn`类并没有重写`subscribe()`方法，所以`subscribe()`方法还是参考`Observable`类中的逻辑，**因此只用看`subscribeActual()`方法的逻辑**
+
+	1. 参数`observer`的类型是`MapObserver`
+
+			// ObservableSubscribeOn 类
+		    public void subscribeActual(final Observer<? super T> observer) {
+		        final SubscribeOnObserver<T> parent = new SubscribeOnObserver<T>(observer);
+		        // MapObserver.onSubscribe
+		        observer.onSubscribe(parent);
+		
+		        parent.setDisposable(scheduler.scheduleDirect(new SubscribeTask(parent)));
+		    }
+
+		- **创建了一个`SubscribeOnObserver`对象，封装了`MapObserver`**，其内部用`downstream`变量保存了`MapObserver`对象，并创建了一个`AtomicReference`类型的`upstream`
+
+		- `MapObserver`没有实现`onSubscribe()`,具体的逻辑在其父类`BasicFuseableObserver`.这里的`downstream`是构造函数中传入的`LambdaObserver`
+		
+		    	public final void onSubscribe(Disposable d) {
+			        if (DisposableHelper.validate(this.upstream, d)) {
+			
+			            this.upstream = d;
+			            if (d instanceof QueueDisposable) {
+			                this.qd = (QueueDisposable<T>)d;
+			            }
+			
+			            if (beforeDownstream()) {
+								// downstream = LambdaObserver
+								// 回调了开发者编写的`onSubscribe()`
+			                downstream.onSubscribe(this);
+			
+			                afterDownstream();
+			            }
+			
+			        }
+			    }
+	    
+	    - 创建了一个`SubscribeTask`对象(`Runnable`类型),封装了`SubscribeOnObserver`对象
+
+			    final class SubscribeTask implements Runnable {
+			        private final SubscribeOnObserver<T> parent;
+					
+			        SubscribeTask(SubscribeOnObserver<T> parent) {
+			            this.parent = parent;
+			        }
+			
+			        @Override
+			        public void run() {
+			            source.subscribe(parent);
+			        }
+			    }
+      
+       - `Scheduler.scheduleDirect()`方法中，会根据`Scheduler`类型的不同，创建不同的线程去执行`SubscribeTask`,以`IoScheduler`为例,就会创建一个线程池去执行
+
+       **此外内部还会将`SubscribeTask`再次封装，得到一个`DisposeTask`对象,执行并返回**
+	    			
+	    		 // run-> SubscribeTask  
+			    public Disposable scheduleDirect(@NonNull Runnable run, long delay, @NonNull TimeUnit unit) {
+			    	  
+			        final Worker w = createWorker();
+			
+			        final Runnable decoratedRun = RxJavaPlugins.onSchedule(run);
+			
+			        DisposeTask task = new DisposeTask(decoratedRun, w);
+			
+			        w.schedule(task, delay, unit);
+			
+			        return task;
+			    }
+	    
+	    - `createWorker()`是抽象方法由具体子类实现,主要就是创建具体执行任务的线程
+
+		- **`SubscribeOnObserver`类型是`AtomicReference`,调用其`setDisposable()`实际上会借助`DisposableHelper`将`Scheduler.scheduleDirect()`返回的对象添加到自身**
+
+
+4. 在插入到线程池中后，`DisposeTask`会被执行,在其内部调用`SubscribeTask`的`run()`方法
+
+		 // SubscribeTask
+        public void run() {
+            source.subscribe(parent);
+        }
+
+	- 这时，`SubscribeTask`就运行在`subscribeOn()`所指定的线程中
+
+	- `source`指的是`ObservableCreate`,`parent`指的是`SubscribeOnObserver`
+
+5. `ObservableCreate`中创建了`CreateEmitter`对象，封装了`SubscribeOnObserver`,然后将`CreateEmitter`和`SubscribeOnObserver`之间创建联系
+	
+	    protected void subscribeActual(Observer<? super T> observer) {
+	        CreateEmitter<T> parent = new CreateEmitter<T>(observer);
+	        
+	        //SubscribeOnObserver 与 CreateEmitter 创建联系,前者保存后者的引用
+	        observer.onSubscribe(parent);
+	
+	        try {
+	            source.subscribe(parent);
+	        } catch (Throwable ex) {
+	            Exceptions.throwIfFatal(ex);
+	            parent.onError(ex);
+	        }
+	    }
+	
+	- `source`是`ObservableOnSubscribe`,是开发者编写的发射事件逻辑
+
+
+![](http://ww1.sinaimg.cn/large/6ab93b35ly1g5c61y0kmoj21kc16iwre.jpg)
+
+
+在订阅过程中，将观察者`Observer`一步步的进行封装
+
+1. 最原始的观察者是开发者编写的发射逻辑,其被封装成`LambdaObserver`
+
+2. 在指定数据的转换逻辑时，将`LambdaObserver`和源数据的转换逻辑 封装成`MapObserver`
+
+3. 在指定被观察者所在的线程时,`MapObserver`被封装成了`SubscribeOnObserver`
+
+	**在这一步，还将`SubscribeOnObserver`做额外的俩次封装,先是封装`SubscribeOnObserver`成`SubscribeTask`,再将`SubscribeTask`封装成`DisposeTask`,更重要的是，在这里将`DisposeTask`放入了`subscribeOn()`传入的的`Scheduler`中执行，因此在后续的开发者通过`CreateEmitter`调用的逻辑都将执行在`Scheduler`中**
+
+4. 最后为了提供给开发者使用，还会再次进行封装，将`SubscribeOnObserver`封装成`CreateEmitter`
+
+	举个例子,`CreateEmitter`调用`onNext()`发送数据,会一层一层的往回调用,先是调用`SubscribeOnObserver`的`onNext()`,再调用`MapObserver`,再调用`LambdaObserver`,最后调用开发者编写的`Consumer`函数
+	
+
+**如果存在`observeOn()`方法呢?**
+
+- 假设我们在订阅前添加了`observeOn()`,那么在创建过程中`ObservableMap`会和订阅者执行的线程信息一起被封装到`ObservableObserveOn`
+
+	那么在订阅过程中，**`ObservableObserveOn`的`subscribeAcutal()`方法会最先被调用**，在方法中会创建一个`Worker`包含一个运行在主线程的`Handler`,然后将`LambdaObserver`封装成`ObserveOnObserver`对象，并交给`ObservableMap`去处理(即封装成`MapObserver`),接下来的流程与上面相似....
+	
+	在执行过程中，调用`CreateEmitter`的`onNext()`方法,最终会回到`ObserveOnObserver`的`onNext()`,而`ObserveOnObserver `会执行在之前创建好的`worker`中(即通过Handler切换到主线程中)
+	
+	然后`ObservableObserveOn`的`run()`方法会在主线程中回调,并回调`LambdaObserver`......
 
 
 
+# 3. 执行过程
+
+从这里开始，就已经执行在了`subscribeOn()`方法所指定的线程当中,
 
 
+1. `ObservableOnSubscribe`是开发者编写事件发射逻辑
+
+		{ emitter: ObservableEmitter<String> ->
+		    emitter.onNext("1")
+		}
+
+	- `emitter`实际类型是`CreateEmitter`
+
+2. `CreateEmitter`类的`onNext()`方法对数据t进行了非空检测，然后继续转交给`SubscribeOnObserver`
+
+        public void onNext(T t) {
+            if (t == null) {
+                onError(new NullPointerException("onNext called with null. Null values are generally not allowed in 2.x operators and sources."));
+                return;
+            }
+            if (!isDisposed()) {
+                observer.onNext(t);
+            }
+        }
+
+3. `SubscribeOnObserver`的`onNext()`没有做额外的操作，直接将数据转交给`MapObserver`的`onNext()`
+
+        public void onNext(T t) {
+            downstream.onNext(t);
+        }
+
+4. `MapObserver`的`onNext()`中判断了是否还有更多的onXXX(onError,onComplete调用后即没有,done = true),然后调用了`LambdaObserver`的`onNext()`
+
+        public void onNext(T t) {
+            if (done) {
+                return;
+            }
+
+            if (sourceMode != NONE) {
+                downstream.onNext(null);
+                return;
+            }
+            
+            downstream.onNext(v);
+        }
+
+5. `LambdaObserver`的`onNext()`方法中，添加了对当前被观察者是否存活的状态的判断,如果存活，则调用开发者编写的逻辑!!
+
+	    public void onNext(T t) {
+	        if (!isDisposed()) {
+	            try {
+	                onNext.accept(t);
+	            } catch (Throwable e) {
+	                Exceptions.throwIfFatal(e);
+	                get().dispose();
+	                onError(e);
+	            }
+	        }
+	    }
 
 
 
