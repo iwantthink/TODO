@@ -158,9 +158,12 @@ SplashActivity 中的logoView控件会在5.0 以上的机器执行Transition动�
 
 4. 兼容SearchView <6.0时
 
+# 8. PostFeedActivity
 
 
-# AlbumFragment
+# 9. SelectGifActivity
+
+## 9.1 AlbumFragment
 
 1. 重写onCreateView 提供布局
 
@@ -173,7 +176,9 @@ SplashActivity 中的logoView控件会在5.0 以上的机器执行Transition动�
 5. 提供了一个根据屏幕宽度以及RecyclerView列数量,计算图片应该展示的大小
 
 
-## GifAlbumFragment
+### 9.1.1 GifAlbumFragment
+图片列表选择页面
+
 
 1. onActivityCreated时 通知关联的Activity,当前展示的Fragment就是自己, 并改变toolbar提示内容 
 
@@ -182,3 +187,19 @@ SplashActivity 中的logoView控件会在5.0 以上的机器执行Transition动�
 	创建 RecyclerView的adapter
 
 2. 重写加载完毕的页面，额外添加首次打开时的加载完毕提示
+
+## 9.2 FileBrowserFragment
+
+文件列表选择页面
+
+# 10. BaseFeedsFragment
+
+1. 封装了一个查找页面内组件的方法，RecyclerView和SwipeRefreshLayout
+
+2. 重写onActivityCreated，调用初始化 RecyclerView(交给子类实现),首次会先加载来自本地的缓存 
+
+	设置了RecyclerView的滚动回调
+
+3. 实现了进行网络请求的声明周期的具体函数
+
+
