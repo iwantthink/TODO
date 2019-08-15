@@ -445,6 +445,10 @@ Observable创建完成后,会进行订阅操作,借助source字段,原始的Obse
 - 举个例子: `CreateEmitter.onNext -> B-Observer.onNext ->A-Observer.onNext -> 原始Observer.onNext`
 
 # Observable线程问题
+[友好 RxJava2.x 源码解析（一）基本订阅流程 ----参考文章](https://juejin.im/post/5a209c876fb9a0452577e830)
+
+
+默认情况下，被观察者和订阅者都运行在调用线程上,线程调度器`Scheduler`是RxJava将同步观察者模式切换到异步观察者模式的工具
 
     Observable.create<String> { observableEmitter: ObservableEmitter<String> ->
         observableEmitter.onNext("Thread = ${Thread.currentThread().name}")
@@ -458,29 +462,35 @@ Observable创建完成后,会进行订阅操作,借助source字段,原始的Obse
 
 # 1. 创建过程
 
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1g5z0mld2g4j20q60qwgpe.jpg)
+
+
 1. `Observable.create()`方法接收一个`ObservableOnSubscribe`类型的对象,并保存在`source`字段中(其包含数据发射逻辑)
 
-	创建返回一个**`ObservableCreate`对象**(继承自`Observable`),包含了`source`对象
+	接着创建返回一个**`ObservableCreate`对象**(继承自`Observable`),包含了`source`对象
 
 2. `ObservableCreate.subscribeOn()`方法接收一个`Scheduler`类型的对象(表示被订阅者执行在的线程信息)
 
-	创建并返回一个**`ObservableSubscribeOn`对象**(继承自`AbstractObservableWithUpstream`),封装了当前`Observable`对象(即`ObservableCreate`对象)以及`Scheduler`信息
+	接着创建并返回一个**`ObservableSubscribeOn`对象**(继承自`AbstractObservableWithUpstream`),封装了当前`Observable`对象(即`ObservableCreate`对象)以及`Scheduler`信息(被观察者所执行的线程信息)
 
 3. `ObservableSubscribeOn.observeOn()`方法接收一个`Scheduler`类型的对象(表示订阅者执行在的线程信息)
 
-	创建并返回一个**`ObservableObserveOn`对象**(继承自`AbstractObservableWithUpstream`),封装了了当前`Observable`对象(即`ObservableSubscribeOn`)以及`Scheduler`信息
+	创建并返回一个**`ObservableObserveOn`对象**(继承自`AbstractObservableWithUpstream`),封装了了当前`Observable`对象(即`ObservableSubscribeOn`)以及`Scheduler`信息(观察者所执行的线程信息)
 
 # 2. 订阅过程
+
+![](http://ww1.sinaimg.cn/large/6ab93b35gy1g5z6sw6ieoj20ps1fun53.jpg)
 
 
 1. `Observable.subscribe()`方法有几个参数重载(`Observer`或者是几个`Consumer`,`Action`的组合)，注意`Consumer`和`Action`的组合 会封装成一个`LambdaObserver`并返回，但是传入参数如果是`Observer`则不会返回
 
-	此外，`subscribe()`方法中还会调用`subscribeActual()`这个抽象方法，方便`Observable`的子类去扩展逻辑
+	此外，`subscribe()`方法中最主要的逻辑交给`subscribeActual()`这个抽象方法实现，方便`Observable`的子类去扩展逻辑
 
-	**根据上述的流程，这里的`Observable`实际类型就是`ObservableObserveOn`**
+	**根据创建的过程得知，这里的`Observable`实际类型就是`ObservableObserveOn`**
 
 2. `ObservableObserveOn.subscribeActual()`方法接收一个原始的`Observer`对象(包含消息处理逻辑，可能是一个`Observer`/`LambdaObserver`),**下面以`LambdaObserver`为例分析**
 
+		 // ObservableObserveOn 类
 	    protected void subscribeActual(Observer<? super T> observer) {
 	    	  // 运行在当前线程
 	        if (scheduler instanceof TrampolineScheduler) {
@@ -492,12 +502,13 @@ Observable创建完成后,会进行订阅操作,借助source字段,原始的Obse
 	        }
 	    }
 
-	- 	参数t的是`LambdaObserver`对象,`source`是在创建过程中(`ObservableSubscribeOn.observeOn`),构建`ObservableObserveOn`对象时
+	- 	参数t的是`LambdaObserver`对象,`source`是在创建过程中(`ObservableSubscribeOn.observeOn`),构建`ObservableObserveOn`对象时被赋值,指向`ObservableSubscribeOn`对象
 
 	- 先判断线程信息，除了`TrampolineScheduler`之外，会创建一个`Worker`,然后将原始Observer，Worker等封装到`ObserveOnObserver`中,并将这个`ObserveOnObserver`传递给上一个`Observable`
 
 3. 	`ObservableSubscribeOn.subscribeActual()`方法接收`ObserveOnObserver`,并将其再次封装为`SubscribeOnObserver `
 
+		 // ObservableSubscribeOn类
 	    public void subscribeActual(final Observer<? super T> observer) {
 	        final SubscribeOnObserver<T> parent = new SubscribeOnObserver<T>(observer);
 	
@@ -521,11 +532,11 @@ Observable创建完成后,会进行订阅操作,借助source字段,原始的Obse
 		        return scheduled;
 		    }
 
-		- 这里非常简单，通过运行在主线程的Handler,进行线程的切换,然后执行上一个Observable的subscribe()方法(即ObservableCreate)
+		- 这里非常简单，通过运行在主线程的Handler,进行线程的切换,然后执行上一个Observable的`subscribe()`方法(即ObservableCreate)
 
-		- 注意，这里返回的是一个`ScheduledRunnable`,其将前面的`SubscribeTask`进行了封装,**实际上`ScheduledRunnable`内部是调用了`SubscribeTask`**,也就是说`ObservableCreate`的`subscribe()`方法，在这里就已经切换到了`ObservableSubscribeOn`指定的`Scheduler`中执行
+		- 注意，这里返回的是一个`ScheduledRunnable`,其将前面的`SubscribeTask`进行了封装,**实际上`ScheduledRunnable`内部是调用了`SubscribeTask`**,也就是说`ObservableCreate`的`subscribe()`方法，在这里就已经切换到了`ObservableSubscribeOn`指定的`Scheduler`中执行,一直到`ObservableObserveOn.subscribe()`
 
-			**记住，这个`subscribeOn()`仅针对ObservableOnSubscribe生效！！**
+			**`subscribeOn()`所设置的线程信息仅针对ObservableOnSubscribe生效！！**
 
 4. 最终`ObservableCreate.subscribe()`方法被调用,
 	
@@ -545,23 +556,31 @@ Observable创建完成后,会进行订阅操作,借助source字段,原始的Obse
 
 5. `ObservableOnSubscribe.subscribe()`就是开发者自己编写的被订阅者的逻辑所在，也就是
 
-	注意：调用链中SubscribeOn()之前的Observable.subscribe()方法都执行在其指定的Scheduler中
+	注意：调用链中`subscribeOn()`之前的`Observable.subscribe()`方法都执行在`subscribeOn()`指定的Scheduler中
+
+
+**总结：**
+
+- 在订阅过程中，就已经确定好了`subscribeOn()`的逻辑，设定好了被订阅者执行所在的线程
+
+- 多个`subscribeOn()`只有第一个生效
     
     
 # 3. 执行过程
-1. `ObservableOnSubscribe`是开发者编写事件发射逻辑
+
+1. 事件发射的逻辑在被观察者的`ObservableOnSubscribe`类中
 
 		{ emitter: ObservableEmitter<String> ->
 		    emitter.onNext("1")
 		}
 
-	- `emitter`实际类型是`CreateEmitter`
+	- `emitter`实际类型是`CreateEmitter`,是`ObservableCreate.subscribeActual()`方法中构建的
 
-2. `CreateEmitter`类的`onNext()`方法对数据t进行了非空检测，然后继续转交给`SubscribeOnObserver`
+2. `CreateEmitter`类的`onNext()`方法对数据t对象进行了非空检测，然后调用`SubscribeOnObserver`的`onNext()`方法
 
         public void onNext(T t) {
             if (t == null) {
-                onError(new NullPointerException("onNext called with null. Null values are generally not allowed in 2.x operators and sources."));
+                onError(.....);
                 return;
             }
             if (!isDisposed()) {
@@ -569,40 +588,356 @@ Observable创建完成后,会进行订阅操作,借助source字段,原始的Obse
             }
         }
 
-3. `SubscribeOnObserver`的`onNext()`没有做额外的操作，直接将数据转交给`MapObserver`的`onNext()`
+	- `CreateEmitter`继承自`AtomicReference<Disposable>`,有关`Disposed`的内容，参考下面的专门分析
+
+3. `SubscribeOnObserver`的`onNext()`没有做额外的操作，直接将数据转交给`downstream`处理，即`ObserveOnObserver`
 
         public void onNext(T t) {
             downstream.onNext(t);
         }
 
-4. `MapObserver`的`onNext()`中判断了是否还有更多的onXXX(onError,onComplete调用后即没有,done = true),然后调用了`LambdaObserver`的`onNext()`
+4. `ObserveOnObserver `的`onNext()`
 
         public void onNext(T t) {
             if (done) {
                 return;
             }
 
-            if (sourceMode != NONE) {
-                downstream.onNext(null);
-                return;
+            if (sourceMode != QueueDisposable.ASYNC) {
+                queue.offer(t);
             }
-            
-            downstream.onNext(v);
+            schedule();
         }
 
-5. `LambdaObserver`的`onNext()`方法中，添加了对当前被观察者是否存活的状态的判断,如果存活，则调用开发者编写的逻辑!!
+	- 这里将数据插入到`queue`队列中,SpscLinkedArrayQueue
 
-	    public void onNext(T t) {
-	        if (!isDisposed()) {
-	            try {
-	                onNext.accept(t);
-	            } catch (Throwable e) {
-	                Exceptions.throwIfFatal(e);
-	                get().dispose();
-	                onError(e);
+	- `ObserveOnObserver.schedule()`
+	
+	        void schedule() {
+	            if (getAndIncrement() == 0) {
+	                worker.schedule(this);
 	            }
 	        }
-	    }
+	        
+	    - `worker`在`ObserveOnObserver`类的构造函数中被赋值,该对象在`ObservableObserveOn`类的`subscribeActual()`方法中被创建
+	
+	    - **此外,`schedule()`需要接收一个`Runnable`对象，这里传递了一个this,即`ObserveOnObserver`对象**
+
+	- `ObservableObserveOn.subscribeActual()`
+	
+		    protected void subscribeActual(Observer<? super T> observer) {
+		        if (scheduler instanceof TrampolineScheduler) {
+		            source.subscribe(observer);
+		        } else {
+		            Scheduler.Worker w = scheduler.createWorker();
+		
+		            source.subscribe(new ObserveOnObserver<T>(observer, w, delayError, bufferSize));
+		        }
+		    }
+	
+		- **`scheduler`是`ObservableObserveOn`的构造函数中赋值，而其构造函数在`observeOn()`方法中被调用！！！假设`observeOn()`方法传入了个`Schedulers.io()`,查看源码可以发现这里实际获取到的是`IoScheduler`**
+
+			那么查看`IoScheduler.createWorker()`方法，发现创建了一个`EventLoopWorker`对象!
+
+5. `EventLoopWorker.schedule()`
+
+		// action 即 ObserveOnObserver
+		public Disposable schedule(@NonNull Runnable action, long delayTime, @NonNull TimeUnit unit) {
+		    if (tasks.isDisposed()) {
+		        // don't schedule, we are unsubscribed
+		        return EmptyDisposable.INSTANCE;
+		    }
+			
+		    return threadWorker.scheduleActual(action, delayTime, unit, tasks);
+		}
+
+	- **这里就不深入了，实际上`threadWorker.scheduleActual()`方法，在内部会通过一个线程池来执行`action`对象（Runnable类型），也就是`ObserveOnObserver `,即其`run()`方法会被调用。在这里就完成了订阅者执行所在线程的切换，`run()`方法之后就都在该线程中执行了,直到原始Observer的`onNext()`方法**
+
+6. `ObserveOnObserver.run()`
+
+        public void run() {
+            if (outputFused) {
+                drainFused();
+            } else {
+                drainNormal();
+            }
+        }
+
+7. `ObserveOnObserver.drainNormal()`,注意这里的`queue`对象，与我们在第四步调用的是同一个,其实这里主要的逻辑就是从队列中获取到数据对象，然后交给上游的`Observer`,在这里即原始Observer(或LambdaObserver)
+
+	这里的`downstream`对象，在`ObserveOnObserver`构造函数中赋值，而该构造函数在`ObserveOnObserver.subscribeActual()`中被调用，即`downstream`指向上游`Observer`
+
+        void drainNormal() {
+            int missed = 1;
+
+            final SimpleQueue<T> q = queue;
+            final Observer<? super T> a = downstream;
+
+            for (;;) {
+                if (checkTerminated(done, q.isEmpty(), a)) {
+                    return;
+                }
+
+                for (;;) {
+                    boolean d = done;
+                    T v;
+
+                    try {
+                        v = q.poll();
+                    } catch (Throwable ex) {
+                        Exceptions.throwIfFatal(ex);
+                        disposed = true;
+                        upstream.dispose();
+                        q.clear();
+                        a.onError(ex);
+                        worker.dispose();
+                        return;
+                    }
+                    boolean empty = v == null;
+
+                    if (checkTerminated(d, empty, a)) {
+                        return;
+                    }
+
+                    if (empty) {
+                        break;
+                    }
+
+                    a.onNext(v);
+                }
+
+                missed = addAndGet(-missed);
+                if (missed == 0) {
+                    break;
+                }
+            }
+        }
+
+8. 到了这一步，就完成了原始`Observer.onNext()`方法的调用
+
+
+总结:
+
+- **`ObserveOnObserver.onNext()`是最重要的完成订阅者所在的执行线程进行切换的地方**
 
 
 
+## Observer.onSubscribe()在什么线程执行
+
+先说结论,其执行在 RXJava调用链执行的线程中
+
+
+示例:
+
+    Observable.create<String> { observableEmitter: ObservableEmitter<String> ->
+        observableEmitter.onNext("Thread = ${Thread.currentThread().name}")
+    }
+        .subscribeOn(Schedulers.computation())
+        .observeOn(Schedulers.from(Executors.newFixedThreadPool(5)))
+        .subscribe(object : Observer<String> {
+            override fun onComplete() {
+                log("onComplete = ${Thread.currentThread().name}")
+            }
+
+            override fun onSubscribe(d: Disposable) {
+                log("onSubscribe = ${Thread.currentThread().name}")
+            }
+
+            override fun onNext(t: String) {
+                log("onNext.msgThread = $t")
+                log("onNext.currentThread = ${Thread.currentThread().name}")
+            }
+
+            override fun onError(e: Throwable) {
+                log("onError = ${Thread.currentThread().name}")
+            }
+
+        })
+
+**创建过程**: ObservableOnSubscribe -> ObservableCreate -> ObservableSubscribeOn -> ObservableSubscribeOn
+
+**订阅过程**：原始Observer -> ObserveOnObserver -> SubscribeOnObserver -> CreateEmitter 
+
+**发射过程**: CreateEmitter -> SubscribeOnObserver ->  ObserveOnObserver -> 原始Observer
+
+
+查看订阅过程，原始Observer被层层封装，直到`ObservableSubscribeOn.subscribeActual()`时，调用了上一层`Observer`的`onSubscribe()`(即`ObserveOnObserver`),然后`ObserveOnObserver.onSubscribe()`继续调用了上一层的`Observer`(即原始`Observer`)
+
+- 在这整个过程中，并没有出现线程切换，因此RxJava调用链执行在什么线程，`Observer.onSubscribe()`方法就执行在哪个线程
+	
+# 俩个subscribeOn()哪个生效?
+先给出结论：处于调用链上游的`subscribeOn()`生效
+
+示例:
+
+    Observable.create<String> { observableEmitter: ObservableEmitter<String> ->
+        observableEmitter.onNext("Thread = ${Thread.currentThread().name}")
+    }
+		.subscribeOn(Schedulers.computation())
+		.subscribeOn(AndroidSchedulers.mainThread())
+		.subscribe {
+            log("Observable = $it")
+            log("onNext = ${Thread.currentThread().name}")
+        }
+
+
+## Observable的创建过程
+
+1. 创建 ObservableCreate
+2. 创建 ObservableSubscribeOn1 Computation-Scheduler(实际类型是`ComputationScheduler`)
+3. 创建 ObservableSubscribeOn2 MainThread-Scheduler(实际类型为`HandlerScheduler`)
+
+## subscribe()->subscribeActual()
+
+1. 调用`ObservableSubscribeOn2.subscribeActual()`,传入一个原始Observer
+
+	创建SubscribeOnObserver1,封装原始Observer
+
+	在这里直接回调了原始`Observer.onSubscribe()`,因此`onSubscribe()`执行在了 调用链所在的线程
+
+	封装了一个`SubscribeTask`(包含了原始Observer,`run()`方法执行了`source`的`subscribe()`方法,`source`即`ObservableSubscribeOn1`)
+	
+	**并通过`MainThread-Scheduler`的`scheduleDirect()`执行上面创建的`SubscribeTask`(通过主线程Handler切换线程),因此`SubscribeTask`这时执行在了主线程**
+
+3. 调用`ObservableSubscribeOn1.subscribeActual()`
+
+	**注意：现在`ObservableSubscribeOn1.subscribeActual()`执行在主线程了!!**
+
+	创建`SubscribeOnObserver2`,封装了`SubscribeOnObserver1`,此外调用了`SubscribeOnObserver1.onSubscribe(SubscribeOnObserver2)`,主要的逻辑就是将`SubscribeOnObserver2 `设置到`SubscribeOnObserver1`的`upstream`字段中
+
+	这里再次封装了一个`SubscribeTask`(包含了SubscribeOnObserver2,`run()`方法执行了`source`的`subscribe()`方法,`source`即`ObservableCreate`)
+
+	**并通过`Schedulers.computation`的`scheduleDirect()`执行上面创建的`SubscribeTask`(这里就是通过一个线程池，执行上面`SubscribeTask`)**
+
+4. 调用`ObservableCreate.subscribeActual()`
+
+	创建`CreateEmitter`,封装了`SubscribeOnObserver2`,此外调用了`SubscribeOnObserver2.onSubscribe(CreateEmitter)`,主要的逻辑就是将`CreateEmitter`设置到`SubscribeOnObserver2`的`upstream`字段中
+
+	**然后调用了`source.subscribe(CreateEmitter)`,source其实就是`ObservableOnSubscribe`**
+
+
+总结一下: 
+
+	Thread("MainThread"){
+		Thread("ComputationThread"){
+			ObservableOnSubscribe()
+		}
+	}
+
+- 订阅时，按照调用链的反向顺序进行调用，直到被订阅者. 因此处于调用链上游的`subscribeOn()`生效,`ObservableOnSubscribe.subscribe()`方法执行在上游`subscribeOn()`指定的线程中
+
+- 此外，由于`ObservableOnSubscribe()`中可能会调用`onNext(),onError(),onComplete()`，因此这三个方法也是执行在上游`subscribeOn()`所指定的线程(**前提是没有指定`observeOn()`**)
+
+
+# 俩个`observeOn`哪个生效?
+
+先给出结论：处于调用链下游的`observeOn()`生效
+
+
+    Observable.create<String> { observableEmitter: ObservableEmitter<String> ->
+        observableEmitter.onNext("Thread = ${Thread.currentThread().name}")
+    }
+        .observeOn(AndroidSchedulers.mainThread())
+        .observeOn(Schedulers.computation())
+        .subscribe(object : Observer<String> {
+            override fun onComplete() {
+                log("onComplete = ${Thread.currentThread().name}")
+            }
+
+            override fun onSubscribe(d: Disposable) {
+                log("onSubscribe = ${Thread.currentThread().name}")
+            }
+
+            override fun onNext(t: String) {
+                log("onNext = $t")
+                log("onNext = ${Thread.currentThread().name}")
+            }
+
+            override fun onError(e: Throwable) {
+                log("onError = ${Thread.currentThread().name}")
+            }
+
+        })
+
+## Observable的创建过程
+
+1. 创建 ObservableCreate (封装ObservableOnSubscribe)
+2. 创建 ObservableObserveOn1 MainThread-Scheduler(实际类型是`HandlerScheduler`)
+3. 创建 ObservableObserveOn2 Computation-Scheduler(实际类型为`ComputationScheduler `)
+
+## subscribe()->subscribeActual()
+核心Observer的创建流程:
+
+- 原始Observer -> ObserveOnObserver1 -> ObserveOnObserver2 -> CreateEmitter
+
+
+1. 调用`ObservableObserveOn2`的`subscribeActual()`,传入原始`Observer`
+
+	**根据Scheduler创建一个Worker(实际上是`EventLoopWorker`),然后将这个Worker和原始Observer一起封装到`ObserveOnObserver1`中**
+	
+	接着调用了`source.subscribe()`(这里的`source`是上游的Observable,即`ObservableObserveOn1`)
+	
+2. 调用`ObservableObserveOn1`的`subscribeActual()`,传入`ObserveOnObserver1`
+
+	**同样的，根据Scheduler创建一个Worker(实际上是`HandlerWorker`),然后将这个Worker和`ObserveOnObserver1`一起封装到`ObserveOnObserver2`中**
+
+	接着调用了`source.subscribe()`(这里的`source`是上游的Observable,即`ObservableCreate `)
+	
+3. 调用`ObservableCreate`的`subscribeActual()`,传入`ObserveOnObserver2`
+
+	接收`ObserveOnObserver2 `创建了一个`CreateEmitter`
+	
+	**此外调用了`ObserveOnObserver2`的`onSubscribe(CreateEmitter)`方法**
+	
+	- `onSubscribe()`方法中创建了队列`SpscLinkedArrayQueue`,使用`upstream`字段保存了对`CreateEmitter`的引用,并调用`downstream`的`onSubscribe()`方法**
+	
+		`downstream`即`ObserveOnObserver2 `被创建时传入的`ObserveOnObserver1`
+
+		`ObserveOnObserver1`的`onSubscribe()`与除了和`ObserveOnObserver2 `相同的操作外，会调用原始`Observer`的`onSubscribe()`方法
+	
+		**此外，onSubscribe()方法还有一个点，如果传入的`Observer`实现了`QueueDisposable`接口，那么会调用其`requestFusion()`将`outputFused`字段置为true,这点在`run()`方法中会使用到**
+		
+		- `ObserveOnObserver`就有实现`QueueDisposable `,而`CreateEmitter`就没有. 因此
+		
+		**可以发现，原始Observer的`onSubscribe()`就是执行在了调用链所在的线程**
+	
+	
+	在回调完`onSubscribe()`之后，调用`source.subscribe(CreateEmitter)`
+		
+4. `ObservableOnSubscribe.subscribe()`从这里开始就执行了被观察者的逻辑
+	
+	**注意：当前被观察者是执行在调用链所在的线程中，因为没有指定`subscribeOn()`**，如果没有`observeOn()`的话，`onNext`等方法同样执行在调用链所在的线程
+	
+	然后`subscribe()`方法内部，会发出`onNext()`等...以这个来查看线程切换
+	
+5. `CreateEmitter.onNext(数据)`
+
+	CreateEmitter仅对数据对象进行非空检查，并判断了下当前状态处于非`DISPOSED`!!!然后就转交给了前一个Observer（即`ObserveOnObserver2`）
+	
+6. 	`ObserveOnObserver2.onNext(数据)`
+	
+	**将数据保存在`onSubscribe()`中创建的队列！！然后使用`worker`来执行`ObserveOnObserver2`的`run()`方法，实际上这里就是进行了切换线程的操作(这里的worker，即HandlerScheduler)**
+	
+	- `ObserveOnObserver2`的`onSubscribe()`方法，接收的是`CreateEmitter`,因此其`requestFusion()`并不会被调用，那么其`run()`方法就是走的`drainNormal()`
+	
+	- `ObserveOnObserver2.drainNormal()`比较简单，取出之前保存在队列中的数据，并用其调用`downstream`的`onNext()`(即`ObserveOnObserver1`)
+	
+7. `ObserveOnObserver1.onNext(数据)`
+
+	**将数据保存在`onSubscribe()`中创建的队列!!然后使用`worker`来执行`ObserveOnObserver1`的`run()`方法，实际上这里就是进行了切换线程的操作(这里的worker，即ComputationScheduler)**
+
+	流程与第七步(`ObserveOnObserver2.onNext()`)相似，但是有一点，`ObserveOnObserver1`的`onSubscribe()`方法，接收的是`ObserveOnObserver2`,因此其`requestFusion()`并会被调用，那么其`run()`方法就是走的`drainFused()`
+
+	`drainFused`主要还是调用了`downstream`的`onNext()`(即原始`Observer`)
+	
+8. 至此，`Observer`的`onNext()`方法就被调用了
+
+**总结: 由于发射流程，是按照调用链顺序进行调用，直到观察者,因此处于调用链下游的`observeOn()`生效**
+
+	new Thread("MainThread"){
+		new Thread("WorkThread"){
+			Observer()
+		}
+	}
+
+- 其实无论多少个`observeOn()`,都是调用链最下游的生效
