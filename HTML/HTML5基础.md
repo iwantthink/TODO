@@ -89,19 +89,18 @@ Single-quoted|	`<input type="text" value='John Doe'>`
 
 HTML5 定义了八个新的语义 HTML 元素,**所有都是块级元素**。
 
-- 您可以把 CSS **display** 属性设置为 **block**，以确保老式浏览器中正确的行为：
+- 您可以把 CSS的**display** 属性设置为 **block**，以确保老式浏览器中正确的行为：
 
-
-	header, section, footer, aside, nav, main, article, figure {
-	    display: block; 
-	}
+		header, section, footer, aside, nav, main, article, figure {
+		    display: block; 
+		}
 
 
 ## 3.2 向HTML添加新元素
 
 可以通过浏览器 trick 向 HTML 添加任何新元素：
 
-本例向 HTML 添加了一个名为 <myHero> 的新元素，并为其定义 display 样式：
+本例向 HTML 添加了一个名为 `<myHero>` 的新元素，并为其定义 display 样式：
 	
 	<html>
 	
@@ -147,28 +146,26 @@ HTML5 定义了八个新的语义 HTML 元素,**所有都是块级元素**。
 
 - 以上代码是一段注释，但是 IE9 的早期版本会读取它（并理解它）。
 
-
-	<!DOCTYPE html>
-	<html>
-	
-		<head>
-		  <title>Styling HTML5</title>
-		  <!--[if lt IE 9]>
-		  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js">
-		  </script>
-		  <![endif]-->
-		</head>
-	
-		<body>
+		<!DOCTYPE html>
+		<html>
+			<head>
+			  <title>Styling HTML5</title>
+			  <!--[if lt IE 9]>
+			  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js">
+			  </script>
+			  <![endif]-->
+			</head>
 		
-			<h1>My First Article</h1>
+			<body>
 			
-			<article>
-				London is the capital city of England. It is the most populous city in the United Kingdom, with a metropolitan area of over 13 million inhabitants.
-			</article>
-		
-		</body>
-	</html>
+				<h1>My First Article</h1>
+				
+				<article>
+					London is the capital city of England. It is the most populous city in the United Kingdom, with a metropolitan area of over 13 million inhabitants.
+				</article>
+			
+			</body>
+		</html>
 
 - 引用 shiv 代码的链接必须位于 `<head>` 元素中，因为 Internet Explorer 需要在读取之前认识所有新元素。
 
