@@ -516,3 +516,67 @@ also|	it|	Context object|	Yes
 
 
 # 标签
+
+# 内联函数(inline)
+
+[Kotlin内联函数参考文章](https://www.jianshu.com/p/4f29c9724b33)
+
+[Kotlin内联函数参考文章](https://juejin.im/entry/5bfccb625188256b0f5837fd)
+
+## 内联函数是什么？
+
+在程序编译时能将程序中内联函数的调用表达式直接替换成内联函数的函数体
+
+- 关键字：inline
+
+## 为什么使用内联函数?
+
+1. 减少方法压栈和出栈
+
+	调用一个方法其实就是一个方法压栈和出栈的过程，调用方法时将栈帧压入方法栈，然后执行方法体，方法结束时将栈帧出栈，这个压栈和出栈的过程是一个耗费资源的过程，这个过程中传递形参也会耗费资源
+
+## 如何使用noinline
+
+如果不希望指定参数(lambda类型或函数类型)进行内联操作，可以添加noinline
+
+## 什么是crossinline
+
+**crossinline 的作用是让被标记的lambda表达式不允许非局部返回**
+
+- 非局部返回指的是在lambda表达式中，退出包含它的函数(直接使用return是不允许的，只能通过return@label实现退出当前lambda)
+
+	但是内联函数允许在lambda中直接使用return退出包含lambda的函数！！
+
+## 什么是reified?
+
+**reified就是具体化泛型,使得开发者能够直接使用泛型的类型(注意：是泛型的类型！！)**
+
+- java中是不能使用泛型作为类型来使用，但是kotlin中通过reified支持了这种行为
+
+举个实际的例子：
+	
+	// Function
+	private fun <T : Activity> Activity.startActivity(context: Context, clazz: Class<T>) {
+	    startActivity(Intent(context, clazz))
+	}
+	
+	// Caller
+	startActivity(context, NewActivity::class.java)
+
+	// 使用reified改写之后
+	
+	// Function
+	inline fun <reified T : Activity> Activity.startActivity(context: Context) {
+	    startActivity(Intent(context, T::class.java))
+	}
+	
+	// Caller
+	startActivity<NewActivity>(context)
+	
+
+
+再举个例子:
+
+	inline fun <reified T> membersOf() = T::class.members
+
+
