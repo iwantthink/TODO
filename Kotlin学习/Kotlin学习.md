@@ -54,14 +54,14 @@ for 可以循环遍历任何提供了迭代器的对象,需要满足如下条件
 
 
 ## 4.1 覆盖规则
-在 Kotlin 中，实现继承由下述规则规定：**如果一个类从它的直接超类继承相同成员的多个实现，它必须覆盖这个成员并提供其自己的实现（也许用继承来的其中之一）**。为了表示采用从哪个超类型继承的实现，我们使用由尖括号中超类型名限定的super，如super<Base>
+在 Kotlin 中，实现继承由下述规则规定：**如果一个类从它的直接超类继承相同成员的多个实现，它必须覆盖这个成员并提供其自己的实现（也许用继承来的其中之一）**。为了表示采用从哪个超类型继承的实现，我们使用由尖括号中超类型名限定的super，如`super<Base>`
 
 
 # 5. 对象表达式和对象声明的差异
 
 1. 对象表达式在被使用的地方立即执行(初始化)
 
-2. 对象声明是在第一此被访问到时延迟初始化
+2. 对象声明是在第一次被访问到时延迟初始化
 
 3. **伴生对象的初始化是在相应的类被加载时(解析),与Java静态初始化块的语义相匹配**
 
@@ -96,7 +96,8 @@ for 可以循环遍历任何提供了迭代器的对象,需要满足如下条件
 
 
 # 7. 修饰符
-public internal protected private
+
+	public internal protected private
 
 ## 7.1 internal
 
@@ -136,6 +137,17 @@ public internal protected private
 
 声明为成员的扩展可以声明为 open 并在子类中覆盖。这意味着这些函数的分发对于分发接收者类型是虚拟的，但对于扩展接收者类型是静态的。
 
+## 8.2 接收者概念
+
+扩展接收者
+
+- 就是调用扩展方法的对象,当扩展接收者和分发接收者
+
+分发接收者
+
+- 当一个扩展方法位于另外一个类中时，分发接收者就是指的这个类，可以通过`this@Outer`进行访问
+
+
 
 # 9. 密封类
 
@@ -147,25 +159,31 @@ public internal protected private
 # 10. 泛型
 [Kotlin中的泛型](https://juejin.im/post/5be40974f265da615a414f54)
 
-## 10.1 Java 通配符`?`
+[【码上开学】Kotlin 的泛型](https://juejin.im/post/5d6c6636f265da03c8153a03)
+
+使用泛型的时候加上的类型参数，会在编译器在编译的时候去掉，这个过程就称为类型擦除。
+
+
+
+## 10.1 Java类型通配符`?`
 
 	Number num = new Integer(1);  
 	ArrayList<Number> list = new ArrayList<Integer>(); //type mismatch
 
 **`Interger`是`Number`的子类，这是Java多态的特性，但是`ArrayList<Integer>`并不是`ArrayList<Number>`的子类，这时就需要一个引入通配符，来表示一个引用 既可以是当前类 又可以是其父类**
 
-- 通配符`?`可以认为是任意类型的父类,它是一个具体的类型，是泛型实参，与泛型形参(`T`,`E`等)不同
+- Java中的通配符用`?`表示，通配符`?`可以认为是任意类型的父类,它是一个具体的类型，是泛型实参，与泛型形参(`T`,`E`等)不同
 
 - 引入通配符，不仅解决了泛型实参之间的逻辑关系，还对泛型引入了边界的概念
 
-## 10.2 Java 通配符`?`的上界
+### 10.1.1 Java 通配符`?`的上界
 	List<? extends Number> list = new ArrayList<Number>();
 
 - **表示类或者方法接收T或者T的子类型**
 
 - **定义通配符`?`的上界又可以称为协变**
 
-## 10.3 Java 通配符`?`的下界
+### 10.1.2 Java 通配符`?`的下界
 
 	 List<? super Integer> list = new ArrayList<Number>();
 
@@ -173,13 +191,41 @@ public internal protected private
 
 - **定义通配符`?`的下界，又称为逆变**
 
-## 10.4 Java 什么时候使用协变和逆变
+### 10.1.3 小结
+
+小结下，Java 的泛型本身是不支持协变和逆变的。
+
+- 可以使用泛型通配符 `? extends` 来使泛型支持协变，但是「只能读取不能修改」，这里的修改仅指对泛型集合添加元素，如果是 `remove(int index)` 以及 clear 当然是可以的。
+
+		List<? extends TextView> textViews = new ArrayList<TextView>(); // 👈 本身
+		List<? extends TextView> textViews = new ArrayList<Button>(); // 👈 直接子类
+		List<? extends TextView> textViews = new ArrayList<RadioButton>(); // 👈 间接子类
+
+		List<? extends TextView> textViews = new ArrayList<Button>();
+		TextView textView = textViews.get(0); // 👈 get 可以
+		textViews.add(textView);
+		//             👆 add 会报错，no suitable method found for add(TextView)
+
+- 可以使用泛型通配符 `? super` 来使泛型支持逆变，但是「只能修改不能读取」，这里说的不能读取是指不能按照泛型类型读取，你如果按照 Object 读出来再强转当然也是可以的
+
+		List<? super Button> buttons = new ArrayList<Button>(); // 👈 本身
+		List<? super Button> buttons = new ArrayList<TextView>(); // 👈 直接父类
+		List<? super Button> buttons = new ArrayList<Object>(); // 👈 间接父类
+
+		List<? super Button> buttons = new ArrayList<TextView>();
+		Object object = buttons.get(0); // 👈 get 出来的是 Object 类型
+		Button button = ...
+		buttons.add(button); // 👈 add 操作是可以的
+
+## 10.2 Java 什么时候使用协变和逆变
 
 在《Effective Java》中给出了一个PECS原则：
 
 	PECS：Producer extends,Customer super
 
-- 当使用泛型类作为生产者，需要从泛型类中取数据时，使用extends，此时泛型类是协变的； 当使用泛型类作为消费者，需要往泛型类中写数据时，使用suepr，此时泛型类是逆变的
+- **当使用泛型类作为生产者，需要从泛型类中取数据时，使用`? extends`，此时泛型类是协变的**
+
+	**当使用泛型类作为消费者，需要往泛型类中写数据时，使用`? suepr`，此时泛型类是逆变的**
 
 一个经典的案例就是Collections中的copy方法
 
@@ -203,13 +249,48 @@ public internal protected private
     }
 
 
-## 10.5 Kotlin中的协变和逆变(声明处型变)
+## 10.3 Kotlin中的协变和逆变
+Kotlin的泛型本身也是不可变的，但是借助`out`和`in`可以实现协变和逆变(统称型变)
 
-Kotlin 中使用`out`表示协变(`? extends T`),即该类型仅从类中返回(生产)，并不被消费。 使用`int`表示逆变(`? super T`).即该类型仅从外部传入类中,并不生产
+- 关键字`out`表示协变(等同于Java中的上界通配符`? extends T`),即该类型仅从类中返回(生产)，并不被消费(**只能被读取，不能被修改**)
+
+		class Producer<T> {
+		    fun produce(): T {
+		        ...
+		    }
+		}
+		
+		val producer: Producer<out TextView> = Producer<Button>()
+		val textView: TextView = producer.produce() // 👈 相当于 'List' 的 `get`
+
+
+- 关键字`in`表示逆变(等同于Java中的下界通配符`? super T`).即该类型仅从外部传入类中,并不生产（**只能被修改，不能被读取**）
+
+		class Consumer<T> {
+		    fun consume(t: T) {
+		        ...
+		    }
+		}
+		
+		val consumer: Consumer<in Button> = Consumer<TextView>()
+		consumer.consume(Button(context)) // 👈 相当于 'List' 的 'add'
+
+
+小结:
+
+- **上面介绍的是Kotlin中协变和逆变在使用处的型变(即类型投影)**
+
+
+### 10.3.1 声明处型变
+
+10.3中介绍了在声明变量和方法时使用关键字`out`或`in`对泛型进行修饰(声明为协变或逆变),但是这种形式太过麻烦，每个变量和方法声明的地方都需要使用
+
+- 这时，可以对类的泛型直接使用`in`或`out`进行修饰，这被称为声明处型变
+
 
 **当泛型作为函数的返回值时，称为协变点，当泛型作为函数参数时，称为逆变点**
 
-以List的泛型E为例，这里使用了协变，即List作为生产者
+以List的泛型E为例，这里使用了协变，即List作为生产者(E类型只能被读取，不能被修改)
 
 	public interface List<out E> : Collection<E> {
 	  
@@ -218,6 +299,7 @@ Kotlin 中使用`out`表示协变(`? extends T`),即该类型仅从类中返回(
 	
 	    // E 作为逆变点
 	    public fun indexOf(element: @UnsafeVariance E): Int
+	  }
 
 - 这里的List是只读的List，使用out关键字修饰泛型，这里将泛型E作为协变来使用，也就是当做函数的返回值。但是源码中也将E作为函数的参数使用，即当做逆变来使用，由于函数（比如indexOf）并不会修改List，所以加注解@UnsafeVariance来修饰
 
@@ -237,10 +319,14 @@ Kotlin 中使用`out`表示协变(`? extends T`),即该类型仅从类中返回(
 
 **协变和逆变 主要是用于有泛型的类型进行赋值**，普通情况下不会发生型变，而协变和逆变确保了赋值能够正常进行
 
-## 10.6 类型投影(使用处型变)
-**暂时理解过来就是在 参数的类型上使用in 或者out,用来指定参数时协变的或者是逆变的**
 
-## 10.7 星投影 ??????
+
+## 10.7 星投影
+Java中单个`?`也能当做泛型通配符来使用，相当于`? extends Object`,Kotlin通过符号`*`支持这种行为(相当于`out Any`)
+
+	var list: List<*>
+
+
 
 当类型参数未知，但是又需要以安全的方式来进行使用
 
