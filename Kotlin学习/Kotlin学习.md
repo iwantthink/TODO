@@ -161,8 +161,9 @@ for 可以循环遍历任何提供了迭代器的对象,需要满足如下条件
 
 [【码上开学】Kotlin 的泛型](https://juejin.im/post/5d6c6636f265da03c8153a03)
 
-使用泛型的时候加上的类型参数，会在编译器在编译的时候去掉，这个过程就称为类型擦除。
+使用泛型的时候加上的类型参数，会在编译器在编译的时候去掉，这个过程就称为类型擦除
 
+- Java提供了**泛型通配符(`? extends`和`? super`)来解决这个问题**
 
 
 ## 10.1 Java类型通配符`?`
@@ -172,9 +173,14 @@ for 可以循环遍历任何提供了迭代器的对象,需要满足如下条件
 
 **`Interger`是`Number`的子类，这是Java多态的特性，但是`ArrayList<Integer>`并不是`ArrayList<Number>`的子类，这时就需要一个引入通配符，来表示一个引用 既可以是当前类 又可以是其父类**
 
-- Java中的通配符用`?`表示，通配符`?`可以认为是任意类型的父类,它是一个具体的类型，是泛型实参，与泛型形参(`T`,`E`等)不同
+- Java中的通配符用`?`表示
 
+	通配符`?`可以认为是任意类型的父类,它是一个具体的类型，是泛型实参，与泛型形参(`T`,`E`等)不同
+	
 - 引入通配符，不仅解决了泛型实参之间的逻辑关系，还对泛型引入了边界的概念
+
+- 在Java中，通配符`?`单独使用时，其实就是`<? extends Object>`的缩写
+
 
 ### 10.1.1 Java 通配符`?`的上界
 	List<? extends Number> list = new ArrayList<Number>();
@@ -182,6 +188,12 @@ for 可以循环遍历任何提供了迭代器的对象,需要满足如下条件
 - **表示类或者方法接收T或者T的子类型**
 
 - **定义通配符`?`的上界又可以称为协变**
+
+- 除此之外，`? extends`有俩层意思
+
+	1. `?`是一个通配符，表示类的泛型类型是未知类型
+
+	2. `extends`限制了这个未知类型，为其定义了上界(包括上界本身)
 
 ### 10.1.2 Java 通配符`?`的下界
 
@@ -191,22 +203,37 @@ for 可以循环遍历任何提供了迭代器的对象,需要满足如下条件
 
 - **定义通配符`?`的下界，又称为逆变**
 
+- `? super`有俩层意思
+
+	1. 通配符`?`表示类的泛型类型是未知类型
+
+	2. `super`限制了这个未知类型，为其定义了下界(包括下界本身)
+
 ### 10.1.3 小结
 
-小结下，Java 的泛型本身是不支持协变和逆变的。
+小结:**Java 的泛型本身是不支持协变和逆变的**
 
-- 可以使用泛型通配符 `? extends` 来使泛型支持协变，但是「只能读取不能修改」，这里的修改仅指对泛型集合添加元素，如果是 `remove(int index)` 以及 clear 当然是可以的。
+Java中可以使用泛型通配符 `? extends` 来使泛型支持协变，但是「只能读取不能修改」，这里的修改仅指对泛型集合添加元素，如果是 `remove(int index)` 以及 clear 当然是可以的
 
-		List<? extends TextView> textViews = new ArrayList<TextView>(); // 👈 本身
-		List<? extends TextView> textViews = new ArrayList<Button>(); // 👈 直接子类
-		List<? extends TextView> textViews = new ArrayList<RadioButton>(); // 👈 间接子类
+	List<? extends TextView> textViews = new ArrayList<TextView>(); // 👈 本身
+	List<? extends TextView> textViews = new ArrayList<Button>(); // 👈 直接子类
+	List<? extends TextView> textViews = new ArrayList<RadioButton>(); // 👈 间接子类
 
-		List<? extends TextView> textViews = new ArrayList<Button>();
-		TextView textView = textViews.get(0); // 👈 get 可以
-		textViews.add(textView);
-		//             👆 add 会报错，no suitable method found for add(TextView)
+	List<? extends TextView> textViews = new ArrayList<Button>();
+	// 具体解释查看下面的注解
+	TextView textView = textViews.get(0); // 👈 get 可以
+	textViews.add(textView);
+	// 👆 add 会报错，no suitable method found for add(TextView)
 
-- 可以使用泛型通配符 `? super` 来使泛型支持逆变，但是「只能修改不能读取」，这里说的不能读取是指不能按照泛型类型读取，你如果按照 Object 读出来再强转当然也是可以的
+- `List<? extends TextView>`的泛型类型是一个未知类型,编译器也不知道是什么类型，只知道它有一个上界
+
+	在get操作时，由于它必须满足`? extends TextView`这个限制条件，因此get操作得到的对象必定是`TextView`的子类型,根据Java多态，这个对象可以被赋值给`TextView`(**但是变量类型不可以是`TextView`子类，变量类型必须是其上界**)
+
+	在add操作时,编译器无法确定泛型类型到底是什么？(它可以是`List<TextView>`或者`List<Button>`,只要满足限制条件即可)正因为无法确定具体的泛型类型，所以无法将特定的类赋值给特定的泛型(例如`List<? extends TextView>`的实际类型可能是`ArrayList<Button>`,那么将`TextView`赋值给它就会出错   )！！
+
+- **正是因为add操作的限制,协变的泛型只能向外提供数据被消费，因此被称为生产者**
+
+Java中可以使用泛型通配符 `? super` 来使泛型支持逆变，但是「只能修改不能读取」，这里说的不能读取是指不能按照泛型类型读取，你如果按照 Object 读出来再强转当然也是可以的
 
 		List<? super Button> buttons = new ArrayList<Button>(); // 👈 本身
 		List<? super Button> buttons = new ArrayList<TextView>(); // 👈 直接父类
@@ -216,6 +243,12 @@ for 可以循环遍历任何提供了迭代器的对象,需要满足如下条件
 		Object object = buttons.get(0); // 👈 get 出来的是 Object 类型
 		Button button = ...
 		buttons.add(button); // 👈 add 操作是可以的
+
+- `List<? super Button>`的泛型类型是一个未知类型！编译器不知道其具体类型，只知道它有一个下界
+
+	在add操作时，由于它必须满足`? super Button`这个限制条件，因此无论具体类型是`ArrayList<Button>`或`ArrayList<TextView>`,它们都是Button的父类，因此`Button`肯定可以被添加(**但是`Button`的父类就无法被添加，被添加的类的类型必须是下界**)
+	
+	在get操作时,编译器无法确定泛型类型到底是什么?(它可以是`List<TextView>`或`List<Button>`,只要满足限制条件即可)，正因为无法确定具体泛型类型，所以无法根据泛型确定返回值类型(例如,`List<? super Button>`的实际类型可能是`ArrayList<Button>`或`ArrayList<TextView>`,那么在get操作时，返回的可能是`Button`或`TextView`,因此只能用俩者共同的父类Object)
 
 ## 10.2 Java 什么时候使用协变和逆变
 
@@ -285,10 +318,9 @@ Kotlin的泛型本身也是不可变的，但是借助`out`和`in`可以实现�
 
 10.3中介绍了在声明变量和方法时使用关键字`out`或`in`对泛型进行修饰(声明为协变或逆变),但是这种形式太过麻烦，每个变量和方法声明的地方都需要使用
 
-- 这时，可以对类的泛型直接使用`in`或`out`进行修饰，这被称为声明处型变
+- 因此，Kotlin允许对类的泛型直接使用`in`或`out`进行修饰，这被称为声明处型变
 
-
-**当泛型作为函数的返回值时，称为协变点，当泛型作为函数参数时，称为逆变点**
+- **当泛型作为函数的返回值时，称为协变点，当泛型作为函数参数时，称为逆变点**
 
 以List的泛型E为例，这里使用了协变，即List作为生产者(E类型只能被读取，不能被修改)
 
@@ -322,27 +354,18 @@ Kotlin的泛型本身也是不可变的，但是借助`out`和`in`可以实现�
 
 
 ## 10.7 星投影
-Java中单个`?`也能当做泛型通配符来使用，相当于`? extends Object`,Kotlin通过符号`*`支持这种行为(相当于`out Any`)
+**Java中单个`?`也能当做泛型通配符来使用，相当于`? extends Object`,Kotlin通过符号`*`支持这种行为(相当于`out Any`)**
 
 	var list: List<*>
+	var list: List<out T:TUpper>
 
 
+- 如果类的定义中已经存在`out`或`in`,那么这个限制在变量声明时依旧存在，不会被`*`去除
 
-当类型参数未知，但是又需要以安全的方式来进行使用
+	例如,类的泛型定义时`out T:Number`,那么在变量声明使用`<*>`时，效果就不是`out Any`而是`out Number`
+	
+	
 
-- 这里的安全的方式指的是 定义泛型类型的这种投影???
-
-	该泛型类型的每个具体实例化是该投影的子类型
-
-Kotlin 为此提供了所谓的星投影语法：
-
-- 对于 `Foo <out T : TUpper>`
-
-	其中 T 是一个具有上界 TUpper 的协变类型参数，`Foo <*> `等价于 `Foo <out TUpper>`。 这意味着当 T 未知时，你可以安全地从 `Foo <*> `读取 `TUpper` 的值
-
-- 对于` Foo <in T>`，其中 T 是一个逆变类型参数，`Foo <*>` 等价于 `Foo <in Nothing>`。 这意味着当 T 未知时，没有什么可以以安全的方式写入 `Foo <*>`
-
-- 对于 Foo` <T : TUpper>`，其中 T 是一个具有上界 TUpper 的不型变类型参数，`Foo<*> `对于读取值时等价于 `Foo<out TUpper> `而对于写值时等价于 `Foo<in Nothing>`
 
 
 
