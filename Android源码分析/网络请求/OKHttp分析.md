@@ -211,7 +211,7 @@
             if (executed) throw new IllegalStateException("Already Executed");
             executed = true;
         }
-        // 为retryAndFollowUpInterceptor 设置callStackTrace
+        // 为retryAndFollowUpInterceptor 设置callStackTrace,默认返回null
         captureCallStackTrace();
         // 默认是空实现
         eventListener.callStart(this);
@@ -220,7 +220,9 @@
     
 - 检查是否重复执行 
 
-- `AsyncCall`封装了传入的回调函数，并且存在一些与`RealCall`(表示当前请求)相关的操作
+- `AsyncCall`封装了传入的回调函数，并且存在一些与`RealCall`(表示当前请求)相关的操作，例如`AsyncCall`所运行的线程名称会与请求url相关
+
+- `client.dispatcher`的默认实现就是`Dispatcher`
 
 ## 6.2 Dispatcher.enqueue()
 
@@ -315,7 +317,7 @@
         assert (!Thread.holdsLock(client.dispatcher()));
         boolean success = false;
         try {
-        		//执行
+			// 线程池执行
             executorService.execute(this);
             //标记执行成功
             success = true;
@@ -323,7 +325,7 @@
         		//创建线程池拒绝异常，并抛给回调
             InterruptedIOException ioException = new InterruptedIOException("executor rejected");
             ioException.initCause(e);
-            //SDK
+            //SDK 默认是空实现
             eventListener.callFailed(RealCall.this, ioException);
             //用户
             responseCallback.onFailure(RealCall.this, ioException);
