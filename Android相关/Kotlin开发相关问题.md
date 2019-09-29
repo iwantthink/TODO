@@ -294,6 +294,9 @@ include标签不要直接设置visibility，最好对内部的内容设置visibi
 - 血的教训，一直对内部控件进行设置visibility，但是include标签的visibility并没有被改变，所以无法可见
 
 
+## 9.1 MpAndroidChart
 
+[中文博客-图例](https://blog.csdn.net/Honiler/article/details/80074019)
 
+[文档翻译](https://juejin.im/post/5c7647cff265da2d98091035)
 
