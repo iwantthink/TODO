@@ -7,7 +7,7 @@
 例如对模块间常量的引用可能会报错，模块A的注解传入模块B的常量，将导致编译失败！！！！
 
 
-# 2. Dagger
+# 2. Dagger 
 
 [Dagger官方文档](https://dagger.dev/android)
 
