@@ -62,7 +62,7 @@ View内部已经提供了post系列的方法了，`post()`方法也是借助的`
 
 
 # 3.自定义属性的使用
-1. 在values目录下面 创建自定义属性的XML文件，例如attrs.xml,DictView 是这个自定义属性集合的名字，然后这个集合里面可以有很多的自定义属性。 自定义属性的包括名字和格式
+1. 在values目录下面 创建自定义属性的XML文件，例如`attrs.xml`,DictView 是这个自定义属性集合的名字，然后这个集合里面可以有很多的自定义属性。 自定义属性的包括名字和格式
 	    
 		<declare-styleable name="DictView">
         	<attr name="sbName" format="string"></attr>
@@ -73,6 +73,7 @@ View内部已经提供了post系列的方法了，`post()`方法也是借助的`
 
 		TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.DictView);
         String str = a.getString(R.styleable.DictView_sbName);
+        
 3. 直接在布局文件中使用,需要注意：为了使用自定义属性，必须得在布局文件中添加schemas声明xmlns:dict="http://schemas.android.com/apk/res-auto"
 
 

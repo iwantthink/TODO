@@ -12,7 +12,7 @@
   
 	例如:`ViewGroup`(performMeasure->measure->onMeasure)->View(measure),在onMeasure中会对所有的子类进行遍历并调用子类的measure
 
-- measure的过程结束后，可以获得测量宽高，getMeasureWidth,几乎所有情况下 测量宽高都等同于 最终宽高。  
+- measure的过程结束后，可以通过方法`getMeasuredWidth()`获得测量宽高,并且几乎所有情况下 测量宽高都等同于最终宽高
 
 - `performDraw()`的遍历过程是在draw方法中通过`dispatchDraw()`来实现  
 
@@ -25,9 +25,9 @@
 
 # 2. MeasureSpec基础知识
 
->A MeasureSpec encapsulates the layout requirements passed from parent to child.Each MeasureSpec represents a requirement for either the width or the height.A MeasureSpec is comprised of a size and a mode.
+> A MeasureSpec encapsulates the layout requirements passed from parent to child.Each MeasureSpec represents a requirement for either the width or the height.A MeasureSpec is comprised of a size and a mode.
 
-1. **`MeasureSpec`封装了父布局传递给子View的布局要求  **
+1. **`MeasureSpec`封装了父布局传递给子View的布局要求**
 
 2. `MeasureSpec`可以表示宽和高  
 
@@ -58,7 +58,7 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 3. `MeasureSpec.UNSPECIFIED`
 
 ### 2.2.1 MeasureSpec.EXACTLY
->The parent has determined an exact size for the child. The child is going to be given those bounds regardless of how big it wants to be.
+> The parent has determined an exact size for the child. The child is going to be given those bounds regardless of how big it wants to be.
 
 父容器已经检测出子类view所需要的精确大小.子控件必须为`SPEC_SIZE`的值 ,即该模式下，View的测量大小即为`SPEC_SIZE`
 
@@ -66,14 +66,14 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 
 ### 2.2.2 MeasureSpec.AT_MOST
 
->The child can be as large as it wants up to the specified size.
+> The child can be as large as it wants up to the specified size.
 
 父容器未检测出子View所需要的精确大小，但是指定了一个可用大小即`SPEC_SIZE`,该模式下，View的测量大小最大不能超过SpecSize  
 
 **当控件的`LayoutParams.width/height`为`WRAP_CONTENT`时,对应的`MeasureSpec.SPEC_MODE`会使用`AT_MOST`**
 
 ### 2.2.3 MeasureSpec.UNSPECIFIED
->The parent has not imposed any constraint on the child. It can be whatever size it wants.
+> The parent has not imposed any constraint on the child. It can be whatever size it wants.
 
 控件在进行测量时,父容器不对子View做限制,可以无视`SPEC_SIZE`的值.控件可以是它所期望的任何值
  
@@ -121,11 +121,13 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 	    protected void measureChildWithMargins(View child,
         int parentWidthMeasureSpec, int widthUsed,
         int parentHeightMeasureSpec, int heightUsed) {
+        	  // 获取子类的LayoutParams
 	        final MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
-	
+			  // 处理了padding 和 margin !!!
 	        final int childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec,
 	                mPaddingLeft + mPaddingRight + lp.leftMargin + lp.rightMargin
 	                        + widthUsed, lp.width);
+
 	        final int childHeightMeasureSpec = getChildMeasureSpec(parentHeightMeasureSpec,
 	                mPaddingTop + mPaddingBottom + lp.topMargin + lp.bottomMargin
 	                        + heightUsed, lp.height);
@@ -141,7 +143,7 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 			// 父类size
 	        int specSize = MeasureSpec.getSize(spec);
 			// 父类大小-padding 大小 , 不能小于0
-			// 即减去paading之后的大小
+			// 即减去paading之后的大小,这样子类就适配的padding和margin
 	        int size = Math.max(0, specSize - padding);
 			// 子类大小
 	        int resultSize = 0;
@@ -152,14 +154,16 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 		        // Parent has imposed an exact size on us
 		        case MeasureSpec.EXACTLY:
 					// 结合子类的LayoutParams进行判断
+					// 子类有确切的大小，那就用子类的大小
 		            if (childDimension >= 0) {
-						// 子类有确切的大小
 		                resultSize = childDimension;
 		                resultMode = MeasureSpec.EXACTLY;
+		             // 子类希望和父类一样大,那就用父类的大小
 		            } else if (childDimension == LayoutParams.MATCH_PARENT) {
-		                // Child wants to be our size. So be it.
 		                resultSize = size;
 		                resultMode = MeasureSpec.EXACTLY;
+		             
+		             // 子类想使用自己的大小，这个大小不能比父类大
 		            } else if (childDimension == LayoutParams.WRAP_CONTENT) {
 		                // Child wants to determine its own size. It can't be
 		                // bigger than us.
@@ -211,17 +215,19 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
    	    }
 	- 可以通过以上代码知道 **子元素的MeasureSpec 主要是根据 父容器的MeasureSpec和子元素本身的LayoutParams来组合而成的**！
 
-	**简单的总结下：  **
+	**简单的总结下：**
 		
-		1. 当子`View`决定采用固定宽高的时候，子`View`的`MeasureSpec`都是精确模式,并且大小遵循`LayoutParams`的大小。     
+	1. 当子`View`决定采用固定宽高的时候,无论父容器的`MeasureSpec`是什么，子`View`的`MeasureSpec`都是精确模式(`MeasureSpec.EXACTLY`),并且大小遵循`LayoutParams`的大小     
 
-		2. 当子`View`的宽高是`match_parent` ,则要根据父容器的`MeasureSpec`来具体区分
-			1. 如果父容器的模式是精准模式，那么子`View`也是精准模式,并且其大小是父容器的剩余空间
-			2. 如果父容器的模式是最大模式，那么子`View`也是最大模式，并且其大小不会超过父容器的剩余空间   
+	2. 当子`View`的宽高是`match_parent` ,则要根据父容器的`MeasureSpec`来具体区分
 
-		3. 当View的宽高是`wrap_content`时，不管父容器是精准还是最大化，View的模式总是最大化，并且大小不可以超过父容器的剩余空间  
+		1. 如果父容器的模式是精准模式，那么子`View`也是精准模式(`MeasureSpec.EXACTLY`),并且其大小是父容器的剩余空间
 
-		4. **一般情况下不考虑`UNSPECIFIED`模式。。 这个模式主要是系统内部多次measure时用到**
+		2. 如果父容器的模式是最大模式，那么子`View`也是最大模式(`MeasureSpec.AT_MOST`)，并且其大小不会超过父容器的剩余空间   
+
+	3. 当View的宽高是`wrap_content`时，不管父容器是精准还是最大化，View的模式总是最大化，并且大小不可以超过父容器的剩余空间  
+
+	4. **一般情况下不考虑`UNSPECIFIED`模式。。 这个模式主要是系统内部多次measure时用到**
 		 
 
 # 3. View的工作流程
@@ -265,7 +271,7 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 
 		这也是`MeasureSpec`最初的生成规则
 
-	2. 在`ViewGroup`类型的控件中的`onMeasure()`中生成,并传递给子类
+	2. 在`ViewGroup`类型的控件中的`onMeasure()`中生成子类的MeasureSpec,并传递给子类
 
 ---
 
@@ -286,8 +292,10 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 
 `getDefaultSize()`代码如下:
 
+	// size = getSuggestedMinimunWidth/Height
 	public static int getDefaultSize(int size, int measureSpec) {
         int result = size;
+        // 父类对子类的要求
         int specMode = MeasureSpec.getMode(measureSpec);
         int specSize = MeasureSpec.getSize(measureSpec);
 
@@ -315,10 +323,9 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 
 	根据`getChildMeasureSpec()`方法,其生成的`MeasureSpec`值(根据父类MeasureSpec和子类自身的LayoutParams生成)，再结合这里的`getDefaultSize()`处理方式。
 
-	**得出一个结论，如果自定义了一个`View` 却不对其`wrap_content` 进行特殊处理，那么就会得到`match_parent`一样的效果。 **
+	**得出一个结论，如果自定义了一个`View` 却不对其`wrap_content` 进行特殊处理，那么就会得到`match_parent`一样的效果**
 
-	- 因为`wrap_content`和`match_parent` 这俩个`LayoutParams` 对长度的要求在生成`MeasureSpec`时,`specMode`都是`AT_MOST`或`EXACTLY`
-
+	- 因为子类的`wrap_content`和`match_parent` 这俩个`LayoutParams` 在生成子类的`MeasureSpec`时,`specMode`是`AT_MOST`和`EXACTLY`,而默认的`EXACTLY`和`AT_MOST`并没有分开处理
 
 ### 3.1.2 ViewGroup的measure过程  
 
@@ -355,7 +362,7 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 
 ### 3.1.3 宽高信息注意事项
 
-**Activity的生命周期和View的生命周期是不同步的，因此如果你在activity的生命周期中去获取view的宽高信息，很有可能获得是0！ ** 
+**Activity的生命周期和View的生命周期是不同步的，因此如果你在activity的生命周期中去获取view的宽高信息，很有可能获得是0！** 
 
 **解决办法如下：**  
 
@@ -378,8 +385,9 @@ MeasureSpec 是一个32位的int数据，高2位 代表SpecMdoe即某种测量�
 
 ### 3.2 layout过程
 
-`layout`作用是`Viewgroup`用来确定自身的位置，当`Viewgroup`的位置被确定后，它在`onLayout()`中会遍历所有的子元素并调用其`layout`方法，在`layout`方法中又会调用`onLayout`方法。  
-layout方法会确定view本身位置，onLayout方法会确定所有子元素的位置
+`layout`作用是`Viewgroup`用来确定自身的位置，当`Viewgroup`的位置被确定后，它在`onLayout()`中会遍历所有的子元素并调用其`layout`方法，在`layout`方法中又会调用`onLayout`方法
+
+- layout方法会确定view本身位置，onLayout方法会确定所有子元素的位置
 
 View的`layout()`方法   
  
