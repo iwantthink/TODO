@@ -300,3 +300,20 @@ include标签不要直接设置visibility，最好对内部的内容设置visibi
 
 [文档翻译](https://juejin.im/post/5c7647cff265da2d98091035)
 
+
+## 9.2 ConstraintLayout
+
+ConstraintLayout+RecyclerView 
+
+其中itemview 也是constraintLayout布局,然后再设置点击事件改变了itemview中某个控件的可见度之后，itemview布局变成了wrap_content!!!!!!!
+
+
+CustomIndicatorsDialog!!!!!
+
+## 9.3 AppBarLayout
+
+在特定的Android Studio 中，会报出Render Problem
+	
+[Github-issue](https://github.com/material-components/material-components-android)
+
+[Issue Tracker](https://issuetracker.google.com/issues/132316448)
