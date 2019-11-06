@@ -312,8 +312,37 @@ CustomIndicatorsDialog!!!!!
 
 ## 9.3 AppBarLayout
 
-在特定的Android Studio 中，会报出Render Problem
+1. 在特定的Android Studio 中，会报出Render Problem
 	
-[Github-issue](https://github.com/material-components/material-components-android)
+	[Github-issue](https://github.com/material-components/material-components-android)
 
-[Issue Tracker](https://issuetracker.google.com/issues/132316448)
+	[Issue Tracker](https://issuetracker.google.com/issues/132316448)
+
+2. [阴影问题](https://www.jianshu.com/p/2a866477485a)
+
+## 9.4 ExpandableListView+CoordinateLayout
+
+俩者会出现滚动失效的情况!!改用RecyclerView就可以!!
+
+## 9.5 NestedScrollView+RecyclerView
+
+会导致RecyclerView无法监听滚动，目前的解决办法是 单独使用RecyclerView
+
+坐标都变动了!!
+
+
+## 9.6 AppBarLayout+RecyclerView
+
+当RecyclerView为空时，仍然支持滑动，会导致页面空白
+
+[BUG](https://blog.csdn.net/LXFX1108/article/details/86711284)
+
+
+## 9.7 StickyRecyclerView
+
+1. 悬浮标题的绘制 已处理
+
+2. 悬浮标题的事件处理 已处理
+
+3. 悬浮标题的事件处理优化(判断是滚动还是点击打开/缩放)
+
