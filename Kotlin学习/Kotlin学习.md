@@ -351,7 +351,60 @@ Kotlin的泛型本身也是不可变的，但是借助`out`和`in`可以实现�
 
 **协变和逆变 主要是用于有泛型的类型进行赋值**，普通情况下不会发生型变，而协变和逆变确保了赋值能够正常进行
 
+## 10.3.2 使用处型变
 
+## 10.3.3 示例
+
+原始版本：
+
+	fun copy<T>(dest:Array<T>,src:Array<T>){
+		if(dest.size < src.size){
+			throw ...
+		}
+		src.forEachedIndexed{index,value->
+			dest[index] = src[index]
+		}
+	}
+ 
+ out版本:
+ 
+	fun copyOut<T>(dest:Array<T>,src:Array<out T>){
+		if(dest.size < src.size){
+			throw ...
+		}
+		src.forEachedIndexed{index,value->
+			dest[index] = src[index]
+		}
+	}
+
+- 表示 src的泛型必须是dest的泛型的子类, 则src是dest的子类
+
+
+in版本:
+
+	fun copyIn<T>(dest:Array<in T>,src:Array<T>){
+		if(dest.size < src.size){
+			throw ...
+		}
+		src.forEachedIndexed{index,value->
+			dest[index] = src[index]
+		}
+	}
+
+- 表示 dest的泛型必须是src的泛型的父类, 则src是dest的子类
+
+使用:
+
+	val src = arrayOf<Int>(1,2,3)
+	val dest = arrayOfNulls<Number>(3)
+	
+	copyOut(dest,src) // ok 这时T是Number ,所以src可以接收所有泛型继承自Number的数组
+	copyIn(dest,src) // ok 这时T是Int ,所以dest 可以接受所有泛型是Int父类的数组
+
+
+## 10.4 小节
+
+![Snipaste_2020-03-08_22-30-53.png](http://ww1.sinaimg.cn/large/6ab93b35ly1gcmw9ksfltj21tu0e4gwp.jpg)
 
 ## 10.7 星投影
 **Java中单个`?`也能当做泛型通配符来使用，相当于`? extends Object`,Kotlin通过符号`*`支持这种行为(相当于`out Any`)**
