@@ -407,19 +407,35 @@ in版本:
 ![Snipaste_2020-03-08_22-30-53.png](http://ww1.sinaimg.cn/large/6ab93b35ly1gcmw9ksfltj21tu0e4gwp.jpg)
 
 ## 10.7 星投影
-**Java中单个`?`也能当做泛型通配符来使用，相当于`? extends Object`,Kotlin通过符号`*`支持这种行为(相当于`out Any`)**
 
-	var list: List<*>
-	var list: List<out T:TUpper>
+**`*`就是泛型通配符，实际上只是一种语法糖!**
+
+- **Java中单个`?`也能当做泛型通配符来使用，相当于`? extends Object`,Kotlin通过符号`*`支持这种行为(相当于`out Any?`)**
 
 
-- 如果类的定义中已经存在`out`或`in`,那么这个限制在变量声明时依旧存在，不会被`*`去除
+情况1:
+对于类的泛型不变时:
 
-	例如,类的泛型定义时`out T:Number`,那么在变量声明使用`<*>`时，效果就不是`out Any`而是`out Number`
+	interface Fruit<T>{
+		fun getT()
+		fun setT(t:T)
+	}
 	
+	val  fruit:Fruit<*> = object:Fruit<String>{....}
+	fruit.getT() // 返回值只能用Any?接收
+	fruit.setT("str") // 错误setT()方法的参数类型在这里是Nothing 
+
+- 因为T默认是Any?类型的,这里的`<*>`= `<out Any?>`
+
+情况2:
+对于类的泛型协变时:
+
+
+情况3:
+对于类的泛型逆变时:
+
+
 	
-
-
 
 
 ## 10.7 泛型问题???
