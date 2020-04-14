@@ -155,21 +155,31 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 	ACC_ENUM-------------------0x4000----------声明为枚举类型
 
 ## 3.5 类/父类索引
-当前类索引和父类索引占用大小都为u2类型，由于一个类只能继承一个父类，故父类索引只有一个。除了java.lang.Object对象的父类索引为0，其他所有类都有父类。
+类索引，`this_class`的值必须是对`constant_pool`表中项目的一个有效索引值。`constant_pool`表在这个索引处的项必须为`CONSTANT_Class_info` 类型常量，**表示这个 Class 文件所定义的类或接口**。
 
-## 3.6 接口索引
+父类索引，对于类来说，`super_class `的值必须为 0 或者是对`constant_pool `表中项目的一个有效索引值
 
-一个类可以实现多个接口，故利用interfaces_count来记录该类所实现的接口个数，interfaces[interfaces_count]来记录所有实现的接口内容。
+- 如果它的值不为 0，那 `constant_pool` 表在这个索引处的项必须为`CONSTANT_Class_info` 类型常量，**表示这个 Class 文件所定义的类的直接父类**。
+
+- 当前类的直接父类，以及它所有间接父类的`access_flag` 中都不能带有`ACC_FINAL` 标记。对于接口来说，它的Class文件的`super_class`项的值必须是对`constant_pool`表中项目的一个有效索引值。 `constant_pool`表在这个索引处的项必须为代表` java.lang.Object` 的 `CONSTANT_Class_info `类型常量 。
+
+- 如果 Class 文件的 `super_class`的值为 0，那这个Class文件只可能是定义的是`java.lang.Object`类，只有它是唯一没有父类的类。
+
+- 当前类索引和父类索引占用大小都为u2类型，由于一个类只能继承一个父类，故父类索引只有一个。除了java.lang.Object对象的父类索引为0，其他所有类都有父类。
+
+## 3.6 接口
+
+一个类可以实现多个接口，故利用`interfaces_count`来记录该类所实现的接口个数，`interfaces[interfaces_count]`来记录所有实现的接口内容。
 
 ## 3.7 字段表
-字段表**用于描述类或接口中声明的变量**，格式如下：
+**字段表用于描述类或接口中声明的类字段或者实例字段**，格式如下：
 
 	field_info {
-    u2             access_flags; //访问标识
-    u2             name_index;  //名称索引
-    u2             descriptor_index; //描述符索引
-    u2             attributes_count; //属性个数
-    attribute_info attributes[attributes_count];  //属性表的具体内容
+	    u2             access_flags; //访问标识
+	    u2             name_index;  //名称索引
+	    u2             descriptor_index; //描述符索引
+	    u2             attributes_count; //属性个数
+	    attribute_info attributes[attributes_count];  //属性表的具体内容
 	}
 
 - 字段访问标识如下：(表中加粗项是字段独有的)
@@ -184,19 +194,20 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 		**ACC_TRANSIENT**	0x0080	声明为 transient; 不能被序列化
 		ACC_SYNTHETIC	0x1000	声明为 synthetic; 不存在于源代码，由编译器生成
 		ACC_ENUM	0x4000	声明为enum
-		Java语法中，接口中的字段默认包含ACC_PUBLIC, ACC_STATIC, ACC_FINAL标识。ACC_FINAL，ACC_VOLATILE不能同时选择等规则。
 
-	紧跟其后的name_index和descriptor_index是对常量池的引用，分别代表着字段的简单名和方法的描述符。
+	Java语法中，接口中的字段默认包含`ACC_PUBLIC`, `ACC_STATIC`, `ACC_FINAL`标识。`ACC_FINAL`，`ACC_VOLATILE`不能同时选择等规则。
+
+	紧跟其后的`name_index`和`descriptor_index`是对常量池的引用，分别代表着字段的简单名和方法的描述符。
 
 ## 3.8 方法表
-方法表用于描述类或接口中声明的方法，格式如下：
+**方法表仅用于描述当前类或接口中声明的方法(不包括继承自父类或父接口的方法)**，格式如下：
 
 	method_info {
-    u2             access_flags; //访问标识
-    u2             name_index;  //名称索引
-    u2             descriptor_index;  //描述符索引
-    u2             attributes_count;  //属性个数
-    attribute_info attributes[attributes_count]; //属性表的具体内容
+	    u2             access_flags; //访问标识
+	    u2             name_index;  //名称索引
+	    u2             descriptor_index;  //描述符索引
+	    u2             attributes_count;  //属性个数
+	    attribute_info attributes[attributes_count]; //属性表的具体内容
 	}
 	
 方法访问标识如下：(表中加粗项是方法独有的)
@@ -216,16 +227,18 @@ Java虚拟机规范规定：Class文件格式采用伪结构来存储数据，�
 	ACC_SYNTHETIC	0x1000	声明为 synthetic; 不存在于源代码，由编译器生成
 	
 - 对于方法里的Java代码，进过编译器编译成字节码指令后，存放在方法属性表集合中“code”的属性内。
+
 - 当子类没有覆写父类方法，则方法集合中不会出现父类的方法信息。
+
 - Java语言中重载方法，必须与原方法同名，且特征签名不同。特征签名是指方法中各个参数在常量池的字段符号引用的集合，不包括返回值。当时Class文件格式中，特征签名范围更广，允许方法名和特征签名都相同，但返回值不同的方法，合法地共存子啊同一个Class文件中。
 
 ## 3.9 属性表
 属性表格式：
 
 	attribute_info {
-    u2 attribute_name_index;   //属性名索引
-    u4 attribute_length;       //属性长度
-    u1 info[attribute_length]; //属性的具体内容
+	    u2 attribute_name_index;   //属性名索引
+	    u4 attribute_length;       //属性长度
+	    u1 info[attribute_length]; //属性的具体内容
 	}
 
 属性表的限制相对宽松，不需要各个属性表有严格的顺序，只要不与已有的属性名重复，任何自定义的编译器都可以向属性表中写入自定义的属性信息，Java虚拟机运行时会忽略掉无法识别的属性。 关于虚拟机规范中预定义的属性，这里不展开讲了，列举几个常用的。
@@ -245,23 +258,23 @@ Code属性java程序方法体中的代码，经编译后得到的字节码指令
 Code属性的格式如下：
 
 	Code_attribute {
-    u2 attribute_name_index; //常量池中的uft8类型的索引，值固定为”Code“
-    u4 attribute_length; //属性值长度，为整个属性表长度-6
-    u2 max_stack;   //操作数栈的最大深度值，jvm运行时根据该值佩服栈帧
-    u2 max_locals;  //局部变量表最大存储空间，单位是slot
-    u4 code_length; // 字节码指令的个数
-    u1 code[code_length]; // 具体的字节码指令
-    u2 exception_table_length; //异常的个数
-    {   u2 start_pc;
-        u2 end_pc;
-        u2 handler_pc; //当字节码在[start_pc, end_pc)区间出现catch_type或子类，则转到handler_pc行继续处理。
-        u2 catch_type; //当catch_type=0，则任意异常都需转到handler_pc处理
-    } exception_table[exception_table_length]; //具体的异常内容
-    u2 attributes_count;     //属性的个数
-    attribute_info attributes[attributes_count]; //具体的属性内容
+	    u2 attribute_name_index; //常量池中的uft8类型的索引，值固定为”Code“
+	    u4 attribute_length; //属性值长度，为整个属性表长度-6
+	    u2 max_stack;   //操作数栈的最大深度值，jvm运行时根据该值佩服栈帧
+	    u2 max_locals;  //局部变量表最大存储空间，单位是slot
+	    u4 code_length; // 字节码指令的个数
+	    u1 code[code_length]; // 具体的字节码指令
+	    u2 exception_table_length; //异常的个数
+	    {   u2 start_pc;
+	        u2 end_pc;
+	        u2 handler_pc; //当字节码在[start_pc, end_pc)区间出现catch_type或子类，则转到handler_pc行继续处理。
+	        u2 catch_type; //当catch_type=0，则任意异常都需转到handler_pc处理
+	    } exception_table[exception_table_length]; //具体的异常内容
+	    u2 attributes_count;     //属性的个数
+	    attribute_info attributes[attributes_count]; //具体的属性内容
 	}
 
-- slot是虚拟机中局部变量分配内存使用的最小单位。**对于byte/char/float/int/short/boolean/returnAddress等长度不超过32位的局部变量，每个占用1个Slot；对于long和double这两种64位的数据类型则需要2个Slot来存放。**
+- `slot`是虚拟机中局部变量分配内存使用的最小单位。**对于byte/char/float/int/short/boolean/returnAddress等长度不超过32位的局部变量，每个占用1个Slot；对于long和double这两种64位的数据类型则需要2个Slot来存放。**
 
 
 - 实例方法中有隐藏参数this, 显式异常处理器的参数，方法体定义的局部变量都使用局部变量表来存放。

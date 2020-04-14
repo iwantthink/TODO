@@ -19,11 +19,34 @@
 
 [**设计Gradle脚本-5.1.1版本-官方文档**](https://guides.gradle.org/designing-gradle-plugins/)
 
-# 注意事项
+#  简介
 
-**Android studio 中gradle的版本,gradle插件和gradle是不同的。**
+Android Studio 中，Gradle-Plugin 和Gradle 是不同的概念
 
-- 前者用来配置环境使得AS支持gradle，后者是用于Gradle开发
+- Gradle是一个基于Apache Ant和Apache Maven概念的项目自动化建构工具，它使用一种基于Groovy的特定领域语言来声明项目设置
+
+- Gradle-Plugin 是Google使用Gradle开发出的一个Android插件，该插件为Android Studio提供了项目的管理，例如，添加项目依赖，打包，签名等流程的定义
+
+## 源码下载方法
+
+从`gradle-plugin 3.0.0` 开始，Google 将Android的一些库放到自己的`Google()`仓库里了。地址如下：
+
+	https://dl.google.com/dl/android/maven2/index.html
+
+但是`Google()`并没有提供文件遍历功能，所以无法直接访问路径去下载。但是实际上源码还是在那个路径下放着，所以只需要输入待下载文件的完整的路径即可下载。
+
+例如：需要下载`gradle-3.0.0-sources.jar` ,只需要将完整的路径输入即可
+
+	https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/3.0.0/gradle-3.0.0-sources.jar
+
+**下载完源文件之后放入指定gradle目录下,即可在`Android Studio中`查看对应的源码**
+
+- gradle目录可以通过AS 得知...
+
+- 示例
+
+		/Users/ryan/.gradle/caches/modules-2/files-2.1/com.android.tools.build/gradle/3.3.2/
+		
 
 
 # 1. 自定义任务
@@ -129,7 +152,7 @@ Gradle支持俩种类型的Task：
                   version: '1.0-SNAPSHOT'
     		}
 		}
-
+![](data:image/jpeg;base64,IyBHcmFkbGUtUGx1Z2luIOWtpuS5oAoKCiMgMS4g566A5LuLCgpBbmRyb2lkIFN0dWRpbyDkuK3vvIxHcmFkbGUtUGx1Z2luIOWSjEdyYWRsZSDmmK/kuI3lkIznmoTmpoLlv7UKCi0gR3JhZGxl5piv5LiA5Liq5Z+65LqOQXBhY2hlIEFudOWSjEFwYWNoZSBNYXZlbuamguW/teeahOmhueebruiHquWKqOWMluW7uuaehOW3peWFt++8jOWug+S9v+eUqOS4gOenjeWfuuS6jkdyb292eeeahOeJueWumumihuWfn+ivreiogOadpeWjsOaYjumhueebruiuvue9rgoKLSBHcmFkbGUtUGx1Z2luIOaYr0dvb2dsZeS9v+eUqEdyYWRsZeW8gOWPkeWHuueahOS4gOS4qkFuZHJvaWTmj5Lku7bvvIzor6Xmj5Lku7bkuLpBbmRyb2lkIFN0dWRpb+aPkOS+m+S6humhueebrueahOeuoeeQhu+8jOS+i+Wmgu+8jOa3u+WKoOmhueebruS+nei1lu+8jOaJk+WMhe+8jOetvuWQjeetiea1geeoi+eahOWumuS5iQoKCQoKIyAyLiDmupDnoIHkuIvovb3mlrnms5UKCuS7jmBncmFkbGUtcGx1Z2luIDMuMC4wYCDlvIDlp4vvvIxHb29nbGUg5bCGQW5kcm9pZOeahOS4gOS6m+W6k+aUvuWIsOiHquW3seeahGBHb29nbGUoKWDku5PlupPph4zkuobjgILlnLDlnYDlpoLkuIvvvJoKCglodHRwczovL2RsLmdvb2dsZS5jb20vZGwvYW5kcm9pZC9tYXZlbjIvaW5kZXguaHRtbAoK5L2G5pivYEdvb2dsZSgpYOW5tuayoeacieaPkOS+m+aWh+S7tumBjeWOhuWKn+iDve+8jOaJgOS7peaXoOazleebtOaOpeiuv+mXrui3r+W+hOWOu+S4i+i9veOAguS9huaYr+WunumZheS4iua6kOeggei/mOaYr+WcqOmCo+S4qui3r+W+hOS4i+aUvuedgO+8jOaJgOS7peWPqumcgOimgei+k+WFpeW+heS4i+i9veaWh+S7tueahOWujOaVtOeahOi3r+W+hOWNs+WPr+S4i+i9veOAggoK5L6L5aaC77ya6ZyA6KaB5LiL6L29YGdyYWRsZS0zLjAuMC1zb3VyY2VzLmphcmAgLOWPqumcgOimgeWwhuWujOaVtOeahOi3r+W+hOi+k+WFpeWNs+WPrwoKCWh0dHBzOi8vZGwuZ29vZ2xlLmNvbS9kbC9hbmRyb2lkL21hdmVuMi9jb20vYW5kcm9pZC90b29scy9idWlsZC9ncmFkbGUvMy4wLjAvZ3JhZGxlLTMuMC4wLXNvdXJjZXMuamFyCgoqKuS4i+i9veWujOa6kOaWh+S7tuS5i+WQjuaUvuWFpeaMh+WummdyYWRsZeebruW9leS4iyzljbPlj6/lnKhgQW5kcm9pZCBTdHVkaW/kuK1g5p+l55yL5a+55bqU55qE5rqQ56CBKioKCi0gZ3JhZGxl55uu5b2V5Y+v5Lul6YCa6L+HQVMg5b6X55+lLi4uCgotIOekuuS+iwoKCQkvVXNlcnMvcnlhbi8uZ3JhZGxlL2NhY2hlcy9tb2R1bGVzLTIvZmlsZXMtMi4xL2NvbS5hbmRyb2lkLnRvb2xzLmJ1aWxkL2dyYWRsZS8zLjMuMi8KCQkK)
 		task greeting(type: org.gradle.GreetingTask) {
     		greeting = 'howdy!'
 		}
@@ -516,7 +539,7 @@ MyPlugin:
 
 
 使用插件
-	
+
 	// 引用插件
 	apply plugin:GreetingPlugin
 	
@@ -561,7 +584,9 @@ Gradle API 提供了可变类型，`PropertyState`表示可以在执行时间内
 	}
 
 - `project.extensions.create(String name,Class<T> type,Object...constructionArguments)`: 将使用给予的`constructionArguments`参数 创建`type`类型的对象. 注意`type`类型的类中的构造函数需要接收参数
-		
+
+
+
 
 	class GreetingPluginExtension {
 		final PropertyState<String> message
@@ -739,21 +764,19 @@ Gradle API 提供了可变类型，`PropertyState`表示可以在执行时间内
 	可以将 `ObjectFactory`对象通过构造函数直接注入,或者借助`javax.inject.Inject`注解将`ObjectFactory`对象注入到指定方法
 
 	
-	apply plugin: GreetingPlugin
-	
-	greeting {
-	    message = 'Hi'
-		// 这里实际上调用的是 扩展对象的greeter方法
-	    greeter {
-	        name = 'Gradle'
-	    }
-	}
+		apply plugin: GreetingPlugin
+		
+		greeting {
+		    message = 'Hi'
+			// 这里实际上调用的是 扩展对象的greeter方法
+		    greeter {
+		        name = 'Gradle'
+		    }
+		}
 
 ## 2.7 声明DSL配置容器
 
 Gradle支持用同一种类型定义多个,命名数据对象
-
-### 2.7.1 示例
 
 考虑如下构建块:
 
@@ -777,8 +800,8 @@ Gradle支持用同一种类型定义多个,命名数据对象
 
 - 插件提供的`DSL`,提供了容纳一组`Book`扩展对象的容器
 
-
-扩展对象:
+### 2.7.1 方式一
+容器类:
 
 	import org.gradle.api.provider.Property;
 	import org.gradle.api.model.ObjectFactory;
@@ -847,6 +870,50 @@ Gradle支持用同一种类型定义多个,命名数据对象
 	任何能够使用`project.container`方法创建容器的类型，都必须将名为`name`的属性公开为对象的唯一名称和常量名称。 
 
 	`project.container（Class）`通过尝试调用具有单个字符串参数的类的构造函数来创建新的实例，这个参数就是对象的所需名称。 查看允许自定义实例化策略的project.container方法变体的上述链接。
+
+
+### 2.7.2 方式二
+
+1. 创建容器类`Environment`
+	
+		class Environment {
+			private final String name;
+			private final String url;
+		
+			public ServerEnvironment(String name) {
+		        this.name = name;
+		    } 
+		} 
+
+2. 创建扩展对象
+
+
+		class EnvironmentExtension{
+		
+		    final NamedDomainObjectContainer<Environment> environments
+
+		    @Inject
+		    DownloadExtension(ObjectFactory objectFactory) {
+		        // Use an injected ObjectFactory to create a container
+		        resources = objectFactory.domainObjectContainer(Environment)
+		    }
+		}
+
+3. 注册扩展对象
+
+		void apply(Project project){
+			project.extensions.create("EnvironmentExt", EnvironmentExtension)
+		}
+
+4. `build.gradle`中使用
+
+		EnvironmentExt{
+			environments{
+				dev {
+					url = "www.baidu.com"
+				}
+			}
+		}
 
 
 ## 2.8 自定义任务类和插件中使用文件
@@ -1450,3 +1517,5 @@ Gradle支持用同一种类型定义多个,命名数据对象
 
 
 赋值必须使用`=`等号。。。。
+
+![](data:image/jpeg;base64,IyBHcmFkbGUtUGx1Z2luIOWtpuS5oAoKCiMgMS4g566A5LuLCgpBbmRyb2lkIFN0dWRpbyDkuK3vvIxHcmFkbGUtUGx1Z2luIOWSjEdyYWRsZSDmmK/kuI3lkIznmoTmpoLlv7UKCi0gR3JhZGxl5piv5LiA5Liq5Z+65LqOQXBhY2hlIEFudOWSjEFwYWNoZSBNYXZlbuamguW/teeahOmhueebruiHquWKqOWMluW7uuaehOW3peWFt++8jOWug+S9v+eUqOS4gOenjeWfuuS6jkdyb292eeeahOeJueWumumihuWfn+ivreiogOadpeWjsOaYjumhueebruiuvue9rgoKLSBHcmFkbGUtUGx1Z2luIOaYr0dvb2dsZeS9v+eUqEdyYWRsZeW8gOWPkeWHuueahOS4gOS4qkFuZHJvaWTmj5Lku7bvvIzor6Xmj5Lku7bkuLpBbmRyb2lkIFN0dWRpb+aPkOS+m+S6humhueebrueahOeuoeeQhu+8jOS+i+Wmgu+8jOa3u+WKoOmhueebruS+nei1lu+8jOaJk+WMhe+8jOetvuWQjeetiea1geeoi+eahOWumuS5iQoKCQoKIyAyLiDmupDnoIHkuIvovb3mlrnms5UKCuS7jmBncmFkbGUtcGx1Z2luIDMuMC4wYCDlvIDlp4vvvIxHb29nbGUg5bCGQW5kcm9pZOeahOS4gOS6m+W6k+aUvuWIsOiHquW3seeahGBHb29nbGUoKWDku5PlupPph4zkuobjgILlnLDlnYDlpoLkuIvvvJoKCglodHRwczovL2RsLmdvb2dsZS5jb20vZGwvYW5kcm9pZC9tYXZlbjIvaW5kZXguaHRtbAoK5L2G5pivYEdvb2dsZSgpYOW5tuayoeacieaPkOS+m+aWh+S7tumBjeWOhuWKn+iDve+8jOaJgOS7peaXoOazleebtOaOpeiuv+mXrui3r+W+hOWOu+S4i+i9veOAguS9huaYr+WunumZheS4iua6kOeggei/mOaYr+WcqOmCo+S4qui3r+W+hOS4i+aUvuedgO+8jOaJgOS7peWPqumcgOimgei+k+WFpeW+heS4i+i9veaWh+S7tueahOWujOaVtOeahOi3r+W+hOWNs+WPr+S4i+i9veOAggoK5L6L5aaC77ya6ZyA6KaB5LiL6L29YGdyYWRsZS0zLjAuMC1zb3VyY2VzLmphcmAgLOWPqumcgOimgeWwhuWujOaVtOeahOi3r+W+hOi+k+WFpeWNs+WPrwoKCWh0dHBzOi8vZGwuZ29vZ2xlLmNvbS9kbC9hbmRyb2lkL21hdmVuMi9jb20vYW5kcm9pZC90b29scy9idWlsZC9ncmFkbGUvMy4wLjAvZ3JhZGxlLTMuMC4wLXNvdXJjZXMuamFyCgoqKuS4i+i9veWujOa6kOaWh+S7tuS5i+WQjuaUvuWFpeaMh+WummdyYWRsZeebruW9leS4iyzljbPlj6/lnKhgQW5kcm9pZCBTdHVkaW/kuK1g5p+l55yL5a+55bqU55qE5rqQ56CBKioKCi0gZ3JhZGxl55uu5b2V5Y+v5Lul6YCa6L+HQVMg5b6X55+lLi4uCgotIOekuuS+iwoKCQkvVXNlcnMvcnlhbi8uZ3JhZGxlL2NhY2hlcy9tb2R1bGVzLTIvZmlsZXMtMi4xL2NvbS5hbmRyb2lkLnRvb2xzLmJ1aWxkL2dyYWRsZS8zLjMuMi8KCQkK)

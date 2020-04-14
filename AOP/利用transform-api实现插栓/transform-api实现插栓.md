@@ -7,15 +7,19 @@
 
 [android插件官方网站](http://tools.android.com/build#TOC-The-following-release-tags-are-availablestudio-3.0studio-2.3studio-2.2studio-2.0studio-1.5studio-1.4...And-for-gradle:gradle_3.0.0gradle_2.3.0gradle_2.2.0gradle_2.0.0gradle_1.5.0...)
 
-[Transform-Api 官方文档](http://tools.android.com/tech-docs/new-build-system/transform-api)
+[Transform-Api](http://tools.android.com/tech-docs/new-build-system/transform-api)
+
+[Transform-Api Doc](http://google.github.io/android-gradle-dsl/javadoc/current/)
 
 [如何理解 Transform API](https://www.jianshu.com/p/37df81365edf)
+
+
 
 # 重要提示
 
 从`gradle-plugin 3.0.0` 开始，Google 将Android的一些库放到自己的Google()仓库里了。地址如下：
 
-https://dl.google.com/dl/android/maven2/index.html
+	https://dl.google.com/dl/android/maven2/index.html
 
 但是Google()并没有提供文件遍历功能，所以无法直接访问路径去下载。但是实际上源码还是在那个路径下放着，所以只需要输入待下载文件的完整的路径即可下载。
 
@@ -68,8 +72,8 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 
 	**这个jar包就是 gradle-plugin包 ,也就是在AS项目的根目录下的`build.gradle`中`dependencies`脚本块中添加的`com.android.tools.build:gradle:3.0.0`**。
 
-- 这里有个区别就是 `Com.android.tools.build.gradle Api`和`Com.android.tools.build.gradle`,前者是APIs to customize Android Gradle Builds
-， 后者是Gradle plug-in to build Android applications. 前者只添加一个`gradle-api`jar包，后者会添加 很多个jar包例如`dex`,`builder`之类的。**但是要注意后者包含前者！**
+- 这里有个区别就是 `com.android.tools.build.gradle-api`和`com.android.tools.build.gradle`,前者是`APIs to customize Android Gradle Builds`
+， 后者是`Gradle plug-in to build Android applications`. 前者只添加一个`gradle-api`jar包，后者会添加 很多个jar包例如`dex`,`builder`之类的。**要注意后者包含前者,正常开发插件的话也是使用后者**
 
 **Gradle 的各种版本(Gradle-Plugin 3.0.0开始，改为保存在Google自己提供的`google()`仓库 )：**
 
@@ -161,11 +165,11 @@ Note: this applies only to the javac/dx code path. Jack does not use this API at
 type|	Des
 ---|---
 PROJECT|	只处理当前项目
-SUB_PROJECTS|	只处理子项目
-PROJECT_LOCAL_DEPS|	只处理当前项目的本地依赖,例如jar, aar
-EXTERNAL_LIBRARIES|	只处理外部的依赖库
-PROVIDED_ONLY|	只处理本地或远程以provided形式引入的依赖库
-TESTED_CODE|	测试代码
+SUB\_PROJECTS|	只处理子项目
+PROJECT\_LOCAL\_DEPS|	只处理当前项目的本地依赖,例如jar, aar
+EXTERNAL\_LIBRARIES|	只处理外部的依赖库
+PROVIDED\_ONLY|	只处理本地或远程以provided形式引入的依赖库
+TESTED\_CODE|	测试代码
 
 ### 1.3.2 ContentType
 
@@ -175,7 +179,7 @@ TESTED_CODE|	测试代码
 
 1. `Classes`:表示处理编译后的字节码,可能是jar包也可能是目录
 
-2. `Resources` :表示处理标准的java资源
+2. `Resources` :表示标准的java资源
 
 源码如下：
 
@@ -222,9 +226,25 @@ TESTED_CODE|	测试代码
     }
 
 
-### 1.3.3 getTaskNamePrefix
+### 1.3.3 isIncremental
 
-源码如下： 
+`isIncremental `: 当前 Transform 是否支持增量编译
+
+### 1.3.4 自定义Transform的getName()
+
+    /**
+     * Returns the unique name of the transform.
+     *
+     * <p>This is associated with the type of work that the transform does. It does not have to be
+     * unique per variant.
+     */
+    @NonNull
+    public abstract String getName();
+    
+
+- `getName()`主要为`TransformManager.getTaskNamePrefix()`方法服务
+
+源码: 
 
 		//低版本的gradle-plugin中的实现,高版本使用了Java新特性编写代码,但是具体实现的功能不变
 		@NonNull
@@ -247,28 +267,12 @@ TESTED_CODE|	测试代码
 		        return sb.toString();
 		    }
 
-`getTaskNamePrefix`方法中可以**获取Task的前缀**，以`transform`开头，之后根据输入类型，即`ContentType`,将输入类型添加到名称中.`ContentType`之间使用`And`连接，拼接完成之后加上`With`，之后紧跟这个Transform的Name
+`getTaskNamePrefix`方法中可以**获取Task的前缀**，以`transform`开头，之后根据输入类型，即`ContentType`,将输入类型添加到名称中.`ContentType`之间使用`And`连接，拼接完成之后加上`With`，之后紧跟这个Transform的name
 
 - **name是在自定义`Transform`的`getName()`方法中重写返回**
+    
 
-
-### 1.3.4 isIncremental
-
-`isIncremental `: 当前 Transform 是否支持增量编译
-
-### 1.3.5 自定义Transform的getName()
-
-
-    /**
-     * Returns the unique name of the transform.
-     *
-     * <p>This is associated with the type of work that the transform does. It does not have to be
-     * unique per variant.
-     */
-    @NonNull
-    public abstract String getName();
-
-### 1.3.6 TransformManager
+### 1.3.5 TransformManager
 
 `TransformManager`类管理所有的`Transform`
 
@@ -413,7 +417,7 @@ Transform的工作流程:
 
 可以看到proguard的产物`transforms\proguard\release`变成了 dex的输入文件.
 
-结论：**可以向gradle plugin 注册一个Transform ,这个Transform注册之后，需要在编译成字节码之后被执行，执行完之后再去执行混淆的`ProguardTransform`。这样`ProguardTransform`的输入文件就变成自定义的Transform的输入文件，然后自定义的Transform的输出文件就变成了 `ProguardTransform`的输入文件。 **
+结论：**可以向gradle plugin 注册一个Transform ,这个Transform注册之后，需要在编译成字节码之后被执行，执行完之后再去执行混淆的`ProguardTransform`。这样`ProguardTransform`的输入文件就变成自定义的Transform的输入文件，然后自定义的Transform的输出文件就变成了 `ProguardTransform`的输入文件。**
 
 **开启混淆其实也是类似的做法，只是把`ProguardTransform`换成了`DexTransform`**
 
@@ -436,13 +440,13 @@ Transform的工作流程:
 		      android.registerTransform(transform)
 		}
 
-	- 这里的`extensions.getByType(AppExtension)`是去获取插件对象，就是我们在`build.gradle`中添加的`apply plugin: 'com.android.application'`,**除了`AppExtension`之外，还有`com.android.library projects`对应`LibraryExtension`,`TestExtension`对应`com.android.test projects`**
+	- 这里的`extensions.getByType(AppExtension)`是去获取扩展对象，就是我们在`build.gradle`中使用的`android{}`,**除了`AppExtension`之外，还有`com.android.library projects`对应`LibraryExtension`,`TestExtension`对应`com.android.test projects`**
 
 	- 通过这个`AppExtension`，可以获取许多`Android`的属性
 
 	- 这里指定插件适应于`app`而不是`library`
 
-	- 换一种写法`project.extensions.getByName('android')` 也能实现同样的功能.**`AppExtension` 就是扩展的类型，`android`就是AppExtension的名称**
+	- 换一种写法`project.extensions.getByName('android')` 也能实现同样的功能.**`AppExtension` 就是扩展对象的类型，`android`就是AppExtension的名称**
 
 	- 直接创建匿名类`Transform`，会报NullPointExc。。
 

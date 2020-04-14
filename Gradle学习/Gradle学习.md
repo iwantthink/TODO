@@ -15,7 +15,7 @@
 
 [Gradle构建源码浅析](https://blog.csdn.net/yanbober/article/details/60584621)
 
-# Gradle学习
+# 简介
 
 构建，可以叫做build或make. 就是根据输入信息然后干一堆事情，然后得出几个产出物。
 
@@ -34,15 +34,28 @@ Gradle版本在`AndroidStudio`中的位置：
 - 项目名`\gradle\wrapper\gradle-wrapper.properties`
 
 
+# Gradle参数优先级
+
+[Build Environment](https://docs.gradle.org/current/userguide/build_environment.html)
+
+
+1. 命令行标志
+2. 系统属性
+3.  Gradle属性
+4.  环境变量 
+
+
+
+
 # 1. Gradle学习
 
 **Gradle是一个构建工具，它负责定义流程和规则**,而具体的工作则是通过所使用的插件来完成
 
 - 构建工具用于实现项目自动化，是一种可编程的工具，可以用代码来控制构建流程并最终生成可交付的软件
 
-Gradle基于Groovy/Kotlin的动态DSL进行编写
+Gradle基于`Groovy/Kotlin`的动态DSL进行编写
 
-- `Gradle`提供了许多默认的配置以及通常的默认值,此外构建脚本也是一个Groovy脚本,所以构建脚本允许那些在`Groovy`脚本中存在的元素(例如,方法定义和类定义)
+- `Gradle`提供了许多默认的配置以及通常的默认值,此外构建脚本也是一个`Groovy/Kotlin`脚本,所以构建脚本允许那些在`Groovy/Kotlin`脚本中存在的元素(例如,方法定义和类定义)
 
 
 
