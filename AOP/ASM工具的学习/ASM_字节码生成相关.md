@@ -21,6 +21,9 @@
 
 	**类最好填完整路径....**
 
+注意: 在Mac环境下,请使用`:`作为classpath之间的分隔符!
+
+
 
 # 3. Bytecode Outline插件
 

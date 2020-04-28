@@ -77,34 +77,37 @@ ASM有两套API，一套基于访问者模式、一套基于树的数据结构�
 
 **Class的生成和转换是基于`ClassVisitor`这个抽象类**。该类每个方法都对应class的一个结构。
 
-	public abstract class ClassVisitor { 
-		public ClassVisitor(int api);
-		public ClassVisitor(int api, ClassVisitor cv);
-		public void visit(int version, int access, String name, String signature, String superName, String[] interfaces);
-		public void visitSource(String source, String debug);
-		public void visitOuterClass(String owner, String name, String desc); AnnotationVisitor visitAnnotation(String desc, boolean visible); public void visitAttribute(Attribute attr);
-		public void visitInnerClass(String name, String outerName, String innerName, int access);
-		public FieldVisitor visitField(int access, String name, String desc,
-		String signature, Object value);
-		public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions);
-		void visitEnd();
+	public abstract class ClassVisitor {
+	public ClassVisitor(int api);
+	public ClassVisitor(int api, ClassVisitor cv);
+	public void visit(int version, int access, String name,
+	String signature, String superName, String[] interfaces);
+	public void visitSource(String source, String debug);
+	public void visitOuterClass(String owner, String name, String desc); 
+	AnnotationVisitor visitAnnotation(String desc, boolean visible); public void visitAttribute(Attribute attr);
+	public void visitInnerClass(String name, String outerName,
+	String innerName, int access);
+	public FieldVisitor visitField(int access, String name, String desc,
+	String signature, Object value);
+	public MethodVisitor visitMethod(int access, String name, String desc,
+	String signature, String[] exceptions); void visitEnd();
 	}
 
-class中简单的结构 可以直接通过一个 **参数为其描述内容，返回值为void** 的方法来访问
+- class中简单的结构 可以直接通过一个 **参数为其描述内容，返回值为void** 的方法来访问
 
-class中复杂的结构（其内容可以是任意长度和复杂度的部分） 通过**辅助访问者类**进行访问。例如:`visitAnnotation`,`visitField`,`visitMethod`需要返回`AnnotationVisitor`,`FieldVisitor`,`MethodVisitor`
+- class中复杂的结构（其内容可以是任意长度和复杂度的部分） 通过**辅助访问者类**进行访问。例如:`visitAnnotation`,`visitField`,`visitMethod`需要返回`AnnotationVisitor`,`FieldVisitor`,`MethodVisitor`
 
-	public abstract class FieldVisitor { 
-		public FieldVisitor(int api);
-		public FieldVisitor(int api, FieldVisitor fv);
-		public AnnotationVisitor visitAnnotation(String desc, boolean visible); public void visitAttribute(Attribute attr);
-		public void visitEnd();
-	}
+		public abstract class FieldVisitor { 
+			public FieldVisitor(int api);
+			public FieldVisitor(int api, FieldVisitor fv);
+			public AnnotationVisitor visitAnnotation(String desc, boolean visible); public void visitAttribute(Attribute attr);
+			public void visitEnd();
+		}
 
 
 **`ClassVisitor`方法调用必定按照如下顺序:**
 
-> visit visitSource? visitOuterClass? ( visitAnnotation | visitAttribute )*( visitInnerClass | visitField | visitMethod )*visitEnd
+> visit visitSource? visitOuterClass? ( visitAnnotation | visitAttribute )( visitInnerClass | visitField | visitMethod ) visitEnd
 
 
 
@@ -113,7 +116,7 @@ class中复杂的结构（其内容可以是任意长度和复杂度的部分）
 
 - `ClassReader`用来解析编译过后的类的字节码数组.通过`accept`方法与`ClassVisitor`相关联，并在解析过程中会调用`ClassVisitor`相应的`visitXXX`方法。**可以被看做一个事件生产者**.
 
-- `ClassWriter`,是`ClassVisitor`这个抽象类的子类，以二进制形式直接构建编译过的类(字节码)。它可以生成一个类的字节码数组,通过`toByteArray`方法输出字节码数组。**可以被看做是一个事件消费者**。
+- `ClassWriter`,是`ClassVisitor`这个抽象类的子类，以二进制形式直接构建编译过的类(字节码)。它可以生成一个类的字节码数组,通过`toByteArray()`方法输出字节码数组。**可以被看做是一个事件消费者**。
 
 
 - `ClassVisitor`，cv将其所有收到的方法委托给另外一个cv实例。**可以被看做一个事件过滤器**
@@ -230,7 +233,7 @@ class中复杂的结构（其内容可以是任意长度和复杂度的部分）
 
 	- `visit`方法定义了类的头。其中`V1_5`是一个常量，它指定了类的版本。`ACC_xxxx`是一个常量，是与java访问修饰符对应的标志（在例子中，指定了该类是一个接口，所以是public和abstract的） 。 参数`pkg/Comparable`指定了类名(类的字节码中不包含包或导入包，所有的类名都是全限定名) 。下一个参数`null`对应于泛型。`"java/lang/Object"`参数是指的超类(接口类隐式继承Object)。`new String[]{"pkg/Mesurable"}`参数是拓展的接口数组。
 
-	- `visitField`方法用于定义字段。
+- `visitField`方法用于定义字段。
 	
 	第一组参数`ACC_PUBLIC+ACC_FINAL+ACC_STATIC`定义了Java中的访问修饰符public static fianl(接口中字段默认的修饰符).
 
@@ -242,9 +245,9 @@ class中复杂的结构（其内容可以是任意长度和复杂度的部分）
 
 	第五个参数`new Integer(-1)` 是字段的常量值，只能用于真正的常量字段，即最终静态字段，对于其他字段，它必须为null。 
 
-		- 由于这里没有任何注解,所以立即调用`visitEnd`会返回`FieldVisitor`.不需要再调用这个字段的`visitAnnotation`或`visitAtribute`方法
+	- 由于这里没有任何注解,所以立即调用`visitEnd`会返回`FieldVisitor`.不需要再调用这个字段的`visitAnnotation`或`visitAtribute`方法
 
-	- `visitMethod`方法用于定义方法(例子中的`compareTo`).
+- `visitMethod`方法用于定义方法(例子中的`compareTo`).
 
 	第一组参数`ACC_PUBLIC+ACC_ABSTRACT`是Java访问修饰符。
 
@@ -256,7 +259,7 @@ class中复杂的结构（其内容可以是任意长度和复杂度的部分）
 
 	第五个参数`null`,是由方法引起的异常数组，由内部名称(包含包名的类名)指定。
 
-		- `visitMethod`方法返回一个`MethodVisitor`,可以用来定义方法的`annotations `,`annotations `,**以及方法的具体实现代码**。最终还需要调用`MethodVisitor`的`visitEnd`来结束
+	- `visitMethod`方法返回一个`MethodVisitor`,可以用来定义方法的`annotations `,`annotations `,**以及方法的具体实现代码**。最终还需要调用`MethodVisitor`的`visitEnd`来结束
 
 	- `visitEnd`,在类,方法和字段的最后 都需要调用`visitEnd`.用来表示结束。
 
@@ -352,12 +355,14 @@ class中复杂的结构（其内容可以是任意长度和复杂度的部分）
 
 - 如果`ClassReader`检测到`ClassVisitor`返回了由`ClassWriter`返回的`MethodVisitor`，并且这个`MethodVisitor`被传入cr的`accpet`方法中。这意味着这个方法不用改造。
 
-	byte[] b1 = ...
-	ClassReader cr = new ClassReader(b1);
-	ClassWriter cw = new ClassWriter(cr, 0);
-	ChangeVersionAdapter ca = new ChangeVersionAdapter(cw);
-	cr.accept(ca, 0);
-	byte[] b2 = cw.toByteArray();
+		byte[] b1 = ...
+		ClassReader cr = new ClassReader(b1);
+		ClassWriter cw = new ClassWriter(cr, 0);
+		ChangeVersionAdapter ca = new ChangeVersionAdapter(cw);
+		cr.accept(ca, 0);
+		byte[] b2 = cw.toByteArray();
+
+- 这种方式有一个优点，是能够加快转换速度(10-20%)
 
 - 这种方式有一种缺点就是，会拷贝源类文件中所有的已定义的常量 到被改造的字节码中，与不采用这种优化方式的写法相比，会导致类文件增大。 所以这种方式 只适合在 需要添加方法，字段 等添加性的改造时使用。
 
@@ -581,12 +586,12 @@ ASM API暴露出在编译类中的Java类型，例如 `interal names`和`type de
 	或者也可以同时使用这俩个类。除了`TraceClassVisitor`默认的行为，还可以将其所有的方法调用委托给另外一个`Visitor`,例如`ClassWriter`
 
 
-    ClassWriter cw = new ClassWriter(0);
-    TraceClassVisitor tcv = new TraceClassVisitor(cw, printWriter);
-    tcv.visit(...);
-    ...
-    tcv.visitEnd();
-    byte b[] = cw.toByteArray();
+	    ClassWriter cw = new ClassWriter(0);
+	    TraceClassVisitor tcv = new TraceClassVisitor(cw, printWriter);
+	    tcv.visit(...);
+	    ...
+	    tcv.visitEnd();
+	    byte b[] = cw.toByteArray();
 
 - 这段代码创建了一个`Tcv`,它将所有调用都委托给了cw（打印类,PrintWriter），并打印这些调用的文本表示：
 	
@@ -729,7 +734,7 @@ Java代码在线程中执行，每个线程都有自己的由`frame`（帧）组
 
 	- `Stack`（栈操作相关） 主要用于操作操作栈上的数据：POP,DUP（push复制栈顶的数据）SWAP(交换栈顶的两个元素)
 
-	- `Constants`（常量相关） 将一个常量push到栈顶ACONST_NULL（pushes null）, ICONST_0(push 0) FCONST_0(push 0f) DCONST_0 BIPUSH b(push byte 类型的 b)SIPUSH s(push short 类型 s) LDC(push 任意类型 int float long double String 或者是class 常量等)
+	- `Constants`（常量相关） 将一个常量push到栈顶`ACONST_NULL`（pushes null）, `ICONST_0`(push 0) `FCONST_0`(push 0f) `DCONST_0 BIPUSH b`(push byte 类型的 b)`SIPUSH s`(push short 类型 s) `LDC`(push 任意类型 int float long double String 或者是class 常量等)
 
 	- `Arithmetic and logic`(逻辑运算相关) 弹出栈顶几个元素进行运算将结果push到栈顶。xADD xSUB xDIV xREM 分别代表 + - * / % 运算。x可以是‘I’ ‘L’ 'F' 'D' 类似还有和<< >> >>> | ^ & 等相对应的指令。
 
@@ -1028,9 +1033,9 @@ ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`meth
 
 - 对于`new ClassWriter(0)`，没有东西是自动计算的，必须手动计算frames，局部变量，操作数栈的大小。
 	
-- 对于`new ClassWriter(ClassWriter.COMPUTE_MAXS)`,会自动计算本地变量和操作数栈的大小。仍然必须手动调用`visitMaxs()`(可以使用任意参数，参数会被忽略并重新计算)。在`COMPUTE_MAXS`这种情况下，还必须手动计算frames
+- 对于`new ClassWriter(ClassWriter.COMPUTE_MAXS)`,会自动计算本地变量和操作数栈的大小。但是必须手动调用`visitMaxs()`(可以使用任意参数，参数会被忽略并重新计算)。在`COMPUTE_MAXS`这种模式下，必须手动计算frames
 	
-- 对于`new ClassWriter(ClassWriter.COMPUTE_FRAMES)`,会自动计算所有的值。可以不必调用`visitFrame`,但是仍然需要调用`visitMaxs`(参数将被忽略和重新计算)。  
+- 对于`new ClassWriter(ClassWriter.COMPUTE_FRAMES)`,会自动计算所有的值。可以不必调用`visitFrame()`,但是仍然需要调用`visitMaxs()`(参数将被忽略和重新计算)。  
 
 
 使用这些选项可以带来便利,但是也会损耗性能.
@@ -1041,7 +1046,7 @@ ASM提供了三个基于`MethodVisitor`的核心组件用于生成和转换`meth
 	
 **注意：**如果手动计算frames，可以让CW 类协助执行压缩步骤
 
-**注意：**为了自动计算frames，有时还需要手动计算俩个类的共同父类。默认情况下CW在`getCommonSuperClass`方法计算，通过反射API和将俩个类加载到jvm。** 如果生成几个互相引用的类，那么被引用的类可能还未生成，所以就需要重写`getCommonSuperClass`方法去解决这个问题。
+**注意：**为了自动计算frames，有时还需要手动计算俩个类的共同父类。默认情况下CW在`getCommonSuperClass`方法计算，通过反射API和将俩个类加载到jvm。 如果生成几个互相引用的类，那么被引用的类可能还未生成，所以就需要重写`getCommonSuperClass`方法去解决这个问题。
 
 
 ### 2.2.2. Generating methods 
@@ -1599,7 +1604,7 @@ class adapter chain 可以是线性的同时，method adapter chain可以是有�
 
 它的主要优势是 **适用于构造函数**,其不仅能在构造函数的开头调用,而且够在调用了父构造函数之后插入代码.**实际上,这个适配器的大部分代码都用于检测这个父类构造函数**
 
-在2.2.4章节的`AddTimerAdapter`示例 并没有用到构造函数,就是这个原因
+在2.2.4章节的`AddTimerAdapter`示例中并没有将`AddTimerMethodAdapter`使用到构造函数上,就是这个原因
 
 通过继承`AdviceAdapter`这个方法适配器,可以改造构造函数(注意，`AdviceAdapter`从`LocalVariablesSorter`继承，因此我们也可以轻松地使用一个本地变量)
 
