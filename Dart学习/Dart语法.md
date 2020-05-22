@@ -1808,6 +1808,12 @@ Dart 中的Switch语句使用`==`操作符对字符串，整数和编译时常�
 	  }
 	}
 
+	// 输出结果
+	execute w
+	execute a
+	execute b
+	execute c
+
 # 17 类变量和类方法
 
 Dart使用`static`关键字实现类范围的变量和方法
