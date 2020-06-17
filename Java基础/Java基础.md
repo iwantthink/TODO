@@ -156,3 +156,7 @@ lambda表达式有三个部分：
 
  
 # 3.多线程
+
+# 4. 引用类型
+
+![](https://opensource.sensorsdata.cn/wp-content/uploads/%E5%BC%95%E7%94%A8%E7%B1%BB%E5%9E%8B%E5%AF%B9%E6%AF%94.png)
