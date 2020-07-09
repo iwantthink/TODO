@@ -32,4 +32,44 @@ Kotlin中的Lambda只可以转换成具有SAM结构的函数Java接口!!(SAM结�
 	return View.OnClickListener { v -> print("I am clicked") }
 	}
 	
+# 4. Kotlin依赖镜像地址
+
+	maven{ url 'http://maven.aliyun.com/nexus/content/groups/public/'}
 	
+
+# 5. Aar依赖问题
+[相关文章](https://www.geekpeer.com/Development/Android/8193.html)
+
+**Gradle低版本中**,使用`maven publish`插件上传module至仓库，其pom文件中不会包含当前项目的依赖，可以通过手动编写pom文件内容，添加`dependencies`和`dependency` 为aar添加依赖声明
+
+高版本中会带有
+
+    pom.withXml {
+        def dependenciesNode = asNode().appendNode('dependencies')
+
+        configurations.api.allDependencies.each {
+            if (!it.name.equals("unspecified")) {
+                def dependencyNode = dependenciesNode.appendNode('dependency')
+                dependencyNode.appendNode('groupId', it.group)
+                dependencyNode.appendNode('artifactId', it.name)
+                dependencyNode.appendNode('version', it.version)
+            }
+        }
+    }
+
+- 据说使用`maven`插件不会有该问题，但是Gradle官方现在是推荐使用`maven-publish`插件
+
+
+当项目添加某个依赖，并且该依赖 有其自己的依赖， 默认并不会传递依赖,需要使用设置依赖的transition值为true 才能传递。
+
+	projectB <<<< OkHttp
+	
+	projectA <<<< projectB
+	
+	projectA xxxxxxx OkHttp
+
+示例:
+	
+    implementation() {
+        transitive(true)
+    }

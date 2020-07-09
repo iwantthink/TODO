@@ -17,3 +17,13 @@ Android Studio -> Preferences -> Build,Execution,Deployment -> Gradle -> Android
 
 ![](https://picture-pool.oss-cn-beijing.aliyuncs.com/1527781034399981.png)
 
+# 3. 申请权限导致生命周期重走
+
+	   if (ActivityCompat.checkSelfPermission(this,
+	                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+	                ActivityCompat.requestPermissions(this,
+	                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+	                        1);
+	            }
+            
+在动态申请权限时，如果该权限未在清单文件中被声明，那么会导致 生命周期重新执行(onPause -> onResume)

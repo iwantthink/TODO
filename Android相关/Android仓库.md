@@ -10,22 +10,26 @@
 
 [MavenCentral官方文档-如何发布realse版本](https://central.sonatype.org/pages/releasing-the-deployment.html)
 
+[Android Studio中的mavenCentral、jcenter、google仓库](https://juejin.im/post/5dc0c7076fb9a04a8e3bd730)
+
 # 1. 简介
 
-Gradle支持`google`,`jcenter`,`mavenCentral`等仓库.AS3.0+在项目创建时会默认添加`google`和`jcenter`仓库支持.除了**标准的服务器之外,还可以自定义Maven仓库服务器**
+Gradle支持`google`,`jcenter`,`mavenCentral`等仓库(同时也支持本地仓库).AS3.0+在项目创建时会默认添加`google`和`jcenter`仓库支持.除了**标准的服务器之外,还可以自定义Maven仓库服务器**
 
 `Android Studio`在项目根目录下的`build.gradle`文件中声明仓库,然后会去对应的仓库地址下载library
 
 **注：不管是Jcenter还是MavenCentral ，两者都是Maven仓库.但是维护在不同的服务器上,由不同的人提供内容,俩者之间没有联系**
 
 # 2 仓库介绍
-## 2.1 jcenter
+
+
+## 2.1 Jcenter
 
 Jcenter是由JFrog公司提供的Bintray中的Java仓库
 
 仓库的地址是[https://jcenter.bintray.com/](https://jcenter.bintray.com/)
 
-## 2.2 mavenCentral
+## 2.2 MavenCentral
 
 MavenCentral是由Sonatype公司维护的,是Apache Maven,SBT和其他构件系统的默认仓库.
 
@@ -49,6 +53,7 @@ MavenCentral是由Sonatype公司维护的,是Apache Maven,SBT和其他构件系�
 - [官方文档-详细说明了如何上传不开源的jar/aar](https://central.sonatype.org/pages/manual-staging-bundle-creation-and-deployment.html)
 
 # 3 上传Library具体步骤
+这里介绍是将Library上传至SonaType提供的MavenCentral
 
 ## 3.1 创建一个Issue
 
