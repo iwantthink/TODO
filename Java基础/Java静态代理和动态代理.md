@@ -228,7 +228,7 @@
 
 动态代理类是 public,final,非抽象类型的
 
-动态代理类继承了 java.lang,reflect.Proxy类
+动态代理类继承了 java.lang.reflect.Proxy类
 
 动态代理类的名字以 `$Proxy`开头
 
