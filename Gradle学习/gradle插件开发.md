@@ -173,7 +173,7 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 
 - `Build Script` :直接在构建脚本文件（`build.gradle`）中编写，缺点是无法复用插件代码(在其他项目中使用的话 需要复制gradle文件)
 
-- `buildSrc Project`:将插件源码放到 `rootProjectDir/buildSrc/src/main/groovy `目录下。Gradle会编译和测试插件，并使其在构建脚本的类路径上可用。另外插件对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
+- `buildSrc Project`:将插件源码放到 `rootProjectDir/buildSrc/src/main/groovy `目录下。Gradle会在执行task前编译和测试插件，并使其在构建脚本的类路径上可用。另外插件对构建使用的每个构建脚本都可见。但是其他项目没有定义的项目里 依旧无法使用。
 
 - `Standalone project`:在独立的项目里编写插件,打成Jar包使用 或发布到仓库，之后可以直接引用。
 
@@ -182,12 +182,11 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 
 **以下的例子都是在`build.gradle`中编写的,有些GradleAPI 在AndroidStudio中 不存在，因为Gradle的版本问题。。一些API 在特定版本之后才出现**
 
-要创建Gradle插件,需要编写一个类去实现`Plugin`接口.**当插件应用于项目时,Gradle会创建插件类的实例,并调用实例的`Plugin.apply()`方法**, 项目对应的`Project`对象会作为参数传递给`apply()`方法,插件可以使用它来对项目进行设置
+要创建Gradle插件,需要编写一个类去实现`Plugin`接口.**当插件应用于项目时,Gradle会创建插件类的实例,并调用Project实例的`apply()`方法**, 项目对应的`Project`对象会作为参数传递给`apply()`方法,插件可以使用它来对项目进行设置
 
-
-
-		apply plugin:GreetingPlugin //直接依赖 去使用！
-	
+		// 插件使用
+		apply plugin:GreetingPlugin 
+		// 插件定义
 		class GreetingPlugin implements Plugin<Project> {
 	    	void apply(Project project) {
 	        	project.task('hello') {
@@ -206,12 +205,12 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 
 	如果设置为`Gradle`,那么插件可以应用于`init.gradle`
 
-- `build script`形式的插件，需要直接在编写插件的`build.gradle`中去apply插件，然后在项目中apply这个文件
+- 构建脚本形式的插件，需要直接在编写插件的`build.gradle`中去apply插件，然后在项目中apply这个文件
 
 
 ### 2.1.2 独立项目中编写插件
 
-将插件一到一个独立的项目中并发布就可以与其他人共享
+将插件移到一个独立的项目中并发布就可以与其他人共享
 
 示例:使用一个`Groovy`项目,将插件生成一个Jar包
 
@@ -223,6 +222,7 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 		    compile gradleApi()
 		    compile localGroovy()
 		}
+
 2. 提供一个`.properties`属性文件到`src/main/resources/META-INF/gradle-plugins/org.samples.greeting.properties`文件夹下
 
 	**文件名就是插件的id**(就是在`build.gradle`时 `apply plugin:'文件名'`,建议与自己设置的`gourpId+artifactId`相符合)，`implementation-class` 指向具体的实现类(请填写完整的类名)
@@ -235,11 +235,13 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 
 		需要使用`implementation-class`标识插件的实现类
 
-	- `gradle-plugins`，可以指定多个properties文件，定义多个插件
+	- `gradle-plugins`文件夹下可以包含多个properties文件，定义多个插件
 
-	- properties文件名 
+	- **添加META-INF的操作可以通过`java-gradle-plugin`插件实现**
 
-3. 在其他项目中使用自定义的插件
+3. 通过`maven`或者`maven-publish`插件进行发布
+
+4. 在其他项目中使用自定义的插件
 
 	- 发布到`maven`的情况
 
@@ -292,7 +294,7 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 		    }
 		}
 
-3. 应用插件
+3. 应用插件(buildSrc中的内容可以对当前项目中的其他构建脚本可见)
 
 		apply plugin: org.example.greeting.GreetingPlugin
 
@@ -324,11 +326,11 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 		  id 'org.example.greeting'
 		}
 
-## 2.2 使用Java Gradle插件开发插件(孵化中)
+## 2.2 使用Java Gradle插件开发插件
 
-[使用Plugin Development 插件开发插件](https://docs.gradle.org/5.0/userguide/java_gradle_plugin.html),该插件可以消除构建脚本中的一些样板声明,并提供对插件元数据的验证等功能
+[使用Plugin Development 插件开发插件](https://docs.gradle.org/current/userguide/java_gradle_plugin.html#java_gradle_plugin),该插件可以消除构建脚本中的一些样板声明,并提供对插件元数据的验证等功能
 
-该插件会自动应用`Java`插件,添加`gradleApi()`到依赖中,并在`jar`任务执行期间执行插件元数据的验证,最后还会在Jar的`META_INF`目录下生成插件描述符
+该插件会自动应用`Java`插件,添加`gradleApi()`到依赖中,并在`jar`任务执行期间执行插件元数据的验证,最后还会在Jar的`META-INF`目录下生成插件描述符
 
 **对于被开发的插件来说,需要添加`gradlePlugin{}`脚本块来声明插件信息,该脚本块定义了由项目构建的插件,包括插件id 和 implementationClass**
 
@@ -342,19 +344,19 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 	    }
 	}
 
-- 根据`gradlePlugin{}`脚本块,Gradle会自动生成
+- 根据上述的信息,gradle能够自动的完成以下操作:
 
-	1. jar文件中`META-INF`目录下的插件描述符
+	1. 往jar文件中`META-INF`目录下的插件描述符
 
-
+	2. 为`Maven`等发布插件中待发布的插件进行配置
+	
+	3.  
 
 ### 2.2.1 示例
 
 	plugins {
 	    id 'java-gradle-plugin'
 	}
-
-- 添加到插件的项目中
 
 	gradlePlugin {
 	    plugins {
@@ -364,7 +366,6 @@ Gradle使用声明的输入和输出来确定该任务是否处于`up-to-date`�
 	        }
 	    }
 	}
-
 
 ## 2.3 测试自定义插件
 
@@ -411,13 +412,11 @@ MyPlugin:
 	    }
 	}
 
-
-
 ## 2.5 捕获用户输入信息来配置插件运行行为
 
 大多数插件需要从构建脚本中获取一些配置，其中一种实现方式是通过`extension objects`方法实现。`Gradle Project`与`ExtensionContainer`对象相关联,该对象包含已应用于项目的插件的所有设置和属性. **可以通过此容器添加扩展对象来为插件提供配置**
 
-- 其实就是从apply插件的 `build.gradle`文件中传递参数给插件！
+- 本质就是利用了Groovy的DSL特性,从应用了插件的`build.gradle`文件中传递参数给插件！
 
 ### 2.5.1 示例一(通过Property类使用扩展属性)
 
@@ -514,7 +513,7 @@ MyPlugin:
 	}
 
 
-### 2.5.2 示例二(直接使用扩展属性)
+### 2.5.2 示例二(直接通过扩展属性创建)
 
 插件定义:
 		
@@ -585,61 +584,57 @@ Gradle API 提供了可变类型，`PropertyState`表示可以在执行时间内
 
 - `project.extensions.create(String name,Class<T> type,Object...constructionArguments)`: 将使用给予的`constructionArguments`参数 创建`type`类型的对象. 注意`type`类型的类中的构造函数需要接收参数
 
-
-
-
-	class GreetingPluginExtension {
-		final PropertyState<String> message
-		final ConfigurableFileCollection outputFiles
-		
-		// 结合 插件中的扩展创建方法使用
-		GreetingPluginExtension(Project project) {
-		
-			// objects 就是用来创建各种模型对象
-			message = project.objects.property(String)
-			// 为上面创建的message属性设置值
-			message.set('Hello from GreetingPlugin')
-			outputFiles = project.layout.configurableFiles()
+		class GreetingPluginExtension {
+			final PropertyState<String> message
+			final ConfigurableFileCollection outputFiles
+			
+			// 结合 插件中的扩展创建方法使用
+			GreetingPluginExtension(Project project) {
+			
+				// objects 就是用来创建各种模型对象
+				message = project.objects.property(String)
+				// 为上面创建的message属性设置值
+				message.set('Hello from GreetingPlugin')
+				outputFiles = project.layout.configurableFiles()
+			}
+			
+			// 提供setter方法
+			void setOutputFiles(FileCollection outputFiles) {
+				this.outputFiles.setFrom(outputFiles)
+			}
 		}
+
+- `project.layout`: 为项目提供能够快捷访问的几个重要地址
+
+- `project.objects`: 能够创建许多model对象的工厂
+
 		
-		// 提供setter方法
-		void setOutputFiles(FileCollection outputFiles) {
-			this.outputFiles.setFrom(outputFiles)
+		class Greeting extends DefaultTask {
+			// 创建属性
+		 	final Property<String> message = project.objects.property(String)
+		    final ConfigurableFileCollection outputFiles = project.layout.configurableFiles()
+		
+			// 提供setter方法
+		    void setOutputFiles(FileCollection outputFiles) {
+		        this.outputFiles.setFrom(outputFiles)
+		    }
+		
+		    @TaskAction
+		    void printMessage() {
+				// 处理每一个输出文件
+		        outputFiles.each {
+		            logger.quiet "Writing message 'Hi from Gradle' to file"
+		            it.text = message.get()
+		        }
+		    }
 		}
-	}
-
-- `project.layout`:Provides access to several important locations for a project
-
-- `project.objects`:A factory for creating various kinds of model objects.
-
-		
-	class Greeting extends DefaultTask {
-		// 创建属性
-	 	final Property<String> message = project.objects.property(String)
-	    final ConfigurableFileCollection outputFiles = project.layout.configurableFiles()
 	
-		// 提供setter方法
-	    void setOutputFiles(FileCollection outputFiles) {
-	        this.outputFiles.setFrom(outputFiles)
-	    }
-	
-	    @TaskAction
-	    void printMessage() {
-			// 处理每一个输出文件
-	        outputFiles.each {
-	            logger.quiet "Writing message 'Hi from Gradle' to file"
-	            it.text = message.get()
-	        }
-	    }
-	}
-	
-
-	apply plugin: GreetingPlugin
-		
-	greeting {
-		message = 'Hi from Gradle'
-		outputFiles = files('a.txt', 'b.txt')
-	}
+		apply plugin: GreetingPlugin
+			
+		greeting {
+			message = 'Hi from Gradle'
+			outputFiles = files('a.txt', 'b.txt')
+		}
 
 
 ## 2.6 嵌套的DSL元素
@@ -1202,7 +1197,7 @@ Gradle支持用同一种类型定义多个,命名数据对象
 
 在进行Gradle配置时，很多配置是在`build.gradle`中进行设置的，插件可以在构建过程中获取这些配置。
 
-- 构建脚本中的扩展声明以及扩展属性和自定义任务属性之间的映射发生Gradle生命周期的 配置阶段
+- **构建脚本中的扩展声明以及扩展属性和自定义任务属性之间的映射发生Gradle生命周期的[配置阶段]**
 
 通过查看`build.gradle`中的DSL的注释可以看到如下例子：
 
@@ -1222,27 +1217,22 @@ Gradle支持用同一种类型定义多个,命名数据对象
 
 ## 4.2 DSL创建的原理
 
-创建DSL 主要是调用一下方法：
+创建DSL主要是通过`ExtensionContainer`对象：
 
+	// project.extensions 获得ExtensionContainer
 	project.extensions.create('myplugin', MyExtension.class)
 
-`create`方法有三个重载方法：
-
-    @Incubating
-    <T> T create(Class<T> var1, String var2, Class<? extends T> var3, Object... var4);
-
-    @Incubating
-    <T> T create(TypeOf<T> var1, String var2, Class<? extends T> var3, Object... var4);
-
-    <T> T create(String name, Class<T> type, Object... constructionArguments);
+方法详情参考[ExtensionContainer 6.5.1 Api](https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/ExtensionContainer.html#create-java.lang.Class-java.lang.String-java.lang.Class-java.lang.Object...-)
 
 创建DSL时，通常使用第三个重载方法，其参数组成如下：
+
+	<T> T create(String name, Class<T> type, Object... constructionArguments);
 
 1. `String name`:被创建的extension的名称，即在`build.gradle`中可以配置的代码块方法名称
 
 2. `Class<T> type`:被创建的extension的类型，即关联的扩展实体类
 
-3. `Object... constructionArguments`:构造extension实例时传入的参数
+3. `Object... constructionArguments`:构造extension实例时,其构造函数所需的参数
 
 		//如果需要把在apply方法中的project传入
 		project.extensions.create('myplugin',MyExtension.class),project
@@ -1253,6 +1243,8 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		    }
 		    ......
 		}
+
+	- 高版本Gradle提供了依赖注入功能，通过添加`@Inject`注解,Gradle将自动插入某些Service而不需要手动传入参数,例如`ObjectFactory`,`ProjectLayout`等等
 
 ## 4.3 Plugin中DSL的创建
 
@@ -1265,7 +1257,7 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		package com.ryan.log
 		
 		class Person {
-		    String mName;
+		    String name;
 		}
 
 2. 在Plugin的apply方法中创建
@@ -1276,7 +1268,7 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		    void apply(Project project) {
 		        project.extensions.create("Person", Person.class)
 		        project.task('printPerson').doLast {
-		            println project.Person.mName
+		            println project.Person.name
 		        }
 		    }
 		}
@@ -1286,7 +1278,7 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		apply plugin:'com.ryan.log'
 		
 		Person{
-		    mName 'Ryan'
+		    name 'Ryan'
 		}
 
 ### 4.3.2 DSL中的成员变量为扩展实体类时
@@ -1296,21 +1288,33 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		package com.ryan.log
 		
 		class Company {
-		    Person mPerson;
+		
+		    Person person;
+		    
+		    // 必须添加,为了支持Closure方式设置属性
+		    void person(Action<Person> action){
+		    	action.execute(person)
+		    }
+
+		    @Inject
+		    Company(ObjectFactory factory){
+		    	// 创建对象
+		    	factory.newInstance(person)
+		    }
 		}
 
 2. 在Plugin的apply方法中创建
 
         project.extensions.create("Company", Company.class)
         project.task('printCompany').doLast {
-            println project.Company.mPerson.mName
+            println project.Company.person.name
         }
 
 3. 集成插件后使用
 
 		Company{
-		    mPerson Person{
-		        mName 'Jack'
+		    person {
+		        name 'Jack'
 		    }
 		}
 
@@ -1368,16 +1372,18 @@ Gradle支持用同一种类型定义多个,命名数据对象
 
 
 
-## 4.4 嵌套DSL
+## 4.4 嵌套DSL对象
 
 在Gradle4.2之前，官方文档未明确指出嵌套DSL的创建方法
 
-### 4.4.1 Gradle>=4.2
-嵌套DSL类型如下：
+嵌套DSL示例：
 
 	android {
+	    // 普通属性
 	    compileSdkVersion 23
 	    buildToolsVersion "23.0.1"
+	    
+	    // 嵌套DSL对象
 	    defaultConfig {
 	        applicationId "com.example.heqiang.testsomething"
 	        minSdkVersion 23
@@ -1385,26 +1391,36 @@ Gradle支持用同一种类型定义多个,命名数据对象
 	    }
 	}
 
+### 4.4.1 Gradle>=4.2
 
-同时通过`@javax.inject.Inject`声明一个带有`org.gradle.api.model.ObjectFactory`参数的构造函数，并在这个构造函数中通过`ObjectFactory`创建嵌套DSL实例
+高版本Gradle支持依赖注入,通过`@javax.inject.Inject`声明一个带有`org.gradle.api.model.ObjectFactory`等参数的构造函数，Gradle将自动将对象注入,而不需要在创建extensions手动传入(当然手动传入也可以)
+
+- 自动注入的对象包含:`ObjectFactory`,`ProjectLayout`,`ProviderFactory`,`WokerExecutor`,`FileSystemoperations`,`ExecOperations`
+
+	注意:`ProjectLayout`和`WorkerExecutor`只能在project类型的插件中注入
+
+Gradle中通过使用`ObjectFactory`的`newInstance`方法创建嵌套DSL实例
 
 - 如下例子中，插件通过构造函数将 项目的`ObjectFactory`传递给`extension object`
 
 
+		// 内部DSL对象
 		class Person {
 		    String name
 		}
 		
+		// 外部DSL对象
 		class GreetingPluginExtension {
 		    String message
-		    final Person greeter
+		    final Person person
 		
 		    @javax.inject.Inject
 		    GreetingPluginExtension(ObjectFactory objectFactory) {
-		        // Create a Person instance
-		        greeter = objectFactory.newInstance(Person)
+		        // 创建Person对象
+		        person = objectFactory.newInstance(Person)
 		    }
-		
+			
+			 // 该方法是为了支持属性通过Closure设置
 		    void greeter(Action<? super Person> action) {
 		        action.execute(greeter)
 		    }
@@ -1412,11 +1428,11 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		
 		class GreetingPlugin implements Plugin<Project> {
 		    void apply(Project project) {
-		        // Create the extension, passing in an ObjectFactory for it to use
-		        def extension = project.extensions.create('greeting', GreetingPluginExtension, project.objects)
+		        // 这里可以不用手动传入ObjectFactory,因为已经添加Inject注解，Gradle会自动添加
+		        def extension = project.extensions.create('greeting', GreetingPluginExtension.class)
 		        project.task('hello') {
 		            doLast {
-		                println "${extension.message} from ${extension.greeter.name}"
+		                println "${extension.message} from ${extension.person.name}"
 		            }
 		        }
 		    }
@@ -1426,7 +1442,7 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		
 		greeting {
 		    message = 'Hi'
-		    greeter {
+		    person {
 		        name = 'Gradle'
 		    }
 		}
@@ -1439,7 +1455,7 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		package com.ryan.log
 		
 		class Company {
-		    String mCompany
+		    String company
 		
 		    public Company() {
 		        this.extensions.create("Person", Person.class)
@@ -1450,29 +1466,68 @@ Gradle支持用同一种类型定义多个,命名数据对象
 
 		Company{
 		
-		    mCompany 'Hypers'
+		    company 'Hypers'
 		
 		    Person{
-		        mName  'Jack'
+		        name 'Jack'
 		    }
 		}
 
 
+### 4.4.3 总结
+
+1. 创建Bean对象
+
+	属性需要包含get和set方法，如果修饰符为public,那么groovy 会自动生成. 如果修饰符为private,那么需要手动提供get和set方法
+
+	如果属性类型为类,并且希望通过Closure形式对该属性进行配置，那么需要添加一个同名的set方法,传入一个Action参数,泛型为`? super 属性类型` 。 否则只能通过调用set方法进行设置.
+
+		// 不支持Closure
+		extensionName{
+			propertyName = new PropertyName()
+			setPropertyName(new PropertyName())
+		}
+	
+		// 支持Closure
+		void propertyName(Action<? super PropertyClass> action){
+			action.execute(property)
+		}
+		
+		extensionName{
+			propertyName {
+				.........
+			}
+		}
+
+2. 利用`ExtensionContainer`创建扩展
+
+	如果扩展对应的类型其构造函数已经申明了`@Inject`注解，那么某些参数Gradle会自动添加
+
+3. 添加插件,并使用Extension
 
 
 ## 4.5 DSL-对象集合
 
-通过`Project.container(Java.lang.Class)`方法创建`NamedDomainObjectContainer`实例，这个类NDOC提供了很多管理和配置对象的方法。
+Gradle 提供了`Project.container()`方法和`ObjectFactory.domainObjectContainer()`方法创建DSL对象集合
 
-为了能够使用`project.container（Class）`方法，**传入的实例必须暴露一个唯一的常量，名称为'name'。**
+### 4.5.1 使用Project.container()
 
-1. 创建class，必须包含`name`字段，且这个字段必须从构造函数中传入
+注意:**传入的对象的类型必须暴露一个唯一的只读常量，名称为'name',并在构造函数中传入**
 
-		package com.ryan.log
+1. 创建类，必须包含`name`字段，且这个字段必须从构造函数中传入
+
+		package com.ryan
 		
 		class Person {
-		    String name
+			 //非private/final 也可以,但是需要保证不被修改
+			 // Gradle会通过构造函数对该值自动赋值
+		    private final String name
+		    // 普通属性无要求
 		    String lastName
+		    void setLastName(String lastName){
+		    	this.lastName = lastName
+		    }
+		    
 		    Integer age
 		
 		    Person(String name) {
@@ -1482,14 +1537,14 @@ Gradle支持用同一种类型定义多个,命名数据对象
 
 2. 在Plugin中进行声明
 
-		class Log implements Plugin<Project> {
+		class MyPlugin implements Plugin<Project> {
 		
 		    @Override
 		    void apply(Project project) {
 				//创建一个Person实例的container
-		        def persons = project.container(Person.class)
-				//将container 对应成 扩展对象
-		        project.extensions.persons = persons
+		        def personsContainer = project.container(Person.class)
+				//创建名为persons的扩展，并指定扩展类型
+		        project.extensions.persons = personsContainer
 		
 		        project.task("printPersons") << {
 		            persons.all {
@@ -1503,8 +1558,11 @@ Gradle支持用同一种类型定义多个,命名数据对象
 3. 集成插件后使用
 
 		persons{
+			 // ryan会赋值给 Person.name
 		    ryan{
-		        lastName = 'ma'
+		    	 // 如下形式是调用了set方法
+		        lastName 'ma'
+		        // age 没有提供所以不能使用上述形式
 		        age = 18
 		    }
 		
@@ -1516,6 +1574,81 @@ Gradle支持用同一种类型定义多个,命名数据对象
 		}
 
 
-赋值必须使用`=`等号。。。。
+赋值需要使用`=`等号。。。。或者提供`set`方法
 
-![](data:image/jpeg;base64,IyBHcmFkbGUtUGx1Z2luIOWtpuS5oAoKCiMgMS4g566A5LuLCgpBbmRyb2lkIFN0dWRpbyDkuK3vvIxHcmFkbGUtUGx1Z2luIOWSjEdyYWRsZSDmmK/kuI3lkIznmoTmpoLlv7UKCi0gR3JhZGxl5piv5LiA5Liq5Z+65LqOQXBhY2hlIEFudOWSjEFwYWNoZSBNYXZlbuamguW/teeahOmhueebruiHquWKqOWMluW7uuaehOW3peWFt++8jOWug+S9v+eUqOS4gOenjeWfuuS6jkdyb292eeeahOeJueWumumihuWfn+ivreiogOadpeWjsOaYjumhueebruiuvue9rgoKLSBHcmFkbGUtUGx1Z2luIOaYr0dvb2dsZeS9v+eUqEdyYWRsZeW8gOWPkeWHuueahOS4gOS4qkFuZHJvaWTmj5Lku7bvvIzor6Xmj5Lku7bkuLpBbmRyb2lkIFN0dWRpb+aPkOS+m+S6humhueebrueahOeuoeeQhu+8jOS+i+Wmgu+8jOa3u+WKoOmhueebruS+nei1lu+8jOaJk+WMhe+8jOetvuWQjeetiea1geeoi+eahOWumuS5iQoKCQoKIyAyLiDmupDnoIHkuIvovb3mlrnms5UKCuS7jmBncmFkbGUtcGx1Z2luIDMuMC4wYCDlvIDlp4vvvIxHb29nbGUg5bCGQW5kcm9pZOeahOS4gOS6m+W6k+aUvuWIsOiHquW3seeahGBHb29nbGUoKWDku5PlupPph4zkuobjgILlnLDlnYDlpoLkuIvvvJoKCglodHRwczovL2RsLmdvb2dsZS5jb20vZGwvYW5kcm9pZC9tYXZlbjIvaW5kZXguaHRtbAoK5L2G5pivYEdvb2dsZSgpYOW5tuayoeacieaPkOS+m+aWh+S7tumBjeWOhuWKn+iDve+8jOaJgOS7peaXoOazleebtOaOpeiuv+mXrui3r+W+hOWOu+S4i+i9veOAguS9huaYr+WunumZheS4iua6kOeggei/mOaYr+WcqOmCo+S4qui3r+W+hOS4i+aUvuedgO+8jOaJgOS7peWPqumcgOimgei+k+WFpeW+heS4i+i9veaWh+S7tueahOWujOaVtOeahOi3r+W+hOWNs+WPr+S4i+i9veOAggoK5L6L5aaC77ya6ZyA6KaB5LiL6L29YGdyYWRsZS0zLjAuMC1zb3VyY2VzLmphcmAgLOWPqumcgOimgeWwhuWujOaVtOeahOi3r+W+hOi+k+WFpeWNs+WPrwoKCWh0dHBzOi8vZGwuZ29vZ2xlLmNvbS9kbC9hbmRyb2lkL21hdmVuMi9jb20vYW5kcm9pZC90b29scy9idWlsZC9ncmFkbGUvMy4wLjAvZ3JhZGxlLTMuMC4wLXNvdXJjZXMuamFyCgoqKuS4i+i9veWujOa6kOaWh+S7tuS5i+WQjuaUvuWFpeaMh+WummdyYWRsZeebruW9leS4iyzljbPlj6/lnKhgQW5kcm9pZCBTdHVkaW/kuK1g5p+l55yL5a+55bqU55qE5rqQ56CBKioKCi0gZ3JhZGxl55uu5b2V5Y+v5Lul6YCa6L+HQVMg5b6X55+lLi4uCgotIOekuuS+iwoKCQkvVXNlcnMvcnlhbi8uZ3JhZGxlL2NhY2hlcy9tb2R1bGVzLTIvZmlsZXMtMi4xL2NvbS5hbmRyb2lkLnRvb2xzLmJ1aWxkL2dyYWRsZS8zLjMuMi8KCQkK)
+上面的示例直接将对象集合对应成扩展, 如果需要在DSL中嵌入对象集合,那么可以将对象集合赋值给扩展类型对象的属性
+
+	class Person{
+		private final String name 
+		String gender
+		
+		Person(String name){
+			this.name = name
+		}
+	}
+
+	class Room{
+		NamedDomainObjectContainer<Person> persons
+	}
+
+	void apply(Project project){
+		def roomExt = project.extensions.create("Room", Room.class)
+		// 这一步可以放到扩展类型的构造函数中去做
+		def personsContainer = project.container(Person.class)
+		roomExt.persons = personsContainer
+	}
+	
+	Room{
+		persons {
+			jack{
+				gender = "boy"
+			}
+		}
+	}
+
+### 4.5.2 使用ObjectFactory.domainObjectContainer
+
+	class Zoo {
+	    NamedDomainObjectContainer<Animal> animals
+	
+	    @Inject
+	    Zoo(ObjectFactory factory) {
+	       animals = factory.domainObjectContainer(Animal.class)
+	    }
+	
+	}
+	
+	class Animal {
+	    private final String name
+	
+		 // 注意ObjectFactory 需要访问name属性
+	    String getName(){
+	        return name
+	    }
+	    String nickName
+	
+	    Animal(String name) {
+	        this.name = name
+	    }
+	}
+
+	def zoo = project.extensions.create("Zoo", Zoo.class)
+	project.task("printZoo") {
+        group "hypers"
+        doLast {
+            zoo.animals.each {
+                println("动物园里有 [${it.nickName}] ")
+            }
+        }
+    }
+
+### 4.5.3 注意
+
+如果一个类型既要被`NamedDomainObjectContainer`使用，又要单独作为扩展的一个属性来使用,按照之前的设置 会报错:
+
+	The constructor for type Animal should be annotated with @Inject.
+
+再添加了`@Inject`注解后,Gradle其会往构造函数中传入一个`ObjectFactory`,声明就可以了,另外注意`ObjectFactory.newInstance`时，需要将name的值传入
+
+
+
