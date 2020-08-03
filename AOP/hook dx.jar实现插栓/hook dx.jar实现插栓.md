@@ -1,14 +1,19 @@
 # 1.hook dx.jar实现插栓
----
+
 [APM原理链接](http://blog.csdn.net/sgwhp/article/details/50239747)
+
 [APM实现链接](http://blog.csdn.net/sgwhp/article/details/50438666)
+
 [APM源码地址](https://github.com/sgwhp/openapm)
+
 [dx的介绍](https://stackoverflow.com/questions/8487268/android-dx-tool)
+
 [网易NAPM Andorid SDK实现原理](https://neyoufan.github.io/2017/03/10/android/NAPM%20Android%20SDK/)
+
 [Android - 构建和运行您的应用](https://developer.android.com/studio/run/index.html#run-configuration)
 
 # 1.1 dex和processClass方法
-- `APM(性能监控)`的`AOP字节码插栓` 插件会在class编译成dex文件的时候注入相关的代码。关键点就在于编译dex文件的时候注入代码，这个编译的过程是由**dx(dx.bat)**执行的，具体的类和方法是`com.android.dx.command.dexer.Main#processClass`.此方法的第二个参数就是class的byte数组，所以只需要在进入`processClass`方法的时候，利用`ASM`工具对class的byte数组进行改造即可实现插入相关代码。
+`APM(性能监控)`的`AOP字节码插栓` 插件会在class编译成dex文件的时候注入相关的代码。关键点就在于编译dex文件的时候注入代码，这个编译的过程是由**dx(dx.bat)**执行的，具体的类和方法是`com.android.dx.command.dexer.Main#processClass`.此方法的第二个参数就是class的byte数组，所以只需要在进入`processClass`方法的时候，利用`ASM`工具对class的byte数组进行改造即可实现插入相关代码。
 
 	  private static boolean processClass(String name, byte[] bytes)
 	  {

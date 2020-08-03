@@ -335,15 +335,15 @@ JavaScript 语言之所以有 `this` 的设计，**跟内存里面的数据结�
 
   想要解决这种情况,那就需要将`this`的指向外层对象`a`,或者**将属性`p`放到内层对象`b`中**
 
-  	var a = {
-  	  b: {
-  		// 方法里的`this`指向的是 b
-  	    m: function() {
-  	      console.log(this.p);
-  	    },
-  	    p: 'Hello'
-  	  }
-  	};
+	  	var a = {
+	  	  b: {
+	  		// 方法里的`this`指向的是 b
+	  	    m: function() {
+	  	      console.log(this.p);
+	  	    },
+	  	    p: 'Hello'
+	  	  }
+	  	};
 
 - 如果将嵌套对象内部的方法赋值给一个变量,`this`会指向全局对象(**因为此时调用方法的是全局对象!**)
 
@@ -954,12 +954,14 @@ call方法。每个函数都可以调用call方法，来改变当前这个函数
 
 	Function.prototype.mycall = function(context){
 	    context = context || window;
-		// this就是调用函数mycall的对象
+		// this就是调用函数mycall的对象(即需要改变this的)
 	    context.fn = this;
 		console.log('inside this = '+this);
 
 		// 获取到额外的参数
 	    var arr = [];
+	    // 请注意  这里的遍历从 1开始 而不是 0
+	    	 // 因为 arguments[0] 即context
 	    for(var i = 1;i<arguments.length;i++){
 	        arr.push('arguments['+i+']');
 	    }
@@ -974,19 +976,18 @@ call方法。每个函数都可以调用call方法，来改变当前这个函数
 
 - **函数`mycall()`中的`this`会指向调用该函数的对象(其实就是要改变`this`的函数!)**
 
-
-	var obj = {name:'ryan'};
-	var a = {age:1}
-
-	function say(n){
-	    console.log(this,n);
-	}
-	say.mycall(obj,a)
-	// 输出内容
-	VM1748:3 inside this = function say(n){
-	    console.log(this,n);
-	}
-	VM1748:15 {name: "ryan", fn: ƒ} {age: 1}
+		var obj = {name:'ryan'};
+		var a = {age:1}
+	
+		function say(n){
+		    console.log(this,n);
+		}
+		say.mycall(obj,a)
+		// 输出内容
+		VM1748:3 inside this = function say(n){
+		    console.log(this,n);
+		}
+		VM1748:15 {name: "ryan", fn: ƒ} {age: 1}
 
 - 函数`mycall()`中的 context 就是 obj, `this`就是函数`say()`
 
@@ -1023,6 +1024,8 @@ apply和call方法类似，作用都是改变当前函数执行的this指向，�
 	    console.log(this,n,m);
 	}
 	eat.myApply(q,[arg1,arg2])
+	
+	// 输出  {name: "ryan", fn: ƒ} 1 [123]
 
 - `context` 指向 对象`q` 
 	
@@ -1043,7 +1046,7 @@ apply和call方法类似，作用都是改变当前函数执行的this指向，�
 		var self = this;
 		return function (){
 			// 使用 myApply 改变了 self 中 this的指向
-		    self.myApply(context,arguments)
+		   return self.myApply(context,arguments)
 		}
 	};
 
@@ -1060,3 +1063,51 @@ apply和call方法类似，作用都是改变当前函数执行的this指向，�
 	就是上述示例中的对象`j`
 
 - 函数`myBind()`内部的`this`就是函数`drink()`
+
+
+## call方法调用bind进行重写的原理
+
+`Function.prototype.call()  -> Function.prototype.bind()`
+
+	var changedMethod = Function.prototype.call.bind(Array.prototype.slice)
+	
+	//修改后的调用方式
+	slice([1,2,3,4],0,1)  // 输出 [1]
+	//修改前的调用方式
+	[1,2,3,4].slice(0,1)
+	
+- 根据bind的原理(`self.myApply(context,arguments) 原型`)可知:
+		
+		参数
+		var context = Array.prototype.slice
+		var self = Function.prototype.call
+		arguments[0] = Array.prototype.slice 
+		
+		// changedMethod 即下面这个函数
+		function(){
+			// arguments 是changedMethod调用时传入的参数
+			return self.apply(context , arguments)
+		}
+
+- 因此在调用`changedMethod`方法时, 就相当于在调用 apply
+
+		Function.prototype.call.apply(Array.prototype.slice,arguments)
+
+		var context = Array.prototype.slice
+		context.fn = Function.prototype.call
+		var args =  会取arguments中从1 到 arugments.length 的数据,不包含0，因为0位置上是 Context
+		result = eval('context.fn('+args.toString()+')')
+		// 上面的eval即如下代码:
+		Array.prototype.slice.call(????)		
+		
+- 根据call的原理,可以得出下面的代码:
+		
+		var context= ????
+		context.fn = Array.prototype.slice
+		var result = eval("context.fn()")
+		
+		
+		
+		
+		
+		
