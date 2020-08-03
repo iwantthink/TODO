@@ -996,8 +996,9 @@ call方法。每个函数都可以调用call方法，来改变当前这个函数
 ## 7.2 apply方法的原理
 
 apply和call方法类似，作用都是改变当前函数执行的this指向，并且将函数执行。
-唯一不同就是 call方法给当前函数传参是一个一个传。而apply是以数组方式传入参数
+**唯一不同就是 call方法给当前函数传参是一个一个传。而apply是以数组方式传入参数**
 
+	// 注意 这里的arr 参数是单独传入，因此arguments[0] == context
 	Function.prototype.myApply =function(context,arr){
 		context = Object(context) || window;
 		// this 就是 函数myApply被调用时指向的对象
@@ -1086,25 +1087,33 @@ apply和call方法类似，作用都是改变当前函数执行的this指向，�
 		// changedMethod 即下面这个函数
 		function(){
 			// arguments 是changedMethod调用时传入的参数
+			// 即[1,2,3,4],0,1
 			return self.apply(context , arguments)
 		}
 
 - 因此在调用`changedMethod`方法时, 就相当于在调用 apply
 
-		Function.prototype.call.apply(Array.prototype.slice,arguments)
+		Function.prototype.call.apply(Array.prototype.slice,arr)
 
 		var context = Array.prototype.slice
 		context.fn = Function.prototype.call
-		var args =  会取arguments中从1 到 arugments.length 的数据,不包含0，因为0位置上是 Context
+		// 主要是为了放入eval 中进行计算
+		var args =  会将传入的arr数组 转成字符串 "arr[0]",并放入数组args中
+		
+		// context.fn(args[0], args[1], args[2]....)
 		result = eval('context.fn('+args.toString()+')')
 		// 上面的eval即如下代码:
-		Array.prototype.slice.call(????)		
+		Array.prototype.slice.call(args[0], args[1], args[2]....)
 		
+
 - 根据call的原理,可以得出下面的代码:
 		
-		var context= ????
+		var context= args[0]//即[1,2,3,4]待操作的数组
 		context.fn = Array.prototype.slice
-		var result = eval("context.fn()")
+		var arr = args[1]+ args[2] ..... 
+		// 到这一步 可看到 调用形式最终变回了
+		// [1,2,3,4].slice(0,1)
+		var result = eval("context.fn(arr)") 
 		
 		
 		
